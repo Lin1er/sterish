@@ -1,0 +1,43 @@
+name: Pipeline & API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pipeline/**'
+      - 'api/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pipeline/**'
+      - 'api/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: 'latest'
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install pipeline dependencies
+        working-directory: pipeline
+        run: uv sync
+
+      - name: Run pipeline tests
+        working-directory: pipeline
+        run: uv run pytest tests/ -v
+
+      - name: Install API dependencies
+        working-directory: api
+        run: uv sync
+
+      - name: Run API lint
+        working-directory: api
+        run: uv run python -m py_compile src/sterish_api/main.py

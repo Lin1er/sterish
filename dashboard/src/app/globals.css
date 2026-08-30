@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #0a0a0f;
+  --color-surface: #12121a;
+  --color-border: #1e1e2e;
+  --color-text: #e4e4e7;
+  --color-muted: #71717a;
+  --color-accent: #c2320a;
+  --color-accent-hover: #d64422;
+  --color-safe: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'DM Mono', ui-monospace, monospace;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-accent-hover);
+}

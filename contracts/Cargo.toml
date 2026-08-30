@@ -1,0 +1,15 @@
+[workspace]
+members = ["registry", "escrow"]
+resolver = "2"
+
+[workspace.dependencies]
+soroban-sdk = "22.0.0"
+stellar-xdr = { version = "22.0.0", default-features = false }
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = true
+lto = true
+panic = "abort"
