@@ -1,0 +1,12 @@
+{
+  "spec_version": "1.0.0",
+  "skill_id": "com.acme.weather-lookup",
+  "version": "1.2.0",
+  "verdict": "SAFE",
+  "risk": "low",
+  "score": 94,
+  "capabilities": ["NETWORK_OUTBOUND"],
+  "findings": [],
+  "recommendation": "ALLOW",
+  "evidence_hash": "00d030bc547a99dced6b798cc6a4e690673dccd41d80bff07baff3c5deac1431"
+}

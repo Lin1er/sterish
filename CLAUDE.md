@@ -70,5 +70,10 @@ Kalau `gh` belum ter-auth: **push branch saja**, kasih Axel URL `Compare & PR`
 Tujuan: tiap tiket terdokumentasi sebagai PR yang bisa dilacak.
 (Catatan historis: STE-5 terlanjur merge fast-forward langsung ke main sebelum konvensi ini ada — dibiarkan.)
 
-- Deploy WAJIB bukti (CA + stellar.expert / URL) di `docs/deployments.md`.
+### Bukti deploy (STE-13 dst) — WAJIB dicatat di DUA tempat
+Setelah deploy apa pun, catat **SEMUA contract address (CA)** + link [stellar.expert](https://stellar.expert) di:
+1. **Comment Linear** tiket deploy-nya, DAN
+2. **`docs/deployments.md`** (network, tanggal, CA tiap kontrak, tx hash penting, alamat USDC SAC, alamat admin/auditor **publik saja**).
+
+Jangan cuma salah satu. Secret key TIDAK boleh ikut — lihat "Secret & wallet key" di atas.
 - Update CLAUDE.md ini kalau ada keputusan/konvensi baru.

@@ -1,7 +1,23 @@
 .PHONY: build-contracts test-contracts deploy-registry deploy-escrow \
         install-pipeline test-pipeline run-pipeline \
         install-api run-api test-api \
-        install-dashboard dev-dashboard
+        install-dashboard dev-dashboard \
+        verify-spec verify-content-hash
+
+# Frozen specs (STE-10)
+# verify-content-hash proves Python, TypeScript and Rust compute byte-identical
+# content_hash values for every shared test vector; it exits non-zero on drift.
+verify-content-hash:
+	bash scripts/verify-content-hash.sh
+
+# verify-spec is the umbrella gate for docs/specs/. It runs the content_hash
+# cross-language proof, plus the verdict-JSON schema runner once that lands.
+verify-spec: verify-content-hash
+	@if [ -x scripts/verify-verdict-json.sh ]; then \
+		echo ""; bash scripts/verify-verdict-json.sh; \
+	else \
+		echo ""; echo "note: scripts/verify-verdict-json.sh not present yet, skipping verdict schema checks"; \
+	fi
 
 # Contracts
 build-contracts:

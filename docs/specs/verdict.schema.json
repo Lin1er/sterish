@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sterish.dev/specs/verdict.schema.json",
+  "title": "Sterish Audit Verdict",
+  "description": "Frozen v1 shape of the audit verdict document produced by the Sterish pipeline (stages 1-3) and consumed by the on-chain submitter, the verification API and the dashboard. See docs/specs/verdict-json.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "spec_version",
+    "skill_id",
+    "version",
+    "content_hash",
+    "verdict",
+    "risk",
+    "score",
+    "capabilities",
+    "findings",
+    "recommendation",
+    "evidence_hash"
+  ],
+  "properties": {
+    "spec_version": {
+      "$ref": "#/$defs/SpecVersion"
+    },
+    "skill_id": {
+      "$ref": "#/$defs/SkillId"
+    },
+    "version": {
+      "$ref": "#/$defs/SemVer"
+    },
+    "content_hash": {
+      "$ref": "#/$defs/Sha256Hex",
+      "description": "Canonical content hash v1 of the audited skill bytes. Identical to the value registered on-chain as VersionRecord.content_hash."
+    },
+    "verdict": {
+      "$ref": "#/$defs/Verdict"
+    },
+    "risk": {
+      "$ref": "#/$defs/Risk"
+    },
+    "score": {
+      "$ref": "#/$defs/Score"
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Distinct capabilities the skill declares or was observed to exercise. Order is not significant.",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Capability"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Every individual finding raised by any stage. May be empty for a clean SAFE audit.",
+      "items": {
+        "$ref": "#/$defs/Finding"
+      }
+    },
+    "recommendation": {
+      "$ref": "#/$defs/Recommendation"
+    },
+    "evidence_hash": {
+      "$ref": "#/$defs/Sha256Hex",
+      "description": "sha256 of the full off-chain audit report. Anchored on-chain as VersionRecord.evidence_hash so a served report can be verified against the ledger."
+    }
+  },
+  "$defs": {
+    "SpecVersion": {
+      "type": "string",
+      "description": "Version of THIS schema, not of the skill. Major version 1 is what this file describes.",
+      "pattern": "^1\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$"
+    },
+    "SkillId": {
+      "type": "string",
+      "description": "Reverse-domain skill identifier, byte-identical to the skill_id registered on-chain.",
+      "minLength": 3,
+      "maxLength": 255,
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    },
+    "SemVer": {
+      "type": "string",
+      "description": "Semantic version, byte-identical to the version registered on-chain.",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "Sha256Hex": {
+      "type": "string",
+      "description": "sha256 digest as exactly 64 lowercase hex characters. Uppercase is rejected so that string equality is a valid comparison everywhere.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Verdict": {
+      "type": "string",
+      "description": "Maps 1:1 to the AuditVerdict enum in contracts/registry. UNAUDITED exists only as the contract's initial state and must never be submitted.",
+      "enum": ["SAFE", "DANGEROUS", "WARNING", "UNAUDITED"]
+    },
+    "Risk": {
+      "type": "string",
+      "description": "Human-facing risk band. Off-chain only: the Registry stores no risk field.",
+      "enum": ["none", "low", "medium", "high", "critical"]
+    },
+    "Score": {
+      "type": "integer",
+      "description": "Trust score. Submitted verbatim as submit_verdict(score); the contract rejects anything above 100 with InvalidTrustScore.",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "Capability": {
+      "type": "string",
+      "description": "Exactly the Capability StrEnum in pipeline/src/sterish_pipeline/models.py.",
+      "enum": [
+        "FILE_READ",
+        "FILE_WRITE",
+        "NETWORK_OUTBOUND",
+        "WALLET_ACCESS",
+        "ENV_READ",
+        "SECRET_READ"
+      ]
+    },
+    "Severity": {
+      "type": "string",
+      "description": "Exactly the Severity StrEnum in pipeline/src/sterish_pipeline/models.py.",
+      "enum": ["HIGH", "MEDIUM", "LOW"]
+    },
+    "Stage": {
+      "type": "integer",
+      "description": "Which pipeline stage raised the finding: 1 = description scanner, 2 = declared-vs-actual static analysis, 3 = synthesis.",
+      "enum": [1, 2, 3]
+    },
+    "Recommendation": {
+      "type": "string",
+      "description": "Machine-actionable instruction for an installing agent.",
+      "enum": ["ALLOW", "REVIEW", "BLOCK"]
+    },
+    "Finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "severity", "description", "evidence"],
+      "properties": {
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "capability": {
+          "$ref": "#/$defs/Capability",
+          "description": "Optional: present when the finding is attributable to one declared capability. Behavioural findings that map to no single capability omit it."
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "description": {
+          "type": "string",
+          "description": "One human-readable sentence about what was found.",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "string",
+          "description": "Pointer into the audited artifact or the trace that supports this finding, e.g. 'tools[0].description'. Required: every finding must be traceable to something a reader can check.",
+          "minLength": 1
+        }
+      }
+    },
+    "SubmittableVerdict": {
+      "description": "Profile applied by the on-chain submitter only. A document valid against the base schema but carrying verdict UNAUDITED is a legal artifact (it describes an unaudited version) but MUST NOT be handed to submit_verdict, which rejects it with InvalidVerdict (error 9).",
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "enum": ["SAFE", "DANGEROUS", "WARNING"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

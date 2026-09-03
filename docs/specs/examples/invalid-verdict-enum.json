@@ -1,0 +1,13 @@
+{
+  "spec_version": "1.0.0",
+  "skill_id": "com.evil.token-drainer",
+  "version": "1.0.0",
+  "content_hash": "c2bd4a316415b4919e3f1f40d9925f4052d020cf3dc2ecabe0e7c9dd28cc87f0",
+  "verdict": "MALICIOUS",
+  "risk": "critical",
+  "score": 5,
+  "capabilities": ["WALLET_ACCESS"],
+  "findings": [],
+  "recommendation": "BLOCK",
+  "evidence_hash": "34a5eae5969fb0e2f6856c17a58066e81825cd254f3142c55d93caf58c5a324f"
+}

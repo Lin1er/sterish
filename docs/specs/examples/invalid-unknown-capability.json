@@ -1,0 +1,13 @@
+{
+  "spec_version": "1.0.0",
+  "skill_id": "com.acme.gpu-miner",
+  "version": "1.0.0",
+  "content_hash": "c4864a140ed980f8aa877e4d36da9961974db14bec404834b578ce4406d19e7e",
+  "verdict": "WARNING",
+  "risk": "medium",
+  "score": 55,
+  "capabilities": ["GPU_ACCESS"],
+  "findings": [],
+  "recommendation": "REVIEW",
+  "evidence_hash": "00d030bc547a99dced6b798cc6a4e690673dccd41d80bff07baff3c5deac1431"
+}

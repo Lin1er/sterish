@@ -1,0 +1,13 @@
+{
+  "spec_version": "1.0.0",
+  "skill_id": "com.acme.pdf-suite",
+  "version": "0.9.3",
+  "content_hash": "a67dedefce94a532c6c2affe5ddebc6c9a1498fed66354430b48ed20e3e10d5e",
+  "verdict": "WARNING",
+  "risk": "medium",
+  "score": 61,
+  "capabilities": ["FILE_READ", "FILE_WRITE", "NETWORK_OUTBOUND"],
+  "findings": [],
+  "recommendation": "REVIEW",
+  "evidence_hash": "4c5c143dcfcb3386849bf59e282f076f267b165d90b8f2eed9955b292fce978f"
+}

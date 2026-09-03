@@ -136,7 +136,10 @@ fn test_register_skill_requires_owner_auth() {
         }])
         .try_register_skill(&ctx.owner, &skill_id, &version, &h);
 
-    assert!(res.is_err(), "register_skill must reject a missing owner auth");
+    assert!(
+        res.is_err(),
+        "register_skill must reject a missing owner auth"
+    );
     // Nothing was written.
     assert_eq!(client.get_skill_count(), 0);
     assert!(client.lookup_by_hash(&h).is_none());
@@ -228,7 +231,10 @@ fn test_register_new_skill_and_query() {
     assert_eq!(record.verdict, AuditVerdict::Unaudited);
     assert_eq!(record.trust_score, 0);
     assert_eq!(record.auditor, None);
-    assert_eq!(record.evidence_hash, BytesN::from_array(&ctx.env, &[0u8; 32]));
+    assert_eq!(
+        record.evidence_hash,
+        BytesN::from_array(&ctx.env, &[0u8; 32])
+    );
     assert_eq!(record.audited_at, 0);
     assert!(!client.is_verified(&skill_id, &version));
 }
@@ -446,7 +452,13 @@ fn test_rugpull_v2_cannot_inherit_v1_badge() {
     let h2 = hash(&ctx.env, 0x02);
 
     client.register_skill(&ctx.owner, &skill_id, &v1, &h1);
-    client.submit_verdict(&skill_id, &v1, &AuditVerdict::Safe, &95, &hash(&ctx.env, 0xAA));
+    client.submit_verdict(
+        &skill_id,
+        &v1,
+        &AuditVerdict::Safe,
+        &95,
+        &hash(&ctx.env, 0xAA),
+    );
 
     // The rug pull: a brand new, unaudited v2 published by the same owner.
     client.register_skill(&ctx.owner, &skill_id, &v2, &h2);
@@ -467,7 +479,10 @@ fn test_rugpull_v2_cannot_inherit_v1_badge() {
     let entry = client.query_skill(&skill_id);
     assert_eq!(entry.latest_version, v2);
     assert_eq!(entry.latest_audited_version, Some(v1.clone()));
-    assert_eq!(client.get_latest(&skill_id).verdict, AuditVerdict::Unaudited);
+    assert_eq!(
+        client.get_latest(&skill_id).verdict,
+        AuditVerdict::Unaudited
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -521,7 +536,10 @@ fn test_submit_verdict_requires_auditor_auth() {
         }])
         .try_submit_verdict(&skill_id, &version, &AuditVerdict::Safe, &100, &evidence);
 
-    assert!(res.is_err(), "submit_verdict must require the auditor's auth");
+    assert!(
+        res.is_err(),
+        "submit_verdict must require the auditor's auth"
+    );
     assert!(!client.is_verified(&skill_id, &version));
 }
 
@@ -631,7 +649,13 @@ fn test_verdict_per_version_independent() {
     client.register_skill(&ctx.owner, &skill_id, &v1, &hash(&ctx.env, 0x01));
     client.register_skill(&ctx.owner, &skill_id, &v2, &hash(&ctx.env, 0x02));
 
-    client.submit_verdict(&skill_id, &v1, &AuditVerdict::Safe, &92, &hash(&ctx.env, 0xA1));
+    client.submit_verdict(
+        &skill_id,
+        &v1,
+        &AuditVerdict::Safe,
+        &92,
+        &hash(&ctx.env, 0xA1),
+    );
     client.submit_verdict(
         &skill_id,
         &v2,
@@ -885,7 +909,10 @@ fn test_get_latest_and_get_version_not_found() {
         client.try_get_version(&missing, &version),
         RegistryError::SkillNotFound
     );
-    assert_registry_err!(client.try_query_skill(&missing), RegistryError::SkillNotFound);
+    assert_registry_err!(
+        client.try_query_skill(&missing),
+        RegistryError::SkillNotFound
+    );
 
     let skill_id = sid(&ctx.env, "com.example.send-email");
     client.register_skill(&ctx.owner, &skill_id, &version, &hash(&ctx.env, 0x01));
@@ -1134,4 +1161,461 @@ fn test_ttl_extended_on_submit_verdict() {
         ctx.env.storage().persistent().get_ttl(&version_key)
     });
     assert!(bumped_ttl >= BUMP_TO - 1 && bumped_ttl > aged_ttl);
+}
+
+// ===========================================================================
+// STE-10 — canonical `content_hash` v1: Rust side of the cross-language proof.
+//
+// Normative spec: docs/specs/content-hash.md
+// Shared vectors: docs/specs/vectors/content-hash-vectors.json
+// Runner:         scripts/verify-content-hash.sh
+//
+// This module deliberately re-implements the algorithm instead of importing it:
+// the whole point is that three independent implementations (Python, TypeScript,
+// Rust) agree. The sha256 is computed with `env.crypto().sha256()`, i.e. the same
+// host function a deployed Soroban contract would use.
+//
+// `test_content_hash_v1_cross_language_vectors` prints a machine-readable report
+// (`STERISH_HASH <line>`); the runner diffs it against the other two impls.
+// ===========================================================================
+mod content_hash_v1 {
+    use soroban_sdk::{Bytes, Env};
+    // `std` is bound by the `extern crate std;` at the top of this test module.
+    use super::std::string::String as StdString;
+    use super::std::vec::Vec as StdVec;
+
+    /// Domain-separation prefix. 24 bytes, trailing newline included.
+    pub const MAGIC: &[u8] = b"sterish-content-hash/v1\n";
+
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    pub enum HashError {
+        EmptyFileSet,
+        DuplicatePath,
+        InvalidPath,
+        NotUtf8,
+    }
+
+    impl HashError {
+        /// Stable, cross-language error name (matches Python `.kind` and TS `ErrorKind`).
+        pub fn kind(self) -> &'static str {
+            match self {
+                HashError::EmptyFileSet => "EmptyFileSet",
+                HashError::DuplicatePath => "DuplicatePath",
+                HashError::InvalidPath => "InvalidPath",
+                HashError::NotUtf8 => "NotUtf8",
+            }
+        }
+    }
+
+    fn u32be(n: usize) -> [u8; 4] {
+        assert!(n <= u32::MAX as usize, "value out of u32 range: {}", n);
+        (n as u32).to_be_bytes()
+    }
+
+    /// Reject anything that is not a clean, relative, POSIX path.
+    fn check_path(path_bytes: &[u8]) -> Result<(), HashError> {
+        if path_bytes.is_empty() {
+            return Err(HashError::InvalidPath);
+        }
+        let text = core::str::from_utf8(path_bytes).map_err(|_| HashError::InvalidPath)?;
+        if text.contains('\\') || text.contains('\0') {
+            return Err(HashError::InvalidPath);
+        }
+        for part in text.split('/') {
+            if part.is_empty() || part == "." || part == ".." {
+                return Err(HashError::InvalidPath);
+            }
+        }
+        Ok(())
+    }
+
+    /// (a) every CRLF -> LF, (b) every remaining CR -> LF, (c) strip ALL trailing LF.
+    /// Written as three literal passes so it maps 1:1 onto the spec text.
+    fn normalize_content(raw: &[u8]) -> Result<StdVec<u8>, HashError> {
+        core::str::from_utf8(raw).map_err(|_| HashError::NotUtf8)?;
+
+        const CR: u8 = 0x0d;
+        const LF: u8 = 0x0a;
+
+        // (a) CRLF -> LF (leftmost, non-overlapping).
+        let mut out: StdVec<u8> = StdVec::with_capacity(raw.len());
+        let mut i = 0usize;
+        while i < raw.len() {
+            if raw[i] == CR && i + 1 < raw.len() && raw[i + 1] == LF {
+                out.push(LF);
+                i += 2;
+            } else {
+                out.push(raw[i]);
+                i += 1;
+            }
+        }
+        // (b) remaining CR -> LF.
+        for byte in out.iter_mut() {
+            if *byte == CR {
+                *byte = LF;
+            }
+        }
+        // (c) strip all trailing LF.
+        while out.last() == Some(&LF) {
+            out.pop();
+        }
+        Ok(out)
+    }
+
+    /// Build CANON from `(path, raw_content)` pairs. Input order is irrelevant.
+    pub fn canonical_bytes(files: &[(&str, &[u8])]) -> Result<StdVec<u8>, HashError> {
+        if files.is_empty() {
+            return Err(HashError::EmptyFileSet);
+        }
+
+        let mut items: StdVec<(&[u8], StdVec<u8>)> = StdVec::with_capacity(files.len());
+        for (path, raw) in files {
+            let path_bytes = path.as_bytes();
+            check_path(path_bytes)?;
+            if items.iter().any(|(seen, _)| *seen == path_bytes) {
+                return Err(HashError::DuplicatePath);
+            }
+            items.push((path_bytes, normalize_content(raw)?));
+        }
+
+        // ASC bytewise on the RAW path bytes: `Ord for [u8]` is exactly that.
+        items.sort_by(|a, b| a.0.cmp(b.0));
+
+        let mut buf: StdVec<u8> = StdVec::new();
+        buf.extend_from_slice(MAGIC);
+        buf.extend_from_slice(&u32be(items.len()));
+        for (path_bytes, content) in &items {
+            buf.extend_from_slice(&u32be(path_bytes.len()));
+            buf.extend_from_slice(path_bytes);
+            buf.extend_from_slice(&u32be(content.len()));
+            buf.extend_from_slice(content);
+        }
+        Ok(buf)
+    }
+
+    fn hex_lower(bytes: &[u8]) -> StdString {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut out = StdString::with_capacity(bytes.len() * 2);
+        for &b in bytes {
+            out.push(HEX[(b >> 4) as usize] as char);
+            out.push(HEX[(b & 0x0f) as usize] as char);
+        }
+        out
+    }
+
+    /// 64 lowercase hex chars, hashed with the Soroban host's sha256.
+    pub fn content_hash(env: &Env, files: &[(&str, &[u8])]) -> Result<StdString, HashError> {
+        let canon = canonical_bytes(files)?;
+        let digest = env.crypto().sha256(&Bytes::from_slice(env, &canon));
+        Ok(hex_lower(&digest.to_array()))
+    }
+}
+
+use content_hash_v1::{canonical_bytes, content_hash, HashError, MAGIC};
+
+struct HashVector {
+    id: &'static str,
+    files: &'static [(&'static str, &'static [u8])],
+    expected: &'static str,
+    equals: &'static [&'static str],
+    differs: &'static [&'static str],
+}
+
+struct HashErrorCase {
+    id: &'static str,
+    files: &'static [(&'static str, &'static [u8])],
+    expect: &'static str,
+}
+
+/// The real poisoned-skill manifest, pulled straight from the fixture so this
+/// test cannot silently drift away from the corpus it claims to bind to.
+const POISONED_MANIFEST: &[u8] =
+    include_bytes!("../../../docs/specs/vectors/fixtures/poisoned_skill/manifest.json");
+
+const V_SINGLE: &[(&str, &[u8])] = &[(
+    "SKILL.md",
+    b"# Example Skill\n\nDoes nothing harmful.\nEnd.\n",
+)];
+const V_POISONED: &[(&str, &[u8])] = &[("manifest.json", POISONED_MANIFEST)];
+const V_MULTI: &[(&str, &[u8])] = &[
+    ("tools/zeta.py", "# zeta\nprint(\"ζ\")\n".as_bytes()),
+    (
+        "SKILL.md",
+        "# Multi\n\nBerisi karakter non-ASCII: café, 日本語, 🚀\n".as_bytes(),
+    ),
+    ("assets/data.json", "{\"k\": \"välue\"}\n".as_bytes()),
+];
+const V_NON_BMP: &[(&str, &[u8])] = &[("😀.md", b"emoji\n"), ("Ａ.md", b"fullwidth\n")];
+const V_CRLF: &[(&str, &[u8])] = &[(
+    "SKILL.md",
+    b"# Example Skill\r\n\r\nDoes nothing harmful.\rEnd.\r\n\r\n\r\n",
+)];
+const V_FLIP: &[(&str, &[u8])] = &[(
+    "SKILL.md",
+    b"# Example Skill\n\nDoes nothing harmfuL.\nEnd.\n",
+)];
+const V_CONCAT_A: &[(&str, &[u8])] = &[("a", b"bc")];
+const V_CONCAT_B: &[(&str, &[u8])] = &[("ab", b"c")];
+
+/// Same set, same expected hashes, same order as
+/// `docs/specs/vectors/content-hash-vectors.json`.
+const HASH_VECTORS: &[HashVector] = &[
+    HashVector {
+        id: "single-file",
+        files: V_SINGLE,
+        expected: "eaaad94080f641183a4caa2c03e9ccea36c2d466d446909b5b55e0824d3d9edd",
+        equals: &[],
+        differs: &[],
+    },
+    HashVector {
+        id: "poisoned-token-drainer",
+        files: V_POISONED,
+        expected: "c2bd4a316415b4919e3f1f40d9925f4052d020cf3dc2ecabe0e7c9dd28cc87f0",
+        equals: &[],
+        differs: &[],
+    },
+    HashVector {
+        id: "multi-file-ordering",
+        files: V_MULTI,
+        expected: "e650ee53b67bf159ff2d64a444d52ed6e76d7f6f6c79869a20864cd8b6c2ade6",
+        equals: &[],
+        differs: &[],
+    },
+    HashVector {
+        id: "non-bmp-path-order",
+        files: V_NON_BMP,
+        expected: "3b0f76b5277c35d985428b0603df31b174f04b116a35b511eb47129b6cf78248",
+        equals: &[],
+        differs: &[],
+    },
+    HashVector {
+        id: "crlf-equals-lf",
+        files: V_CRLF,
+        expected: "eaaad94080f641183a4caa2c03e9ccea36c2d466d446909b5b55e0824d3d9edd",
+        equals: &["single-file"],
+        differs: &[],
+    },
+    HashVector {
+        id: "one-byte-flip",
+        files: V_FLIP,
+        expected: "dcf8d82be686c3cf845e7e7d69300683480d6cb45497816a0dcd5afd4f89732b",
+        equals: &[],
+        differs: &["single-file"],
+    },
+    HashVector {
+        id: "concat-ambiguity-a",
+        files: V_CONCAT_A,
+        expected: "9e858aa54369f35e3c42d8ba46462943486c497bf9fa08438c55cc760dec5ae3",
+        equals: &[],
+        differs: &["concat-ambiguity-b"],
+    },
+    HashVector {
+        id: "concat-ambiguity-b",
+        files: V_CONCAT_B,
+        expected: "666e8c6ece8f6e3aeb2c4e13f9f36c9ccec5517e2a53450ebeb9a5940875de8e",
+        equals: &[],
+        differs: &["concat-ambiguity-a"],
+    },
+];
+
+const HASH_ERROR_CASES: &[HashErrorCase] = &[
+    HashErrorCase {
+        id: "err-empty-set",
+        files: &[],
+        expect: "EmptyFileSet",
+    },
+    HashErrorCase {
+        id: "err-duplicate-path",
+        files: &[("SKILL.md", b"a\n"), ("SKILL.md", b"b\n")],
+        expect: "DuplicatePath",
+    },
+    HashErrorCase {
+        id: "err-not-utf8",
+        files: &[("blob.bin", b"\xff\xfe\x00\x01")],
+        expect: "NotUtf8",
+    },
+    HashErrorCase {
+        id: "err-absolute-path",
+        files: &[("/SKILL.md", b"x\n")],
+        expect: "InvalidPath",
+    },
+    HashErrorCase {
+        id: "err-dot-prefix",
+        files: &[("./SKILL.md", b"x\n")],
+        expect: "InvalidPath",
+    },
+    HashErrorCase {
+        id: "err-dotdot",
+        files: &[("../SKILL.md", b"x\n")],
+        expect: "InvalidPath",
+    },
+    HashErrorCase {
+        id: "err-empty-path",
+        files: &[("", b"x\n")],
+        expect: "InvalidPath",
+    },
+    HashErrorCase {
+        id: "err-backslash-separator",
+        files: &[("tools\\zeta.py", b"x\n")],
+        expect: "InvalidPath",
+    },
+    HashErrorCase {
+        id: "err-double-slash",
+        files: &[("tools//zeta.py", b"x\n")],
+        expect: "InvalidPath",
+    },
+];
+
+fn hash_of(env: &Env, id: &str) -> std::string::String {
+    let vector = HASH_VECTORS
+        .iter()
+        .find(|v| v.id == id)
+        .unwrap_or_else(|| std::panic!("unknown vector id {}", id));
+    content_hash(env, vector.files).expect("vector must hash cleanly")
+}
+
+/// Emits the shared cross-language report. Run with `-- --nocapture` (that is what
+/// `scripts/verify-content-hash.sh` does) to have the lines compared against the
+/// Python and TypeScript reference implementations.
+#[test]
+fn test_content_hash_v1_cross_language_vectors() {
+    let env = Env::default();
+    let mut report = std::string::String::new();
+
+    for vector in HASH_VECTORS {
+        let got = content_hash(&env, vector.files)
+            .unwrap_or_else(|e| std::panic!("vector {} errored: {:?}", vector.id, e));
+        assert_eq!(
+            got, vector.expected,
+            "vector {} drifted from the frozen hash",
+            vector.id
+        );
+        report.push_str(&std::format!("STERISH_HASH VECTOR {} {}\n", vector.id, got));
+    }
+
+    for vector in HASH_VECTORS {
+        let mine = hash_of(&env, vector.id);
+        for other in vector.equals {
+            let ok = mine == hash_of(&env, other);
+            assert!(ok, "{} must equal {}", vector.id, other);
+            report.push_str(&std::format!(
+                "STERISH_HASH RELATION {} equals {} {}\n",
+                vector.id,
+                other,
+                if ok { "OK" } else { "FAIL" }
+            ));
+        }
+        for other in vector.differs {
+            let ok = mine != hash_of(&env, other);
+            assert!(ok, "{} must differ from {}", vector.id, other);
+            report.push_str(&std::format!(
+                "STERISH_HASH RELATION {} differs {} {}\n",
+                vector.id,
+                other,
+                if ok { "OK" } else { "FAIL" }
+            ));
+        }
+    }
+
+    for case in HASH_ERROR_CASES {
+        let got = match content_hash(&env, case.files) {
+            Ok(_) => "NO_ERROR",
+            Err(e) => e.kind(),
+        };
+        assert_eq!(got, case.expect, "error case {} mismatched", case.id);
+        report.push_str(&std::format!("STERISH_HASH ERROR {} {}\n", case.id, got));
+    }
+
+    // One atomic write so parallel test threads cannot interleave the report.
+    std::print!("{}", report);
+}
+
+#[test]
+fn test_content_hash_v1_magic_is_24_bytes() {
+    assert_eq!(MAGIC.len(), 24);
+    assert_eq!(MAGIC, b"sterish-content-hash/v1\n");
+    // The canonical prefix must be MAGIC || u32be(file_count).
+    let canon = canonical_bytes(V_SINGLE).unwrap();
+    assert_eq!(&canon[..24], MAGIC);
+    assert_eq!(&canon[24..28], &[0, 0, 0, 1]);
+}
+
+#[test]
+fn test_content_hash_v1_crlf_normalization_equals_lf() {
+    let env = Env::default();
+    assert_eq!(
+        content_hash(&env, V_CRLF).unwrap(),
+        content_hash(&env, V_SINGLE).unwrap(),
+        "CRLF, bare CR and extra trailing newlines must normalize away"
+    );
+}
+
+#[test]
+fn test_content_hash_v1_one_byte_flip_changes_hash() {
+    let env = Env::default();
+    assert_ne!(
+        content_hash(&env, V_FLIP).unwrap(),
+        content_hash(&env, V_SINGLE).unwrap(),
+        "a single flipped byte must change content_hash"
+    );
+}
+
+#[test]
+fn test_content_hash_v1_length_prefix_removes_concat_ambiguity() {
+    let env = Env::default();
+    // ("a","bc") and ("ab","c") concatenate to the same raw bytes without prefixes.
+    assert_ne!(
+        content_hash(&env, V_CONCAT_A).unwrap(),
+        content_hash(&env, V_CONCAT_B).unwrap()
+    );
+}
+
+#[test]
+fn test_content_hash_v1_input_order_does_not_matter() {
+    let env = Env::default();
+    let shuffled: &[(&str, &[u8])] = &[V_MULTI[1], V_MULTI[2], V_MULTI[0]];
+    assert_eq!(
+        content_hash(&env, V_MULTI).unwrap(),
+        content_hash(&env, shuffled).unwrap()
+    );
+}
+
+#[test]
+fn test_content_hash_v1_ordering_is_bytewise_not_utf16() {
+    // U+FF21 encodes to EF BC A1, U+1F600 to F0 9F 98 80, so bytewise UTF-8 order
+    // puts the fullwidth 'Ａ' first. UTF-16 code-unit order (the JS default sort)
+    // would put the emoji first because its high surrogate is 0xD83D < 0xFF21.
+    let canon = canonical_bytes(V_NON_BMP).unwrap();
+    let first_path_start = 24 + 4 + 4;
+    let first_path_len = u32::from_be_bytes([canon[28], canon[29], canon[30], canon[31]]) as usize;
+    let first_path = &canon[first_path_start..first_path_start + first_path_len];
+    assert_eq!(
+        core::str::from_utf8(first_path).unwrap(),
+        "Ａ.md",
+        "canonical order must be UTF-8 bytewise, not UTF-16 code-unit"
+    );
+}
+
+#[test]
+fn test_content_hash_v1_rejects_bad_input() {
+    let env = Env::default();
+    assert_eq!(content_hash(&env, &[]), Err(HashError::EmptyFileSet));
+    assert_eq!(
+        content_hash(&env, &[("SKILL.md", b"a"), ("SKILL.md", b"b")]),
+        Err(HashError::DuplicatePath)
+    );
+    assert_eq!(
+        content_hash(&env, &[("blob.bin", b"\xff")]),
+        Err(HashError::NotUtf8)
+    );
+    for bad in [
+        "/a.md", "./a.md", "../a.md", "", "a\\b.md", "a//b.md", "a/./b.md",
+    ] {
+        assert_eq!(
+            content_hash(&env, &[(bad, b"x")]),
+            Err(HashError::InvalidPath),
+            "path {:?} must be rejected",
+            bad
+        );
+    }
 }
