@@ -430,57 +430,205 @@ An operator settling a job must check that `(skill_id, version)` on the request 
 
 ---
 
-## 5. VERIFIED token + license token — **STATUS: PLANNED — NOT FROZEN**
+## 5. Tokens — `sterish_tokens` (VERIFIED badge + license) — **FROZEN**
 
-> 🚧 **These contracts do not exist yet.** There is no code in `contracts/` for them, so
-> nothing below is generated from a WASM and nothing below is binding. This section is the
-> *intended shape* for STE-11 so that the API and dashboard specs have something to name.
-> **Do not implement clients against it.** When STE-11 lands, this section is replaced by a
-> generated ABI block and the `PLANNED` marker is removed.
+Landed in STE-11. One contract carries both token kinds, distinguished by `TokenKind`
+in the record. Both kinds are **soulbound**.
 
-### 5.1 Decisions already fixed by `CLAUDE.md` (these will carry into the frozen version)
+### 5.1 Soulbound, proven from the build
 
-- Both tokens are **soulbound**: non-transferable, and the transfer entrypoints are not
-  exported at all (not merely reverting).
-- Only `AuditVerdict::Safe` may trigger a VERIFIED mint. The mint path must consult
-  `SkillRegistry::is_verified(skill_id, version)` and refuse otherwise.
-- Base standard: OpenZeppelin Stellar non-fungible, with the transfer/approval surface removed.
+`transfer`, `transfer_from`, `approve`, `allowance`, `set_approval_for_all`, `burn` and
+`burn_from` are **not written at all** — not overridden to panic, simply absent — so they
+cannot appear in the contract spec. Verify it yourself against the built artifact:
 
-### 5.2 Planned interface sketch (illustrative, subject to change)
-
-```rust
-// PLANNED — sterish_verified (soulbound badge, one token per audited-Safe version)
-pub trait VerifiedToken {
-    fn __constructor(env: Env, admin: Address, registry: Address);
-    /// Mints to the version owner. MUST call registry.is_verified(skill_id, version)
-    /// and fail with NotSafe if it returns false. Idempotent per (skill_id, version).
-    fn mint_verified(env: Env, skill_id: String, version: String) -> Result<u32, VerifiedError>;
-    fn token_of(env: Env, skill_id: String, version: String) -> Option<u32>;
-    fn owner_of(env: Env, token_id: u32) -> Result<Address, VerifiedError>;
-    // NO transfer / transfer_from / approve — soulbound.
-}
-
-// PLANNED — sterish_license (soulbound per-agent, per-version access token)
-pub trait LicenseToken {
-    fn __constructor(env: Env, admin: Address, registry: Address, usdc: Address);
-    /// Called by the x402 settlement path after a USDC micropayment clears.
-    fn mint_license(env: Env, to: Address, skill_id: String, version: String)
-        -> Result<u32, LicenseError>;
-    fn has_license(env: Env, holder: Address, skill_id: String, version: String) -> bool;
-    // NO transfer — soulbound.
-}
+```bash
+bash scripts/verify-soulbound.sh     # or: make verify-soulbound
 ```
 
-### 5.3 Open questions for STE-11 (need an Axel decision)
+The script reads the compiled WASM's contract spec, fails if any forbidden entrypoint is
+present, and also fails if the expected mint/view surface is missing (so an empty or wrong
+artifact cannot pass trivially). The 14 exported entrypoints are exactly:
 
-1. Does a license bind to `(skill_id, version)` or to `content_hash`? Binding to
-   `content_hash` makes "the license goes stale on the next audited version" automatic and
-   matches `lookup_by_hash`, but it makes the token id harder to read for a human.
-2. Royalties: `SYSTEM_DESIGN.md` §5 mentions OZ Royalties for an author cut on each license.
-   Royalties on a **soulbound** token only make sense at mint time, not on resale — confirm
-   that a mint-time author cut is what is wanted, or drop the extension.
-3. Who may call `mint_license` — only the x402 facilitator settlement address, or the API
-   admin key as well?
+```
+__constructor  get_admin  get_auditor_role  get_minter_role  get_registry
+get_token      has_license  is_verified_token  mint_license   mint_verified
+owner_of       set_auditor_role  set_minter_role  total_supply
+```
+
+### 5.2 Generated ABI
+
+```rust
+    #[soroban_sdk::contractargs(name = "Args")]
+    #[soroban_sdk::contractclient(name = "Client")]
+    pub trait Contract {
+        fn owner_of(
+            env: soroban_sdk::Env,
+            token_id: u32,
+        ) -> Result<soroban_sdk::Address, TokenError>;
+        fn get_admin(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
+        fn get_token(
+            env: soroban_sdk::Env,
+            token_id: u32,
+        ) -> Result<TokenRecord, TokenError>;
+        fn has_license(
+            env: soroban_sdk::Env,
+            agent: soroban_sdk::Address,
+            skill_id: soroban_sdk::String,
+            version: soroban_sdk::String,
+        ) -> bool;
+        fn get_registry(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
+        fn mint_license(
+            env: soroban_sdk::Env,
+            agent: soroban_sdk::Address,
+            skill_id: soroban_sdk::String,
+            version: soroban_sdk::String,
+        ) -> Result<u32, TokenError>;
+        fn total_supply(env: soroban_sdk::Env) -> u32;
+        fn __constructor(
+            env: soroban_sdk::Env,
+            admin: soroban_sdk::Address,
+            registry: soroban_sdk::Address,
+            auditor: soroban_sdk::Address,
+            minter: soroban_sdk::Address,
+        );
+        fn mint_verified(
+            env: soroban_sdk::Env,
+            skill_id: soroban_sdk::String,
+            version: soroban_sdk::String,
+            owner: soroban_sdk::Address,
+        ) -> Result<u32, TokenError>;
+        fn get_minter_role(
+            env: soroban_sdk::Env,
+        ) -> Result<soroban_sdk::Address, TokenError>;
+        fn set_minter_role(
+            env: soroban_sdk::Env,
+            minter: soroban_sdk::Address,
+        ) -> Result<(), TokenError>;
+        fn get_auditor_role(
+            env: soroban_sdk::Env,
+        ) -> Result<soroban_sdk::Address, TokenError>;
+        fn set_auditor_role(
+            env: soroban_sdk::Env,
+            auditor: soroban_sdk::Address,
+        ) -> Result<(), TokenError>;
+        fn is_verified_token(
+            env: soroban_sdk::Env,
+            skill_id: soroban_sdk::String,
+            version: soroban_sdk::String,
+        ) -> bool;
+    }
+    #[soroban_sdk::contracttype(export = false)]
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub struct TokenRecord {
+        pub kind: TokenKind,
+        pub minted_at: u64,
+        pub owner: soroban_sdk::Address,
+        pub skill_id: soroban_sdk::String,
+        pub token_id: u32,
+        pub version: soroban_sdk::String,
+    }
+    #[soroban_sdk::contracttype(export = false)]
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub enum DataKey {
+        Admin,
+        Registry,
+        AuditorRole,
+        MinterRole,
+        NextTokenId,
+        Token(u32),
+        VerifiedOf(soroban_sdk::String, soroban_sdk::String),
+        LicenseOf(soroban_sdk::Address, soroban_sdk::String, soroban_sdk::String),
+    }
+    #[soroban_sdk::contracttype(export = false)]
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub enum TokenKind {
+        Verified,
+        License,
+    }
+    #[soroban_sdk::contracterror(export = false)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub enum TokenError {
+        NotInitialized = 1,
+        TokenNotFound = 2,
+        AlreadyMinted = 3,
+        NotSafeVerdict = 4,
+        NotVerified = 5,
+        InvalidInput = 6,
+    }
+    #[soroban_sdk::contractevent(export = false, topics = ["license_minted"])]
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub struct LicenseMinted {
+        #[topic]
+        pub skill_id: soroban_sdk::String,
+        #[topic]
+        pub version: soroban_sdk::String,
+        pub agent: soroban_sdk::Address,
+    }
+    #[soroban_sdk::contractevent(export = false, topics = ["verified_minted"])]
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    pub struct VerifiedMinted {
+        #[topic]
+        pub skill_id: soroban_sdk::String,
+        #[topic]
+        pub version: soroban_sdk::String,
+        pub owner: soroban_sdk::Address,
+    }
+```
+
+### 5.3 Function reference
+
+| Function | Auth | Mutates | Errors | Events |
+|---|---|---|---|---|
+| `__constructor(admin, registry, auditor, minter)` | — | `Admin`, `Registry`, `AuditorRole`, `MinterRole`, `NextTokenId=1` | — | — |
+| `mint_verified(skill_id, version, owner)` | `AuditorRole` | `Token(id)`, `VerifiedOf(skill,ver)`, `NextTokenId` | `InvalidInput`, `NotSafeVerdict`, `AlreadyMinted` | `verified_minted` |
+| `mint_license(agent, skill_id, version)` | `MinterRole` | `Token(id)`, `LicenseOf(agent,skill,ver)`, `NextTokenId` | `InvalidInput`, `NotVerified`, `NotSafeVerdict`, `AlreadyMinted` | `license_minted` |
+| `has_license(agent, skill_id, version) -> bool` | none | — | never errors | — |
+| `is_verified_token(skill_id, version) -> bool` | none | — | never errors | — |
+| `owner_of(token_id)` / `get_token(token_id)` | none | — | `TokenNotFound` | — |
+| `total_supply() -> u32` | none | — | never errors | — |
+| `set_auditor_role` / `set_minter_role` | `Admin` | the role | `NotInitialized` | — |
+| `get_admin` / `get_registry` / `get_auditor_role` / `get_minter_role` | none | — | `NotInitialized` | — |
+
+`TokenError` codes are public ABI from here on: `NotInitialized = 1`, `TokenNotFound = 2`,
+`AlreadyMinted = 3`, `NotSafeVerdict = 4`, `NotVerified = 5`, `InvalidInput = 6`.
+
+### 5.4 Frozen invariants (enforced by code, covered by tests)
+
+| # | Invariant |
+|---|---|
+| T1 | A VERIFIED badge can only be minted when `SkillRegistry::is_verified(skill_id, version)` is `true` — the mint path cross-calls the Registry on-chain. `Unaudited`, `Warning`, `Dangerous` and unknown skills all fail with `NotSafeVerdict`. |
+| T2 | One badge per `(skill_id, version)`. A second attempt is `AlreadyMinted`, even with a different `owner`. |
+| T3 | A licence requires the badge to exist **and** the Registry to still say `Safe` at the moment of sale. A version re-audited away from `Safe` can sell no further licences (`NotSafeVerdict`), while licences already sold stay valid. |
+| T4 | Licences are bound to `(agent, skill_id, version)`. A new version does **not** inherit an old licence — the agent pays again. |
+| T5 | `Registry` is immutable: set at construction, no setter. Roles are rotatable by `Admin` only. |
+| T6 | No token can ever move: no transfer/approve/burn entrypoint exists (§5.1). |
+| T7 | The badge is a **snapshot at mint time**. Because nothing can be burned, `is_verified_token` can stay `true` after a version is re-audited `Dangerous`. Consumers needing the live answer MUST read `SkillRegistry::is_verified`. This is deliberate and covered by `test_badge_survives_a_later_dangerous_reaudit_but_registry_disagrees`. |
+
+### 5.5 Decisions taken in STE-11 (differ from the ticket text — rationale)
+
+- **No OpenZeppelin.** `stellar-tokens` 0.7.2 requires `soroban-sdk ^26.1.0`; this workspace is
+  frozen at `27.0.6`, and cargo resolves two incompatible copies of the SDK. Independently,
+  OZ 0.7.2's `non_fungible` module has **no soulbound support** — implementing its
+  `NonFungibleToken` trait exports exactly the `transfer`/`approve` surface this ticket forbids.
+  A custom contract was the only way to satisfy both the frozen stack and the soulbound
+  done-criterion. §5.1 of the earlier PLANNED sketch (which named OZ as the base) is superseded.
+- **`mint_verified` takes `owner` as a parameter** rather than reading it from the Registry.
+  Reading it would require duplicating `SkillEntry` inside the tokens crate, creating drift
+  against a frozen ABI. The auditor role is already fully trusted to write verdicts, so trusting
+  it to name the owner adds no new trust surface — and the `Safe` verdict itself is still
+  checked on-chain, which is the part that matters.
+- **`mint_license` is gated on the badge** (`VTOK -.gates.-> LTOK`, SYSTEM_DESIGN §3) — the
+  ticket did not require this; it is added so licences cannot be sold for unaudited versions.
+- **Licences bind to `(skill_id, version)`, not `content_hash`** (open question 1 in the old
+  §5.3). Version binding already delivers "the licence goes stale on the next audited version",
+  and it keeps the token readable for humans and cheap for the 402 gate.
+- **Royalties dropped** (open question 2). On a soulbound token there is no resale to take a cut
+  from, and a mint-time cut is just pricing, which belongs in the x402 seller (STE-19).
+- **`mint_license` caller = `MinterRole`** (open question 3), a single rotatable address held by
+  the x402 settlement backend. `Admin` cannot mint; it can only rotate the role.
+- **`TokenError::NotAuthorized` removed** before freezing. Every role check fails through
+  `require_auth()` as a host error, never as a typed error, so the variant was dead. Removed now
+  because after this freeze the codes are public ABI and may not be renumbered.
 
 ---
 

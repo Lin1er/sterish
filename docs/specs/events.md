@@ -277,6 +277,61 @@ that `(skill_id, version)` must be treated as stale by consumers.
 
 ---
 
+## 3b. Token events
+
+Emitted by `sterish_tokens` (STE-11). Both token kinds are soulbound, so there is no
+`transfer` event and never will be — the absence is part of the frozen surface.
+
+### 3b.1 `verified_minted`
+
+| | |
+|---|---|
+| Rust type | `VerifiedMinted` |
+| Emitted by | `mint_verified` |
+| Topic filter (base64 XDR) | `AAAADwAAAA92ZXJpZmllZF9taW50ZWQA` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"verified_minted"` | `ScSymbol` |
+| 1 | `skill_id` | `ScString` |
+| 2 | `version` | `ScString` |
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `owner` | `ScAddress` | Skill owner the badge was minted to. |
+
+### 3b.2 `license_minted`
+
+| | |
+|---|---|
+| Rust type | `LicenseMinted` |
+| Emitted by | `mint_license` |
+| Topic filter (base64 XDR) | `AAAADwAAAA5saWNlbnNlX21pbnRlZAAA` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"license_minted"` | `ScSymbol` |
+| 1 | `skill_id` | `ScString` |
+| 2 | `version` | `ScString` |
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `agent` | `ScAddress` | Agent the licence was minted to. |
+
+> **Neither event carries `token_id`.** The shapes match the STE-11 ticket exactly. An indexer
+> that needs the id resolves it with `is_verified_token` / `get_token`, or by counting mints —
+> `total_supply` is monotonic and ids are assigned in emission order.
+
+---
+
 ## 4. Emission order (frozen)
 
 Order within a single transaction is part of the contract, because a consumer that folds
@@ -293,6 +348,8 @@ events in stream order must land on the right final state.
 | `post_bond` | USDC SAC `transfer`, then `bond_posted` |
 | `settle` | USDC SAC `transfer`, then `settled` |
 | `slash` / `claim_forfeited` | two USDC SAC `transfer`s (bond→reporter, then fee→requestor), then `slashed` |
+| `mint_verified` | `verified_minted` only |
+| `mint_license` | `license_minted` only |
 
 A failed call emits nothing: every event is published after the state write and after any
 token transfer, and any error unwinds the whole transaction.
