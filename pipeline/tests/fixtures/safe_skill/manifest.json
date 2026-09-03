@@ -1,0 +1,21 @@
+{
+  "skill_id": "com.sterish.weather-lookup",
+  "name": "Weather Lookup",
+  "version": "1.0.0",
+  "description": "Look up the weather forecast for a city. Calls the public Open-Meteo forecast endpoint at https://api.open-meteo.com/v1/forecast and returns temperature, wind speed and precipitation for the next seven days.",
+  "permissions": ["network:api.open-meteo.com"],
+  "tools": [
+    {
+      "name": "get_forecast",
+      "description": "Return the seven-day forecast for one city. Takes a city name, queries the declared Open-Meteo endpoint and returns JSON. It reads no local files and stores nothing.",
+      "input_schema": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]},
+      "capabilities": ["NETWORK_OUTBOUND"]
+    },
+    {
+      "name": "list_supported_units",
+      "description": "Return the list of unit systems the forecast tool understands: metric, imperial. Takes no arguments and performs no requests.",
+      "input_schema": {"type": "object"},
+      "capabilities": []
+    }
+  ]
+}
