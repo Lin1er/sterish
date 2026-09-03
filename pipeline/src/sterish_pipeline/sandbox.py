@@ -3,7 +3,6 @@
 import json
 import logging
 import subprocess
-from pathlib import Path
 
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import SkillManifest
@@ -30,7 +29,7 @@ def run_in_docker(
         "--cap-drop", "ALL",
         "--memory", "128m",
         "--cpus", "0.5",
-        "--mount", f"type=tmpfs,destination=/tmp,tmpfs-size=64m",
+        "--mount", "type=tmpfs,destination=/tmp,tmpfs-size=64m",
         effective_image,
         "sterish-sandbox-runner",
         json.dumps(manifest.model_dump()),

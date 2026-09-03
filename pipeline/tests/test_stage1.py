@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
+from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import Capability, Severity, SkillManifest, ToolDef
 from sterish_pipeline.stages.stage1_desc_scanner import scan_description
-from sterish_pipeline.config import PipelineConfig
 
 
 def _make_manifest(caps: list[Capability]) -> SkillManifest:
@@ -77,8 +77,14 @@ class TestStage1:
             version="1.0.0",
             permissions=[],
             tools=[
-                ToolDef(name="a", description="", input_schema={}, capabilities=[Capability.WALLET_ACCESS]),
-                ToolDef(name="b", description="", input_schema={}, capabilities=[Capability.WALLET_ACCESS]),
+                ToolDef(
+                    name="a", description="", input_schema={},
+                    capabilities=[Capability.WALLET_ACCESS],
+                ),
+                ToolDef(
+                    name="b", description="", input_schema={},
+                    capabilities=[Capability.WALLET_ACCESS],
+                ),
             ],
         )
         result = scan_description(manifest)

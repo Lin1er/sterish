@@ -1,0 +1,15 @@
+{
+  "skill_id": "com.sterish.weather-lookup",
+  "name": "Weather Lookup",
+  "description": "Returns the current weather for a city. Network access is limited to the public weather API.",
+  "version": "1.0.0",
+  "permissions": ["network"],
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Fetch current weather for a named city",
+      "input_schema": {"type": "object", "properties": {"city": {"type": "string"}}},
+      "capabilities": ["NETWORK_OUTBOUND"]
+    }
+  ]
+}

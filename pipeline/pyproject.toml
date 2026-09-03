@@ -11,9 +11,17 @@ dependencies = [
     "click>=8.0",
 ]
 
+# The CLI had no console-script entry point, so `sterish audit ...` did not exist.
+[project.scripts]
+sterish = "sterish_pipeline.cli:main"
+
 [project.optional-dependencies]
 sandbox = ["docker>=7.0"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.8"]
+# Stage 3 LLM synthesis. Deliberately OPTIONAL: sterish_pipeline.llm imports anthropic
+# lazily and fails soft, so the whole pipeline runs -- and the whole test suite passes --
+# on an install that does not have it.
+llm = ["anthropic>=0.40"]
+dev = ["pytest>=8.0", "ruff>=0.8"]
 
 [build-system]
 requires = ["hatchling"]
@@ -24,9 +32,16 @@ packages = ["src/sterish_pipeline"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.8",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

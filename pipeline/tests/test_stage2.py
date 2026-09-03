@@ -1,5 +1,5 @@
-from sterish_pipeline.models import Capability, Severity, SkillManifest, Stage2Result, BehavioralFlag, ToolDef
-from sterish_pipeline.stages.stage2_sandbox_check import run_sandbox_check, _static_fallback
+from sterish_pipeline.models import Capability, Severity, SkillManifest, Stage2Result, ToolDef
+from sterish_pipeline.stages.stage2_sandbox_check import _static_fallback, run_sandbox_check
 
 
 def _make_manifest(caps: list[Capability]) -> SkillManifest:
