@@ -273,6 +273,23 @@ impl UsdcEscrow {
         Self::slash_to(&env, request_id, reporter)
     }
 
+    /// Slash with the admin as the reporter — the documented fallback for when
+    /// the bad audit was caught internally and there is no external reporter to
+    /// pay. Exactly equivalent to `slash(request_id, admin)`.
+    ///
+    /// ## Why this is not the scaffold's function any more
+    /// The scaffold ran this AFTER `slash`, required status `Slashed`, and
+    /// changed no state. Since `Slashed` is terminal, the admin could call it
+    /// repeatedly and each call drained another `bond_amount` from the shared
+    /// contract balance — i.e. out of OTHER jobs' escrowed funds. It now
+    /// requires `Bonded` and performs the terminal transition itself, so a
+    /// second call always fails with `AlreadySlashed`.
+    pub fn claim_forfeited(env: Env, request_id: u32) -> Result<(), EscrowError> {
+        let admin = Self::get_admin(env.clone())?;
+        admin.require_auth();
+        Self::slash_to(&env, request_id, admin)
+    }
+
     /// Read one job.
     pub fn get_request(env: Env, request_id: u32) -> Result<AuditRequest, EscrowError> {
         env.storage()
