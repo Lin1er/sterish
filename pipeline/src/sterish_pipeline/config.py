@@ -3,6 +3,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+#: Canonical Stellar **testnet** network passphrase. Verified against RPC ``getNetwork``
+#: during STE-13. Any other value makes signed transactions rejected by the network.
+TESTNET_PASSPHRASE = "Test SDF Network ; September 2015"
+PUBNET_PASSPHRASE = "Public Global Stellar Network ; September 2015"
+
 
 class PipelineConfig(BaseModel):
     """Configuration for the audit pipeline."""
@@ -21,7 +26,9 @@ class PipelineConfig(BaseModel):
 
     # On-chain settings.
     registry_contract_id: str = ""
-    network_passphrase: str = "Test SDF Network ; September 2024"
+    # NOTE: the Stellar testnet passphrase is "... September 2015". The scaffold said 2024,
+    # which makes every signed transaction fail network validation. Locked by test_config.py.
+    network_passphrase: str = TESTNET_PASSPHRASE
     rpc_url: str = "https://soroban-testnet.stellar.org:443"
 
     # Risk scoring deductions.
