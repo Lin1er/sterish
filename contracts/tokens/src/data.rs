@@ -1,4 +1,6 @@
-use soroban_sdk::{contractclient, contracterror, contractevent, contracttype, Address, Env, String};
+use soroban_sdk::{
+    contractclient, contracterror, contractevent, contracttype, Address, Env, String,
+};
 
 /// Approximate number of ledgers closed in a day (5s close time).
 pub const DAY_IN_LEDGERS: u32 = 17_280;

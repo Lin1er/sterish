@@ -83,13 +83,7 @@ impl SterishTokens {
     ///
     /// Returns the id that was assigned. The caller is responsible for having
     /// checked authorization, input validity and the "already minted" index.
-    fn mint(
-        env: &Env,
-        kind: TokenKind,
-        skill_id: String,
-        version: String,
-        owner: Address,
-    ) -> u32 {
+    fn mint(env: &Env, kind: TokenKind, skill_id: String, version: String, owner: Address) -> u32 {
         let token_id: u32 = env
             .storage()
             .instance()
@@ -224,8 +218,7 @@ impl SterishTokens {
             return Err(TokenError::NotVerified);
         }
 
-        let license_key =
-            DataKey::LicenseOf(agent.clone(), skill_id.clone(), version.clone());
+        let license_key = DataKey::LicenseOf(agent.clone(), skill_id.clone(), version.clone());
         if env.storage().persistent().has(&license_key) {
             return Err(TokenError::AlreadyMinted);
         }
