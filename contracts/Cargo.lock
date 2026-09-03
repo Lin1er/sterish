@@ -1713,6 +1713,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sterish-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+ "sterish-escrow",
+ "sterish-registry",
+ "sterish-tokens",
+]
+
+[[package]]
 name = "sterish-registry"
 version = "0.1.0"
 dependencies = [
