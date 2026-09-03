@@ -1,0 +1,3 @@
+# Corpus snapshot bytes carry recorded per-file digests; git must not rewrite
+# their line endings (see docs/specs/content-hash.md).
+corpus/** -text

@@ -40,10 +40,26 @@ class RiskFlag(BaseModel):
     description: str
 
 
+class InjectionFlag(BaseModel):
+    """A prompt-injection / tool-poisoning hit found in a skill's own text."""
+
+    category: str
+    severity: Severity
+    rule: str
+    description: str
+    location: str
+    evidence: str
+
+
 class Stage1Result(BaseModel):
     risk_flags: list[RiskFlag] = Field(default_factory=list)
+    injection_flags: list[InjectionFlag] = Field(default_factory=list)
     initial_score: int = Field(ge=0, le=100, default=100)
     reasoning: str = ""
+
+    @property
+    def has_injection(self) -> bool:
+        return bool(self.injection_flags)
 
 
 class BehavioralFlag(BaseModel):
@@ -73,6 +89,8 @@ class FinalVerdict(StrEnum):
 
 class AuditReport(BaseModel):
     skill_id: str
+    version: str = ""
+    content_hash: str = ""
     stage1: Stage1Result = Field(default_factory=Stage1Result)
     stage2: Stage2Result = Field(default_factory=Stage2Result)
     final_verdict: FinalVerdict = FinalVerdict.SAFE

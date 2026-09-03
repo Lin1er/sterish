@@ -78,6 +78,16 @@ def audit(
     else:
         console.print("  [green]No risk flags detected.[/green]")
 
+    if stage1.injection_flags:
+        console.print(
+            f"  [bold red]{len(stage1.injection_flags)} injection finding(s) "
+            f"in the skill's own text:[/bold red]"
+        )
+        inj_table = Table("Severity", "Rule", "Location", "Evidence")
+        for flag in stage1.injection_flags:
+            inj_table.add_row(flag.severity.value, flag.rule, flag.location, flag.evidence)
+        console.print(inj_table)
+
     # Stage 2: Sandbox check.
     if skip_sandbox:
         console.print("\n[bold cyan]Stage 2:[/] [dim]Skipped (--skip-sandbox)[/dim]")
@@ -141,6 +151,37 @@ def audit(
         except Exception as exc:
             console.print(f"[red]On-chain submission failed: {exc}[/red]")
             sys.exit(1)
+
+
+@cli.command("hash")
+@click.option(
+    "--path",
+    "root",
+    required=True,
+    type=click.Path(exists=True),
+    help="Skill file or directory to hash",
+)
+def hash_command(root: str) -> None:
+    """Compute content_hash v1 for a skill on disk (see docs/specs/content-hash.md).
+
+    The hash covers only the skill's file paths and their normalized bytes —
+    not skill_id or version.
+    """
+    from sterish_pipeline.content_hash import content_hash_path
+
+    digest = content_hash_path(Path(root))
+    console.print(digest)
+
+
+def _register_subcommands() -> None:
+    """Attach the intake group and corpus batch to the top-level CLI."""
+    from sterish_pipeline.intake.cli import audit_corpus, intake
+
+    cli.add_command(intake)
+    cli.add_command(audit_corpus)
+
+
+_register_subcommands()
 
 
 def main() -> None:

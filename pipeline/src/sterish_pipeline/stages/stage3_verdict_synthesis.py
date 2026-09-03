@@ -1,4 +1,16 @@
-"""Stage 3: Final verdict synthesis and trust score calculation."""
+"""Stage 3: Final verdict synthesis and trust score calculation.
+
+Most of the verdict is a weighted score. Two signals are *not* scored, because
+averaging them away is exactly the failure mode an attacker wants:
+
+* **Sandbox escape** — the skill broke out. Nothing else matters.
+* **A HIGH-severity injection finding** — the skill's own text tries to steer
+  the agent reading it. A poisoned skill typically declares no capabilities at
+  all, so its stage-1 capability score is clean and a purely weighted verdict
+  would come back SAFE. These are caps, not deductions: a HIGH finding forces
+  DANGEROUS and a MEDIUM one caps the verdict at WARNING, whatever the numbers
+  say.
+"""
 
 import hashlib
 
@@ -27,6 +39,8 @@ def synthesize_verdict(
     ) // 100
     trust_score = max(0, min(100, raw_score))
 
+    injection_severity = _highest_injection_severity(stage1)
+
     # Determine verdict based on thresholds.
     if stage2.escaped_sandbox:
         verdict = FinalVerdict.DANGEROUS
@@ -37,6 +51,15 @@ def synthesize_verdict(
         verdict = FinalVerdict.WARNING
     else:
         verdict = FinalVerdict.DANGEROUS
+
+    # Hard gates. A skill carrying injected instructions is never SAFE, however
+    # clean its declared capabilities look.
+    if injection_severity == Severity.HIGH:
+        verdict = FinalVerdict.DANGEROUS
+        trust_score = min(trust_score, cfg.warning_threshold - 1)
+    elif injection_severity == Severity.MEDIUM and verdict == FinalVerdict.SAFE:
+        verdict = FinalVerdict.WARNING
+        trust_score = min(trust_score, cfg.safe_threshold - 1)
 
     # Build recommendation text.
     recommendation = _build_recommendation(verdict, stage1, stage2, trust_score)
@@ -55,6 +78,13 @@ def synthesize_verdict(
     report.evidence_hash = evidence_hash
     report.recommendation = recommendation
     return report
+
+
+def _highest_injection_severity(stage1: Stage1Result) -> Severity | None:
+    for level in (Severity.HIGH, Severity.MEDIUM, Severity.LOW):
+        if any(flag.severity == level for flag in stage1.injection_flags):
+            return level
+    return None
 
 
 def _sandbox_score(stage2: Stage2Result) -> int:
@@ -79,6 +109,13 @@ def _build_recommendation(
     trust_score: int,
 ) -> str:
     """Generate a human-readable recommendation."""
+    injection_count = len(stage1.injection_flags)
+    injection_note = (
+        f" {injection_count} injection finding(s) in the skill's own text."
+        if injection_count
+        else ""
+    )
+
     if verdict == FinalVerdict.SAFE:
         return (
             f"Skill passed audit with trust score {trust_score}/100. "
@@ -88,12 +125,12 @@ def _build_recommendation(
         return (
             f"Skill has trust score {trust_score}/100. "
             f"Some risk flags: {len(stage1.risk_flags)} description risks, "
-            f"{len(stage2.behavioral_flags)} behavioral flags. "
+            f"{len(stage2.behavioral_flags)} behavioral flags.{injection_note} "
             f"Review before using in production."
         )
     return (
         f"SKILL REJECTED: trust score {trust_score}/100. "
         f"Critical risks found. {len(stage1.risk_flags)} description risks, "
         f"{len(stage2.behavioral_flags)} behavioral flags, "
-        f"sandbox escaped: {stage2.escaped_sandbox}. Do not use."
+        f"sandbox escaped: {stage2.escaped_sandbox}.{injection_note} Do not use."
     )

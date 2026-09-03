@@ -1,0 +1,408 @@
+{
+  "schema": "sterish.corpus/v1",
+  "content_hash_spec": "sterish-content-hash/v1",
+  "generated_at": "2026-09-03T12:04:57+00:00",
+  "count": 20,
+  "entries": [
+    {
+      "skill_id": "com.fixtures.poisoned.invoice-helper",
+      "version": "1.0.0",
+      "kind": "mcp-server",
+      "path": "fixtures/evil-mcp",
+      "content_hash": "4eb62911d152ca847ae48cc311f05b49c41de8435a9eb726e96ded8815e54799",
+      "file_digests": {
+        "evil-mcp.json": "168b815abcdda5cd35c6a0f9062ec6215d6438a39fef66f47089c3a66838b100"
+      },
+      "expected_verdict": "DANGEROUS",
+      "label": "poisoned",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/evil-mcp",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "MCP server: autoApprove:['*'], tool shadowing, wallet drain in env."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.markdown-linter",
+      "version": "2.0.1",
+      "kind": "agent-skill",
+      "path": "fixtures/hidden-comment-skill",
+      "content_hash": "4e21fb01389acb3f8db5e76aad984f124d48988eb8bf5519a7b6f2b8fd6d1a23",
+      "file_digests": {
+        "SKILL.md": "30009ce25c3c2a7163c06955405033f0dd2f1987dd27cdc30ebb5dfac4922278"
+      },
+      "expected_verdict": "DANGEROUS",
+      "label": "poisoned",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/hidden-comment-skill",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Payload hidden in an HTML comment invisible to a human reader."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.pdf-summarizer",
+      "version": "1.4.0",
+      "kind": "agent-skill",
+      "path": "fixtures/poisoned-pdf-skill",
+      "content_hash": "c2f67997100ed75ba8eb36bebcbc7d2697049fcf4ed6f71e92d92bd5f984692c",
+      "file_digests": {
+        "SKILL.md": "33ca80e67ad7bf0d943f1566fc5e44a1dba89c83ecf3744a7fa1e5f63d81954d"
+      },
+      "expected_verdict": "DANGEROUS",
+      "label": "poisoned",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/poisoned-pdf-skill",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "ethnyc-style: benign frontmatter, credential-exfil instructions in the body."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.token-drainer",
+      "version": "1.0.0",
+      "kind": "mcp-server",
+      "path": "fixtures/token-drainer-mcp",
+      "content_hash": "adb942765c751b62c22d582c3d3fd08473d4da5c9a0ce9dd5a0862239ed0e068",
+      "file_digests": {
+        "token-drainer.json": "9e371ea96b0268ea37fc17e51b093fe90bf5ea2833264beedf85c6828e3088bd"
+      },
+      "expected_verdict": "DANGEROUS",
+      "label": "poisoned",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/token-drainer-mcp",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Ported from the scaffold poisoned fixture; declared wallet+secret drain."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.safe.premium-pdf-suite",
+      "version": "3.1.0",
+      "kind": "agent-skill",
+      "path": "fixtures/premium-pdf-suite",
+      "content_hash": "e6a7423c88ffe0031fec3af98bc9d3bf5b258b7b9f8849b9a78101c20d049458",
+      "file_digests": {
+        "SKILL.md": "cc039b23c71b88e8ae52bc0b84466403dc87f56e76dc60fa9e44d28f14d35ea6"
+      },
+      "expected_verdict": "SAFE",
+      "label": "safe",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/premium-pdf-suite",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Legitimate local PDF tool; read+write of named files stays SAFE by default."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.safe.price-checker",
+      "version": "0.9.0",
+      "kind": "agent-skill",
+      "path": "fixtures/price-checker",
+      "content_hash": "d159b461426a5bcfd0a9b36fdad54236e4b2642033037c718ff572a37a2e85ff",
+      "file_digests": {
+        "SKILL.md": "d0650ce4bba8b4e69fd7bee85fb1b531d34691a198278003b5d2c13764ad0655"
+      },
+      "expected_verdict": "SAFE",
+      "label": "safe",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/price-checker",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Legitimate read-only network skill."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.safe.weather-lookup",
+      "version": "1.2.0",
+      "kind": "agent-skill",
+      "path": "fixtures/safe-weather-skill",
+      "content_hash": "6308b6e80fd6fbd25d81a8cb11d789ce9db45a8624c37f82aea2b46b97b3c196",
+      "file_digests": {
+        "SKILL.md": "05db9fc6662fb51180dc64036f2aa3476536b786dae1389f536ea196907d4d1f"
+      },
+      "expected_verdict": "SAFE",
+      "label": "safe",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/safe-weather-skill",
+        "fetched_at": "2026-09-03T12:04:56+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Legitimate read-only network skill."
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.mpp",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/agentic-payments.mpp",
+      "content_hash": "35b7b57b9230f972f6ae6cfea72dd76855a9e27b356e90091d33b3d974e0c0c6",
+      "file_digests": {
+        "mpp.md": "14214c9ae7e1e61a3f00c0df50a7d40fcd323997aa06399bf36613c2e39d279d"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/agentic-payments/mpp.md",
+        "fetched_at": "2026-09-03T10:19:53+00:00",
+        "upstream_etag": "W/\"6a959a59-3c02\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.x402",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/agentic-payments.x402",
+      "content_hash": "a1728e0400eb3bc979b66d8eef41d55c229662b5a74e25cecf8b9c7db1136e51",
+      "file_digests": {
+        "x402.md": "5b07269ec626abede4020525e744a1285e3aad23bf3aa3de8ca0b10523eff950"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/agentic-payments/x402.md",
+        "fetched_at": "2026-09-03T10:19:53+00:00",
+        "upstream_etag": "W/\"6a959a59-33f3\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.axelar",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/cross-chain.axelar",
+      "content_hash": "7d10aa0de318ff6a6126e463f45f4abc0e63dcf053a09c03db76a2a1cda9af08",
+      "file_digests": {
+        "axelar.md": "71fc3d0cc217fa7218798f9d3bace35698ae3dda8f21e50ea9379ded3425d9b5"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/cross-chain/axelar.md",
+        "fetched_at": "2026-09-03T10:19:54+00:00",
+        "upstream_etag": "W/\"6a959a59-2c17\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.cctp",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/cross-chain.cctp",
+      "content_hash": "f6fcdb2907ded30e75bcd61ac13263f41ad45f9921923784f77305734e69cf2b",
+      "file_digests": {
+        "cctp.md": "cbf304de0410bcd22e856fbf37aa4ae6ee892557ee167dd44631980c3e31ed8f"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/cross-chain/cctp.md",
+        "fetched_at": "2026-09-03T10:19:54+00:00",
+        "upstream_etag": "W/\"6a959a59-42be\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.data-fetching",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/dapp.data-fetching",
+      "content_hash": "5c9d232fba6c6be661f2d09a58062a177ce9cbff1e61b41053f7a2c14649f5fd",
+      "file_digests": {
+        "data-fetching.md": "524811deb14662153c5cc1f665f53a5aca84ea2544b627f112cdb6db8a69a4c5"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/dapp/data-fetching.md",
+        "fetched_at": "2026-09-03T10:19:54+00:00",
+        "upstream_etag": "W/\"6a959a59-afd\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.react",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/dapp.react",
+      "content_hash": "528ad44c3b6e9f78a70415e60a41a4e4a4226c488e9833a7ab8790f006a8f22b",
+      "file_digests": {
+        "react.md": "b6cbc9cf398777c711af55148c3cdb89d8954b32e0122aae7e0d1541268cc367"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/dapp/react.md",
+        "fetched_at": "2026-09-03T10:19:54+00:00",
+        "upstream_etag": "W/\"6a959a59-e2d\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.smart-accounts",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/dapp.smart-accounts",
+      "content_hash": "829ecc1308efb93d68c3aedb48d9036d8b850dcb86fad15315925873d34d9c5d",
+      "file_digests": {
+        "smart-accounts.md": "d2cdbd38786fc272ecedc22ec251d2cd12573d469539f840a9c07605d9974621"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/dapp/smart-accounts.md",
+        "fetched_at": "2026-09-03T10:19:55+00:00",
+        "upstream_etag": "W/\"6a959a59-fe3\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.data.horizon",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/data.horizon",
+      "content_hash": "56b6ca1b464d02b6a4a60de6b94f4577ccf20535305cda5afda0b2fb33dd7fb8",
+      "file_digests": {
+        "horizon.md": "448dcc6dd9752c28a879b06cdbfcae12f8224c11c5f7f2459a43516cf91b6deb"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/data/horizon.md",
+        "fetched_at": "2026-09-03T10:19:55+00:00",
+        "upstream_etag": "W/\"6a959a59-ebf\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.development",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/smart-contracts.development",
+      "content_hash": "2c9804b92d6d23c1588ed0f5c838a804b6cfada210190215b1941b7da0727075",
+      "file_digests": {
+        "development.md": "37c40c87f89ddab705d1181dadf8631a078c1d725854732d2896d02b8bfbee20"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/smart-contracts/development.md",
+        "fetched_at": "2026-09-03T10:19:55+00:00",
+        "upstream_etag": "W/\"6a959a59-7a5d\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.security",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/smart-contracts.security",
+      "content_hash": "9efb0273924fe35b79f180655508de81653af20afead91dee6848a60aac92e32",
+      "file_digests": {
+        "security.md": "62a9ad80247e26c2c4e31a4686a9a8eacf62452522c04550cb14791df06bebdb"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/smart-contracts/security.md",
+        "fetched_at": "2026-09-03T10:19:56+00:00",
+        "upstream_etag": "W/\"6a959a59-2b50\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.testing",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/smart-contracts.testing",
+      "content_hash": "c51ed00a8801cc2691e5180e6f530171933e06e9ddd9d78b1fb66e96952b522b",
+      "file_digests": {
+        "testing.md": "c44c4b10b4ecc5fc238e630cb14629333fd63884e109638e8dff535cd469c0d5"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/smart-contracts/testing.md",
+        "fetched_at": "2026-09-03T10:19:56+00:00",
+        "upstream_etag": "W/\"6a959a59-2a32\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.ecosystem",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/standards.ecosystem",
+      "content_hash": "b316e820aa088d5f7ff64a3a1bb8752bb2760f015427891cbc28c99538981339",
+      "file_digests": {
+        "ecosystem.md": "852eb70fa57a3779b3cdec6ef7cf4944bbdc9a1bd2efc25bea07dd491032c21f"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/standards/ecosystem.md",
+        "fetched_at": "2026-09-03T10:19:56+00:00",
+        "upstream_etag": "W/\"6a959a59-5b86\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.resources",
+      "version": "2026.08.31",
+      "kind": "agent-skill",
+      "path": "catalog/standards.resources",
+      "content_hash": "cfe431919761b98f7849d31c0460d1ed913dcbc361084bc376dbadfe6a859355",
+      "file_digests": {
+        "resources.md": "9d41207dd2199870b11f5dcef20085167b751c80d8c25a72b56702bcf7db0d1e"
+      },
+      "expected_verdict": "",
+      "label": "catalog",
+      "provenance": {
+        "source": "skills.stellar.org",
+        "source_url": "https://skills.stellar.org/skills/standards/resources.md",
+        "fetched_at": "2026-09-03T10:19:56+00:00",
+        "upstream_etag": "W/\"6a959a59-43ad\"",
+        "upstream_last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+        "note": ""
+      }
+    }
+  ]
+}
