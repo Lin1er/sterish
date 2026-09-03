@@ -11,6 +11,10 @@ dependencies = [
     "click>=8.0",
 ]
 
+# The CLI had no console-script entry point, so `sterish audit ...` did not exist.
+[project.scripts]
+sterish = "sterish_pipeline.cli:main"
+
 [project.optional-dependencies]
 sandbox = ["docker>=7.0"]
 # Stage 3 LLM synthesis. Deliberately OPTIONAL: sterish_pipeline.llm imports anthropic
