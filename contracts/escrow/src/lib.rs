@@ -23,9 +23,11 @@ fn bump_instance(env: &Env) {
 /// safe and cheap. The scaffold never extended `Request(id)` at all, so a job
 /// could be archived out from under its escrowed funds.
 fn bump_request(env: &Env, request_id: u32) {
-    env.storage()
-        .persistent()
-        .extend_ttl(&StorageKey::Request(request_id), BUMP_THRESHOLD, BUMP_TO);
+    env.storage().persistent().extend_ttl(
+        &StorageKey::Request(request_id),
+        BUMP_THRESHOLD,
+        BUMP_TO,
+    );
 }
 
 /// Assert a job is in exactly `want`, mapping every other state to the error the
@@ -239,11 +241,7 @@ impl UsdcEscrow {
         let usdc = Self::get_usdc_token(env.clone())?;
         // The contract is `from`, so it authorizes itself implicitly — no extra
         // require_auth is needed or wanted here.
-        TokenClient::new(&env, &usdc).transfer(
-            &env.current_contract_address(),
-            &auditor,
-            &payout,
-        );
+        TokenClient::new(&env, &usdc).transfer(&env.current_contract_address(), &auditor, &payout);
 
         request.status = AuditStatus::Settled;
         request.resolved_at = env.ledger().timestamp();
