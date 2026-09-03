@@ -3,6 +3,7 @@
 **/*.rs.bk
 *.wasm
 .soroban/
+.stellar/
 
 # Python
 __pycache__/
@@ -24,8 +25,9 @@ node_modules/
 out/
 *.tsbuildinfo
 
-# Environment
+# Environment (SECRET - lihat CLAUDE.md 'Secret & wallet key')
 .env
+.env.keys
 .env.local
 .env.*.local
 

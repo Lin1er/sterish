@@ -38,6 +38,17 @@ Teammate (James, Ancung, Nabil) push ke `main` terus, jadi **SEBELUM mulai tiap 
 
 **SEBELUM merge** tiket: `git fetch origin` lagi + rebase/merge `origin/main` terbaru ke branch tiket, resolve konflik, test hijau lagi, BARU merge.
 
+## Secret & wallet key (deploy testnet, mis. STE-13)
+SEMUA wallet/identity key yang dipakai deploy WAJIB disimpan di **`.env` di root repo** biar kesimpen + bisa diakses ulang.
+Urutan WAJIB, jangan dibalik:
+1. **Pastikan `.env` sudah ada di `.gitignore` DULU** sebelum menulis secret apa pun (sudah: `.env`, `.env.keys`, `.stellar/`, `.soroban/`).
+2. `chmod 600 .env` (dan `chmod 600` file secret lain).
+3. Format per identity: `<NAME>_ADDRESS=G...` + `<NAME>_SECRET=S...` (mis. `DEPLOYER_ADDRESS` / `DEPLOYER_SECRET`, `AUDITOR_ADDRESS` / `AUDITOR_SECRET`).
+4. Header file wajib berisi warning: `# TESTNET ONLY - JANGAN COMMIT - JANGAN REUSE KEY MAINNET`.
+
+**JANGAN PERNAH** print secret ke stdout/log/terminal/laporan/Linear/PR — tulis LANGSUNG ke file (`stellar keys ... >> .env`, heredoc, atau `python3` write), jangan lewat `echo` yang isinya secret.
+Yang boleh dilaporkan/di-commit cuma **public address (G...)** dan **contract address (C...)**. Bukti deploy tetap di `docs/deployments.md`.
+
 ## Git & workflow (ACC GATE per tiket)
 - **Branch baru per tiket** (nama dari deskripsi tiket, base main).
 - **Commit kecil-kecil**, pesan rujuk STE-#.
