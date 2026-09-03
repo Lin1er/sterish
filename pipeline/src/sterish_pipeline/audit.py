@@ -156,7 +156,9 @@ def run_audit(
             risk=opinion.risk,
             recommendation=opinion.recommendation,
             score=opinion.score,
-            reasons=[f"LLM ({opinion.model}): {opinion.rationale}"],
+            reasons=[
+                f"{policy.LLM_REASON_PREFIX}{opinion.model}): {opinion.rationale}"
+            ],
         )
         merged = policy.enforce_critical(policy.tighten(baseline, advisory), stage1, cfg)
         report.final_verdict = merged.verdict

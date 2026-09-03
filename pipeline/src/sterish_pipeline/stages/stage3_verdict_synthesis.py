@@ -197,7 +197,8 @@ def build_findings(report: AuditReport, manifest: SkillManifest) -> list[Finding
             )
         )
 
-    if report.policy_reasons:
+    deterministic = policy.deterministic_reasons(report.policy_reasons)
+    if deterministic:
         findings.append(
             Finding(
                 stage=3,
@@ -210,7 +211,7 @@ def build_findings(report: AuditReport, manifest: SkillManifest) -> list[Finding
                 ),
                 description=(
                     f"Synthesis: {report.final_verdict.value} at score {report.trust_score}/100. "
-                    + " ".join(report.policy_reasons[:2])
+                    + " ".join(deterministic[:2])
                 ),
                 evidence="policy.decide over stage1+stage2 findings",
             )

@@ -59,6 +59,17 @@ CRITICAL_PATTERNS: frozenset[str] = frozenset(
     }
 )
 
+#: Prefix stamped on every reason string that came from a model rather than from the rules.
+#: The verdict document is built from deterministic reasons only -- model prose belongs in the
+#: internal report, where its provenance is unambiguous.
+LLM_REASON_PREFIX = "LLM ("
+
+
+def deterministic_reasons(reasons: list[str]) -> list[str]:
+    """Reasons produced by the rules, with model-sourced ones removed."""
+    return [r for r in reasons if not r.startswith(LLM_REASON_PREFIX)]
+
+
 #: Verdicts, ordered from most permissive to most restrictive. Used when merging an LLM
 #: opinion: the merge takes the maximum, so the model can only tighten.
 _FINAL_RANK: dict[FinalVerdict, int] = {
