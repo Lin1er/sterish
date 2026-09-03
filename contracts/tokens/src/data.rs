@@ -94,18 +94,17 @@ pub enum DataKey {
 pub enum TokenError {
     /// Instance storage is missing — contract was never constructed.
     NotInitialized = 1,
-    NotAuthorized = 2,
-    TokenNotFound = 3,
+    TokenNotFound = 2,
     /// A badge already exists for this version, or the agent already holds a
     /// license for it.
-    AlreadyMinted = 4,
+    AlreadyMinted = 3,
     /// The registry says this exact version is not `Safe` (that includes
     /// `Unaudited`, `Warning`, `Dangerous`, and skills it has never seen).
-    NotSafeVerdict = 5,
+    NotSafeVerdict = 4,
     /// A license was requested for a version that has no VERIFIED badge.
-    NotVerified = 6,
+    NotVerified = 5,
     /// Empty `skill_id` or `version`.
-    InvalidInput = 7,
+    InvalidInput = 6,
 }
 
 /// Emitted when a VERIFIED badge is minted for one audited-`Safe` version.

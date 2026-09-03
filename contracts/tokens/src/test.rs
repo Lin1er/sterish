@@ -1057,3 +1057,43 @@ fn test_badge_survives_a_later_dangerous_reaudit_but_registry_disagrees() {
     assert!(!ctx.registry().is_verified(&skill_id, &version));
     assert!(client.is_verified_token(&skill_id, &version));
 }
+
+#[test]
+fn test_no_new_licence_after_verdict_flips_away_from_safe() {
+    // The badge is a snapshot and cannot be burned, but a SALE must never ride a
+    // stale one: `mint_license` re-checks the registry live, so the moment a
+    // version is re-audited away from `Safe` no further agent can buy into it.
+    // Licences already sold stay valid — the agent paid while it was Safe.
+    let ctx = setup();
+    let client = ctx.client();
+    let skill_id = sid(&ctx.env, "com.example.send-email");
+    let version = sid(&ctx.env, "1.0.0");
+    ctx.seed_safe(&skill_id, &version);
+    client.mint_verified(&skill_id, &version, &ctx.owner);
+
+    let early_agent = Address::generate(&ctx.env);
+    client.mint_license(&early_agent, &skill_id, &version);
+    assert!(client.has_license(&early_agent, &skill_id, &version));
+
+    // The re-audit lands.
+    ctx.registry().submit_verdict(
+        &skill_id,
+        &version,
+        &AuditVerdict::Dangerous,
+        &1,
+        &ctx.next_hash(),
+    );
+
+    // The badge is still there, so the badge check alone would have let this through.
+    assert!(client.is_verified_token(&skill_id, &version));
+
+    let late_agent = Address::generate(&ctx.env);
+    assert_token_err!(
+        client.try_mint_license(&late_agent, &skill_id, &version),
+        TokenError::NotSafeVerdict
+    );
+    assert!(!client.has_license(&late_agent, &skill_id, &version));
+
+    // The earlier buyer is untouched.
+    assert!(client.has_license(&early_agent, &skill_id, &version));
+}

@@ -218,6 +218,16 @@ impl SterishTokens {
             return Err(TokenError::NotVerified);
         }
 
+        // The badge alone is NOT enough. A badge minted while the version was
+        // `Safe` stays minted forever (soulbound, nothing to burn), so a version
+        // re-audited into `Dangerous` would otherwise keep selling licences off a
+        // stale badge. Re-check the registry live on every sale: the verdict at
+        // the moment of purchase is what the agent is paying for.
+        let registry = Self::get_registry(env.clone())?;
+        if !RegistryClient::new(&env, &registry).is_verified(&skill_id, &version) {
+            return Err(TokenError::NotSafeVerdict);
+        }
+
         let license_key = DataKey::LicenseOf(agent.clone(), skill_id.clone(), version.clone());
         if env.storage().persistent().has(&license_key) {
             return Err(TokenError::AlreadyMinted);
