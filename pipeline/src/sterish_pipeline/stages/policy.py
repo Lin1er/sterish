@@ -232,3 +232,36 @@ def tighten(base: PolicyDecision, other: PolicyDecision) -> PolicyDecision:
         reasons=[*base.reasons, *other.reasons],
         critical_patterns=base.critical_patterns,
     )
+
+
+def enforce_critical(
+    decision: PolicyDecision,
+    stage1: Stage1Result,
+    config: PipelineConfig | None = None,
+) -> PolicyDecision:
+    """Re-assert row 1 after any merge. Idempotent.
+
+    ``tighten`` already cannot loosen anything, so on paper this is redundant. It is here
+    anyway because the critical override is the one guarantee the product sells, and a
+    guarantee that depends on another function staying correct is not a guarantee.
+    """
+    cfg = config or PipelineConfig()
+    criticals = critical_findings(stage1.injection_findings)
+    if not criticals:
+        return decision
+    ids = sorted({f.pattern_id for f in criticals})
+    reasons = list(decision.reasons)
+    if decision.verdict is not FinalVerdict.DANGEROUS or decision.score > cfg.critical_max_score:
+        reasons.append(
+            f"critical override re-applied after merge ({', '.join(ids)}): "
+            f"{decision.verdict.value}/{decision.score} -> DANGEROUS/"
+            f"{min(decision.score, cfg.critical_max_score)}"
+        )
+    return PolicyDecision(
+        verdict=FinalVerdict.DANGEROUS,
+        risk=Risk.CRITICAL,
+        recommendation=Recommendation.BLOCK,
+        score=min(decision.score, cfg.critical_max_score),
+        reasons=reasons,
+        critical_patterns=ids,
+    )
