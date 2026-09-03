@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from sterish_pipeline import run_audit
 from sterish_pipeline import llm as llm_module
+from sterish_pipeline import run_audit
 from sterish_pipeline.audit import _llm_will_be_attempted
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.llm import (

@@ -22,8 +22,8 @@ from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import (
     AuditReport,
     Capability,
-    Finding,
     FinalVerdict,
+    Finding,
     Severity,
     SkillManifest,
     Stage1Result,

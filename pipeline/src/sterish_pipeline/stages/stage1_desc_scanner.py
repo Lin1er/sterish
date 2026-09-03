@@ -12,7 +12,6 @@ asserts it scores 97/SAFE, which is the gap this ticket closes.
 
 from pathlib import Path
 
-
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import (
     Capability,
@@ -35,7 +34,10 @@ _CAPABILITY_SEVERITY: dict[Capability, Severity] = {
 }
 
 _SEVERITY_DESCRIPTIONS: dict[Severity, str] = {
-    Severity.HIGH: "This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+    Severity.HIGH: (
+        "This capability grants direct access to sensitive resources and cannot be "
+        "fully sandboxed."
+    ),
     Severity.MEDIUM: "This capability could leak information or mutate state in unexpected ways.",
     Severity.LOW: "Low-risk read-only access; generally safe but worth noting.",
 }
@@ -63,7 +65,8 @@ def scan_description(
     seen: dict[Capability, RiskFlag] = {}
     for flag in flags:
         existing = seen.get(flag.capability)
-        if existing is None or _severity_rank(flag.severity) > _severity_rank(existing.severity):
+        existing_rank = -1 if existing is None else _severity_rank(existing.severity)
+        if _severity_rank(flag.severity) > existing_rank:
             seen[flag.capability] = flag
     deduped = list(seen.values())
 
@@ -80,7 +83,11 @@ def scan_description(
             reasons.append(f"LOW: {flag.description}")
 
     score = max(0, 100 - deduction)
-    reasoning = "\n".join(reasons) if reasons else "No risk flags found. Skill appears safe by description."
+    reasoning = (
+        "\n".join(reasons)
+        if reasons
+        else "No risk flags found. Skill appears safe by description."
+    )
 
     return Stage1Result(risk_flags=deduped, initial_score=score, reasoning=reasoning)
 

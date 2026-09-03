@@ -3,19 +3,21 @@
 Decision table (first matching row wins)
 =======================================
 
-===  =========================================================  ==========  ========  ==========  ==================
-#    Condition                                                  verdict     risk      rec         score
-===  =========================================================  ==========  ========  ==========  ==================
-1    any finding whose pattern_id is in CRITICAL_PATTERNS        DANGEROUS   critical  BLOCK       min(score, 10)
-2    stage2.escaped_sandbox                                      DANGEROUS   critical  BLOCK       0
-3    any HIGH injection finding, score < warning_threshold       DANGEROUS   high      BLOCK       score
-4    any HIGH injection finding, score >= warning_threshold       WARNING     high      REVIEW      score
-5    LLM was attempted and did not return a usable answer         WARNING     medium    REVIEW      score
-6    any injection finding at all (MEDIUM/LOW)                    WARNING     medium    REVIEW      score
-7    score >= safe_threshold                                      SAFE        none/low  ALLOW       score
-8    score >= warning_threshold                                   WARNING     medium    REVIEW      score
-9    otherwise                                                    DANGEROUS   high      BLOCK       score
-===  =========================================================  ==========  ========  ==========  ==================
+===  ==========================================  =========  ========  =======  =========
+#    Condition                                   verdict    risk      rec      score
+===  ==========================================  =========  ========  =======  =========
+1    finding in CRITICAL_PATTERNS                DANGEROUS  critical  BLOCK    min(s, 10)
+2    stage2.escaped_sandbox                      DANGEROUS  critical  BLOCK    0
+3    HIGH injection finding, s < warning_thr     DANGEROUS  high      BLOCK    s
+4    HIGH injection finding, s >= warning_thr    WARNING    high      REVIEW   s
+5    LLM attempted, no usable answer             WARNING    medium    REVIEW   s
+6    any injection finding at all                WARNING    medium    REVIEW   s
+7    s >= safe_threshold                         SAFE       none/low  ALLOW    s
+8    s >= warning_threshold                      WARNING    medium    REVIEW   s
+9    otherwise                                   DANGEROUS  high      BLOCK    s
+===  ==========================================  =========  ========  =======  =========
+
+``s`` is the weighted stage1/stage2 score.
 
 Two properties this table exists to guarantee:
 
@@ -228,7 +230,11 @@ def tighten(base: PolicyDecision, other: PolicyDecision) -> PolicyDecision:
     """
     from sterish_pipeline.models import RECOMMENDATION_RANK, RISK_RANK
 
-    verdict = base.verdict if _FINAL_RANK[base.verdict] >= _FINAL_RANK[other.verdict] else other.verdict
+    verdict = (
+        base.verdict
+        if _FINAL_RANK[base.verdict] >= _FINAL_RANK[other.verdict]
+        else other.verdict
+    )
     risk = base.risk if RISK_RANK[base.risk] >= RISK_RANK[other.risk] else other.risk
     rec = (
         base.recommendation

@@ -193,7 +193,10 @@ _EXFIL_PHRASE = re.compile(
 )
 #: Long base64-looking blob. Requires mixed case + a digit so that a 64-char lowercase hex
 #: content_hash quoted in a description is not mistaken for an encoded payload.
-_BASE64_BLOB = re.compile(r"\b(?=[A-Za-z0-9+/]*[a-z])(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*\d)[A-Za-z0-9+/]{60,}={0,2}")
+_BASE64_BLOB = re.compile(
+    r"\b(?=[A-Za-z0-9+/]*[a-z])(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*\d)"
+    r"[A-Za-z0-9+/]{60,}={0,2}"
+)
 
 _ZERO_WIDTH_CHARS = "".join(
     chr(c)

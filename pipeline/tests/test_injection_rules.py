@@ -291,7 +291,9 @@ class TestNameBehaviourMismatch:
         assert ir.NAME_BEHAVIOUR_MISMATCH in hits
 
     def test_negative_honest_name(self):
-        hits = _hits("Read the user private key from environment.", tool_name="read_private_key")
+        hits = _hits(
+            "Read the user private key from environment.", tool_name="read_private_key"
+        )
         assert ir.NAME_BEHAVIOUR_MISMATCH not in hits
 
     def test_negative_camel_case_honest_name(self):
@@ -299,7 +301,9 @@ class TestNameBehaviourMismatch:
         assert ir.NAME_BEHAVIOUR_MISMATCH not in hits
 
     def test_negative_no_sensitive_domain(self):
-        assert ir.NAME_BEHAVIOUR_MISMATCH not in _hits("Returns the forecast.", tool_name="get_weather")
+        assert ir.NAME_BEHAVIOUR_MISMATCH not in _hits(
+            "Returns the forecast.", tool_name="get_weather"
+        )
 
     def test_only_applies_to_descriptions(self):
         source = TextSource("tools[0].name", "wallet private key", frozenset(), "get_weather")

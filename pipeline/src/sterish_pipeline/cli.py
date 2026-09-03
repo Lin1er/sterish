@@ -10,7 +10,7 @@ from rich.table import Table
 
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import AuditReport, SkillManifest
-from sterish_pipeline.stages import scan_description, run_sandbox_check, synthesize_verdict
+from sterish_pipeline.stages import run_sandbox_check, scan_description, synthesize_verdict
 
 console = Console()
 logger = logging.getLogger("sterish")
@@ -33,11 +33,21 @@ def cli(verbose: bool) -> None:
 
 @cli.command()
 @click.option("--skill-id", required=True, help="Unique skill identifier")
-@click.option("--manifest", "-m", required=True, type=click.Path(exists=True), help="Path to skill manifest JSON")
+@click.option(
+    "--manifest",
+    "-m",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to skill manifest JSON",
+)
 @click.option("--config", "-c", default=None, help="Path to pipeline config JSON")
 @click.option("--skip-sandbox", is_flag=True, help="Skip stage 2 sandbox check")
 @click.option("--submit", is_flag=True, help="Submit verdict on-chain after audit")
-@click.option("--secret-key", envvar="STERISH_SECRET_KEY", help="Stellar secret key for on-chain submission")
+@click.option(
+    "--secret-key",
+    envvar="STERISH_SECRET_KEY",
+    help="Stellar secret key for on-chain submission",
+)
 def audit(
     skill_id: str,
     manifest: str,
@@ -108,7 +118,10 @@ def audit(
     # Optionally submit on-chain.
     if submit:
         if not secret_key:
-            console.print("[red]Error: --secret-key or STERISH_SECRET_KEY required for on-chain submission.[/red]")
+            console.print(
+                "[red]Error: --secret-key or STERISH_SECRET_KEY required "
+                "for on-chain submission.[/red]"
+            )
             sys.exit(1)
         if not cfg.registry_contract_id:
             console.print("[red]Error: registry_contract_id not set in config.[/red]")

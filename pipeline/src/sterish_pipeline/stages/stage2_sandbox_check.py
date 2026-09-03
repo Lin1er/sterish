@@ -138,7 +138,10 @@ def _static_fallback(declared_caps: set[Capability]) -> list[BehavioralFlag]:
                 syscall=cap.value,
                 expected=True,
                 severity=sev,
-                description=f"Declared {cap.value} could not be sandbox-verified (Docker unavailable).",
+                description=(
+                    f"Declared {cap.value} could not be sandbox-verified "
+                    "(Docker unavailable)."
+                ),
             )
         )
     return flags

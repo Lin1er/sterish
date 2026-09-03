@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
+from typing import Any
 
 #: Marker that identifies the repository root when walking up from this file.
 _ROOT_MARKER = Path("docs") / "specs" / "verdict.schema.json"
