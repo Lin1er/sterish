@@ -31,10 +31,27 @@ class PipelineConfig(BaseModel):
     network_passphrase: str = TESTNET_PASSPHRASE
     rpc_url: str = "https://soroban-testnet.stellar.org:443"
 
-    # Risk scoring deductions.
+    # Risk scoring deductions for DECLARED capabilities (stage 1a).
     high_risk_deduction: int = 25
     medium_risk_deduction: int = 10
     low_risk_deduction: int = 3
+
+    # Risk scoring deductions for INJECTION findings (stage 1b). Heavier than the declared
+    # ones on purpose: a declared WALLET_ACCESS is a disclosed risk a user can weigh, while
+    # an instruction hidden in prose is an attempt to act without the user knowing at all.
+    injection_high_deduction: int = 40
+    injection_medium_deduction: int = 15
+    injection_low_deduction: int = 5
+
+    # Ceiling applied to the score when a critical-class pattern fires (policy.py).
+    critical_max_score: int = Field(ge=0, le=100, default=10)
+
+    # Stage 3 LLM synthesis. The key is read from the ANTHROPIC_API_KEY environment
+    # variable only and is never written to config files or to the verdict document.
+    use_llm: bool = True
+    llm_model: str = "claude-sonnet-5"
+    llm_timeout_s: int = 60
+    llm_max_tokens: int = 2048
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> "PipelineConfig":
