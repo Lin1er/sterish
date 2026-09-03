@@ -3,13 +3,15 @@ members = ["registry", "escrow"]
 resolver = "2"
 
 [workspace.dependencies]
-soroban-sdk = "22.0.0"
-stellar-xdr = { version = "22.0.0", default-features = false }
+soroban-sdk = "27.0.6"
+stellar-xdr = { version = "23.0.0", default-features = false }
 
 [profile.release]
 opt-level = "z"
 overflow-checks = true
 debug = 0
-strip = true
+strip = "symbols"
+debug-assertions = false
+codegen-units = 1
 lto = true
 panic = "abort"

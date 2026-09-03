@@ -19,11 +19,11 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
 
-      - name: Install soroban-cli
+      - name: Install stellar-cli
         run: |
-          cargo install --locked soroban-cli --version 22.0.0
+          cargo install --locked stellar-cli --version 27.0.0
 
       - name: Run contract tests
         working-directory: contracts
@@ -31,4 +31,4 @@ jobs:
 
       - name: Check WASM build
         working-directory: contracts
-        run: cargo build --target wasm32-unknown-unknown --release
+        run: cargo build --target wasm32v1-none --release

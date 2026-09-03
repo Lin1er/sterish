@@ -5,16 +5,16 @@
 
 # Contracts
 build-contracts:
-	cd contracts && cargo build --target wasm32-unknown-unknown --release
+	cd contracts && cargo build --target wasm32v1-none --release
 
 test-contracts:
 	cd contracts && cargo test
 
 deploy-registry:
-	soroban-cli deploy --wasm target/wasm32-unknown-unknown/release/registry.wasm --source account --network testnet
+	soroban-cli deploy --wasm target/wasm32v1-none/release/sterish_registry.wasm --source account --network testnet
 
 deploy-escrow:
-	soroban-cli deploy --wasm target/wasm32-unknown-unknown/release/escrow.wasm --source account --source-account-args="USDC_ADDRESS" --network testnet
+	soroban-cli deploy --wasm target/wasm32v1-none/release/sterish_escrow.wasm --source account --source-account-args="USDC_ADDRESS" --network testnet
 
 # Pipeline
 install-pipeline:
