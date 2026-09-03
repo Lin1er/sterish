@@ -8,7 +8,7 @@ pub use data::{
     VerdictFlipped, VersionRecord, VersionRecorded, VersionRegistered,
 };
 use data::{BUMP_THRESHOLD, BUMP_TO};
-use soroban_sdk::{contract, contractimpl, Address, Env};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
 #[contract]
 pub struct SkillRegistry;
@@ -38,6 +38,115 @@ impl SkillRegistry {
             .set(&DataKey::TrustConfig, &TrustScoreConfig::default());
         env.storage().instance().set(&DataKey::SkillCount, &0u32);
         bump_instance(&env);
+    }
+
+    /// Register a new version of a skill.
+    ///
+    /// `owner` must authorize the call. The scaffold used
+    /// `env.current_contract_address()` as the creator with no auth at all, which let
+    /// anyone register anything under any identity — that is the main bug fixed here.
+    ///
+    /// Invariants enforced:
+    /// - a skill_id belongs to exactly one owner; only that owner can add versions;
+    /// - a (skill_id, version) pair is immutable — it can never be overwritten;
+    /// - a content_hash maps to exactly one (skill_id, version), so `lookup_by_hash`
+    ///   is never ambiguous and hash-squatting is impossible.
+    pub fn register_skill(
+        env: Env,
+        owner: Address,
+        skill_id: String,
+        version: String,
+        content_hash: BytesN<32>,
+    ) -> Result<(), RegistryError> {
+        owner.require_auth();
+
+        if skill_id.is_empty() || version.is_empty() {
+            return Err(RegistryError::InvalidInput);
+        }
+
+        let skill_key = DataKey::Skill(skill_id.clone());
+        let version_key = DataKey::Version(skill_id.clone(), version.clone());
+        let hash_key = DataKey::HashIndex(content_hash.clone());
+
+        let existing: Option<SkillEntry> = env.storage().persistent().get(&skill_key);
+        if let Some(ref entry) = existing {
+            if entry.owner != owner {
+                return Err(RegistryError::NotAuthorized);
+            }
+        }
+        if env.storage().persistent().has(&version_key) {
+            return Err(RegistryError::VersionAlreadyExists);
+        }
+        if env.storage().persistent().has(&hash_key) {
+            return Err(RegistryError::HashAlreadyRegistered);
+        }
+
+        let now = env.ledger().timestamp();
+
+        let mut entry = match existing {
+            Some(entry) => entry,
+            None => {
+                let count = Self::get_skill_count(env.clone());
+                let index_key = DataKey::SkillIndex(count);
+                env.storage().persistent().set(&index_key, &skill_id);
+                bump_persistent(&env, &index_key);
+                env.storage()
+                    .instance()
+                    .set(&DataKey::SkillCount, &(count + 1));
+
+                SkillRegistered {
+                    skill_id: skill_id.clone(),
+                    owner: owner.clone(),
+                }
+                .publish(&env);
+
+                SkillEntry {
+                    skill_id: skill_id.clone(),
+                    owner: owner.clone(),
+                    versions: Vec::new(&env),
+                    latest_version: version.clone(),
+                    latest_audited_version: None,
+                    registered_at: now,
+                }
+            }
+        };
+
+        let record = VersionRecord {
+            skill_id: skill_id.clone(),
+            version: version.clone(),
+            content_hash: content_hash.clone(),
+            owner: owner.clone(),
+            registered_at: now,
+            verdict: AuditVerdict::Unaudited,
+            trust_score: 0,
+            auditor: None,
+            evidence_hash: BytesN::from_array(&env, &[0u8; 32]),
+            audited_at: 0,
+        };
+
+        entry.versions.push_back(version.clone());
+        entry.latest_version = version.clone();
+
+        env.storage().persistent().set(&version_key, &record);
+        env.storage().persistent().set(&skill_key, &entry);
+        env.storage()
+            .persistent()
+            .set(&hash_key, &(skill_id.clone(), version.clone()));
+
+        bump_persistent(&env, &version_key);
+        bump_persistent(&env, &skill_key);
+        bump_persistent(&env, &hash_key);
+        bump_instance(&env);
+
+        VersionRegistered {
+            skill_id,
+            version,
+            content_hash,
+            owner,
+        }
+        .publish(&env);
+
+        Ok(())
     }
 
     /// Set the authorized auditor address. Admin only.
