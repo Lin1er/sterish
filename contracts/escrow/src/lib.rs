@@ -45,6 +45,41 @@ fn require_status(request: &AuditRequest, want: AuditStatus) -> Result<(), Escro
 
 #[contractimpl]
 impl UsdcEscrow {
+    /// Shared body of `slash` / `claim_forfeited`. Caller MUST have already
+    /// checked admin auth. Moves the bond to `reporter`, refunds the fee to the
+    /// requestor, and makes the transition terminal so it can never run twice.
+    fn slash_to(env: &Env, request_id: u32, reporter: Address) -> Result<(), EscrowError> {
+        let mut request = Self::get_request(env.clone(), request_id)?;
+        require_status(&request, AuditStatus::Bonded)?;
+
+        let usdc = Self::get_usdc_token(env.clone())?;
+        let token = TokenClient::new(env, &usdc);
+        let contract_id = env.current_contract_address();
+        let bond = request.bond_amount;
+
+        // Bond to whoever reported the bad audit; fee back to who paid it.
+        token.transfer(&contract_id, &reporter, &bond);
+        token.transfer(&contract_id, &request.requestor, &request.fee_amount);
+
+        request.status = AuditStatus::Slashed;
+        request.resolved_at = env.ledger().timestamp();
+        env.storage()
+            .persistent()
+            .set(&StorageKey::Request(request_id), &request);
+
+        bump_request(env, request_id);
+        bump_instance(env);
+
+        Slashed {
+            request_id,
+            reporter,
+            bond,
+        }
+        .publish(env);
+
+        Ok(())
+    }
+
     /// Constructor — runs atomically at deploy time. The scaffold's `initialize`
     /// left a deploy->initialize window in which anyone could claim admin.
     pub fn __constructor(env: Env, usdc_token: Address, admin: Address) {
@@ -171,6 +206,71 @@ impl UsdcEscrow {
         .publish(&env);
 
         Ok(())
+    }
+
+    /// Pay the auditor `fee + bond` and close the job as `Settled`.
+    ///
+    /// ## Gating (MVP testnet)
+    /// Admin-gated. The admin key is the same key that holds the auditor role on
+    /// the Registry contract. The source of truth for the verdict is the
+    /// Registry's `version_recorded` event, read OFF-CHAIN by the operator
+    /// before calling this. Nothing on-chain here verifies the verdict.
+    ///
+    /// Roadmap (outside the SOW scope): a dispute window plus a verdict-gated
+    /// path that reads the Registry record on-chain, and TEE attestation of the
+    /// pipeline — see the "MVP auth note" in SYSTEM_DESIGN §4.2 and
+    /// docs/architecture.md §2.
+    pub fn settle(env: Env, request_id: u32) -> Result<(), EscrowError> {
+        Self::get_admin(env.clone())?.require_auth();
+
+        let mut request = Self::get_request(env.clone(), request_id)?;
+        require_status(&request, AuditStatus::Bonded)?;
+
+        // `Bonded` is only reachable through post_bond, which always sets Some.
+        let auditor = request.auditor.clone().ok_or(EscrowError::NotBonded)?;
+
+        // Both operands are > 0 (validated at create), so this can only trip on
+        // absurd inputs; reported as InvalidAmount rather than trapping.
+        let payout = request
+            .fee_amount
+            .checked_add(request.bond_amount)
+            .ok_or(EscrowError::InvalidAmount)?;
+
+        let usdc = Self::get_usdc_token(env.clone())?;
+        // The contract is `from`, so it authorizes itself implicitly — no extra
+        // require_auth is needed or wanted here.
+        TokenClient::new(&env, &usdc).transfer(
+            &env.current_contract_address(),
+            &auditor,
+            &payout,
+        );
+
+        request.status = AuditStatus::Settled;
+        request.resolved_at = env.ledger().timestamp();
+        env.storage()
+            .persistent()
+            .set(&StorageKey::Request(request_id), &request);
+
+        bump_request(&env, request_id);
+        bump_instance(&env);
+
+        Settled { request_id, payout }.publish(&env);
+
+        Ok(())
+    }
+
+    /// Forfeit the auditor's bond to `reporter` and refund the fee to the
+    /// requestor, closing the job as `Slashed`.
+    ///
+    /// The scaffold left the bond sitting in the contract, so whoever caught the
+    /// bad audit was never paid and the funds needed a second admin call to move.
+    ///
+    /// ## Gating (MVP testnet)
+    /// Admin-gated, with the same off-chain verdict source and the same roadmap
+    /// as [`UsdcEscrow::settle`].
+    pub fn slash(env: Env, request_id: u32, reporter: Address) -> Result<(), EscrowError> {
+        Self::get_admin(env.clone())?.require_auth();
+        Self::slash_to(&env, request_id, reporter)
     }
 
     /// Read one job.
