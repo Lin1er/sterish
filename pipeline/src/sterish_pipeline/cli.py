@@ -136,18 +136,40 @@ def audit(
             console.print("[red]Error: registry_contract_id not set in config.[/red]")
             sys.exit(1)
         try:
-            from sterish_pipeline.onchain import submit_verdict_to_chain
+            from stellar_sdk import Keypair
 
-            tx_hash = submit_verdict_to_chain(
-                contract_id=cfg.registry_contract_id,
+            from sterish_pipeline.onchain import SorobanChainClient, VerdictOrchestrator
+            from sterish_pipeline.report import publish_report
+
+            # Publish the report and take evidence_hash over the published bytes,
+            # so the on-chain hash matches what a reviewer fetches (STERISH-12).
+            final_report.skill_id = skill_id
+            report_path, report_uri, evidence_hash = publish_report(
+                final_report, cfg.report_dir, cfg.report_base_uri
+            )
+            final_report.evidence_hash = evidence_hash
+            console.print(f"[dim]Report:[/] {report_path} -> {report_uri}")
+
+            orchestrator = VerdictOrchestrator(
+                client=SorobanChainClient(cfg),
+                registry_contract_id=cfg.registry_contract_id,
+                escrow_contract_id=cfg.escrow_contract_id,
+                auditor=Keypair.from_secret(secret_key),
+            )
+            result = orchestrator.submit_audit(
                 skill_id=skill_id,
+                version=skill_manifest.version,
                 verdict=final_report.final_verdict,
                 score=final_report.trust_score,
-                evidence_hash=final_report.evidence_hash,
-                secret_key=secret_key,
-                public_key="",  # derived from secret_key
+                evidence_hash=evidence_hash,
+                content_hash=final_report.content_hash,
+                report_uri=report_uri,
             )
-            console.print(f"[green]Verdict submitted on-chain. TX: {tx_hash}[/green]")
+            for step in result.steps:
+                console.print(f"  [green]->[/green] {step}")
+            console.print(
+                f"[green]Verdict submitted on-chain. verdict tx: {result.verdict_tx}[/green]"
+            )
         except Exception as exc:
             console.print(f"[red]On-chain submission failed: {exc}[/red]")
             sys.exit(1)

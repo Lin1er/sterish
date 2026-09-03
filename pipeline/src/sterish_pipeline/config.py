@@ -20,8 +20,15 @@ class PipelineConfig(BaseModel):
 
     # On-chain settings.
     registry_contract_id: str = ""
+    escrow_contract_id: str = ""
     network_passphrase: str = "Test SDF Network ; September 2015"
     rpc_url: str = "https://soroban-testnet.stellar.org:443"
+
+    # Report publication. evidence_hash on-chain == sha256 of the report at
+    # report_base_uri (see report.py). Fill report_base_uri with the public URL
+    # the report_dir is served at (e.g. a raw GitHub URL).
+    report_dir: str = "./reports"
+    report_base_uri: str = ""
 
     # Risk scoring deductions.
     high_risk_deduction: int = 25
