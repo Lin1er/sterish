@@ -3,7 +3,6 @@
 import json
 import logging
 import subprocess
-from pathlib import Path
 
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import SkillManifest
@@ -24,13 +23,20 @@ def run_in_docker(
     effective_image = image or cfg.sandbox_image
 
     cmd = [
-        "docker", "run", "--rm",
-        "--network", "none",
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
         "--read-only",
-        "--cap-drop", "ALL",
-        "--memory", "128m",
-        "--cpus", "0.5",
-        "--mount", f"type=tmpfs,destination=/tmp,tmpfs-size=64m",
+        "--cap-drop",
+        "ALL",
+        "--memory",
+        "128m",
+        "--cpus",
+        "0.5",
+        "--mount",
+        "type=tmpfs,destination=/tmp,tmpfs-size=64m",
         effective_image,
         "sterish-sandbox-runner",
         json.dumps(manifest.model_dump()),
@@ -40,9 +46,7 @@ def run_in_docker(
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"Sandbox failed (exit {proc.returncode}): {proc.stderr[:500]}"
-        )
+        raise RuntimeError(f"Sandbox failed (exit {proc.returncode}): {proc.stderr[:500]}")
 
     try:
         return json.loads(proc.stdout)

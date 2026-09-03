@@ -1,89 +1,104 @@
+"""Registry reads for the verification API.
+
+Until the registry contract is deployed (STERISH-9) and the real Soroban reads
+land (STERISH-13), this module serves a small fixture registry so the API, its
+tests, and the dashboard have something concrete to talk to.
+
+Fixture mode is active only while `REGISTRY_CONTRACT_ID` is unset. Once a
+contract ID is configured the fixtures are never consulted.
+"""
+
 import os
 from typing import Any
 
-import httpx
-
 STELLAR_RPC_URL = os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org")
+STELLAR_NETWORK_PASSPHRASE = os.getenv(
+    "STELLAR_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015"
+)
 REGISTRY_CONTRACT_ID = os.getenv("REGISTRY_CONTRACT_ID", "")
 
 
-async def invoke_contract(contract_id: str, function: str, args: list[str]) -> dict[str, Any]:
-    """Invoke a Soroban contract read-only function via RPC."""
-    payload: dict[str, Any] = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "simulateTransaction",
-        "params": {
-            "transaction": {
-                "source": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
-                "fee": "100",
-                "seq": "0",
-                "operations": [
-                    {
-                        "type": "invoke_host_function",
-                        "function": function,
-                        "args": {"address": contract_id, "args": args},
-                    }
-                ],
-                "xdr": "",
-            },
-            "resource_fee": "0",
-        },
-    }
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(STELLAR_RPC_URL, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        if "error" in data:
-            return {}
-        return data.get("result", {}).get("results", [{}])[0].get("xdr", {})
+def fixture_mode() -> bool:
+    """True while no registry contract is configured."""
+    return not os.getenv("REGISTRY_CONTRACT_ID", "")
 
 
 def query_skill(skill_id: str) -> dict[str, Any] | None:
-    """Query a skill from the on-chain registry. Returns mock data if no contract deployed."""
-    if not REGISTRY_CONTRACT_ID:
-        return _mock_skills().get(skill_id)
-    # TODO: implement real RPC call via stellar-sdk when contract is deployed
-    return _mock_skills().get(skill_id)
+    """Return a single skill entry, or None when it is not registered."""
+    if fixture_mode():
+        return _fixture_skills().get(skill_id)
+    raise NotImplementedError(
+        "on-chain registry reads land in STERISH-13; unset REGISTRY_CONTRACT_ID to use fixture mode"
+    )
 
 
 def query_all_skills(start: int, limit: int) -> list[dict[str, Any]]:
-    """Query paginated skills from the on-chain registry."""
-    skills = list(_mock_skills().values())
-    return skills[start : start + limit]
+    """Return a page of registered skills."""
+    if fixture_mode():
+        return list(_fixture_skills().values())[start : start + limit]
+    raise NotImplementedError(
+        "on-chain registry reads land in STERISH-13; unset REGISTRY_CONTRACT_ID to use fixture mode"
+    )
 
 
 def query_skill_count() -> int:
-    """Get total number of registered skills."""
-    return len(_mock_skills())
+    """Total number of registered skills."""
+    if fixture_mode():
+        return len(_fixture_skills())
+    raise NotImplementedError(
+        "on-chain registry reads land in STERISH-13; unset REGISTRY_CONTRACT_ID to use fixture mode"
+    )
 
 
-def _mock_skills() -> dict[str, dict[str, Any]]:
-    """Mock data for development before contract deployment."""
+def _fixture_skills() -> dict[str, dict[str, Any]]:
+    """Fixture registry used before a contract is deployed."""
     return {
-        "skill-001": {
-            "skill_id": "skill-001",
-            "name": "web-search-tool",
+        "com.example.web-search": {
+            "skill_id": "com.example.web-search",
             "latest_verdict": "SAFE",
             "trust_score": 92,
-            "evidence_url": "https://stellar.expert/testnet/tx/0xabc123",
-            "audit_timestamp": "2026-08-20T14:30:00Z",
-            "auditor": "GCBYXEE...",
+            "evidence_hash": "a" * 64,
+            "evidence_url": "",
+            "audit_timestamp": 1755700200,
+            "auditor": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
             "versions": [
-                {"version": "1.0.0", "content_hash": "abc123...", "registered_at": 1692537000}
+                {
+                    "version": "1.0.0",
+                    "content_hash": "b" * 64,
+                    "registered_at": 1755613800,
+                }
             ],
         },
-        "skill-002": {
-            "skill_id": "skill-002",
-            "name": "file-manager",
+        "com.example.file-manager": {
+            "skill_id": "com.example.file-manager",
             "latest_verdict": "WARNING",
             "trust_score": 65,
+            "evidence_hash": "c" * 64,
             "evidence_url": "",
-            "audit_timestamp": "2026-08-22T10:00:00Z",
-            "auditor": "GCBYXEE...",
+            "audit_timestamp": 1755872000,
+            "auditor": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
             "versions": [
-                {"version": "1.2.0", "content_hash": "def456...", "registered_at": 1692708800}
+                {
+                    "version": "1.2.0",
+                    "content_hash": "d" * 64,
+                    "registered_at": 1755785600,
+                }
+            ],
+        },
+        "com.evil.token-drainer": {
+            "skill_id": "com.evil.token-drainer",
+            "latest_verdict": "DANGEROUS",
+            "trust_score": 4,
+            "evidence_hash": "e" * 64,
+            "evidence_url": "",
+            "audit_timestamp": 1755958400,
+            "auditor": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+            "versions": [
+                {
+                    "version": "1.0.0",
+                    "content_hash": "f" * 64,
+                    "registered_at": 1755872000,
+                }
             ],
         },
     }

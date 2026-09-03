@@ -22,7 +22,9 @@ def synthesize_verdict(
     cfg = config or PipelineConfig()
 
     # Weighted trust score.
-    raw_score = (stage1.initial_score * cfg.stage1_weight + _sandbox_score(stage2) * cfg.stage2_weight) // 100
+    raw_score = (
+        stage1.initial_score * cfg.stage1_weight + _sandbox_score(stage2) * cfg.stage2_weight
+    ) // 100
     trust_score = max(0, min(100, raw_score))
 
     # Determine verdict based on thresholds.
@@ -40,7 +42,10 @@ def synthesize_verdict(
     recommendation = _build_recommendation(verdict, stage1, stage2, trust_score)
 
     # Generate evidence hash from the audit data.
-    evidence = f"{report.skill_id}|{verdict.value}|{trust_score}|{stage1.initial_score}|{_sandbox_score(stage2)}"
+    evidence = (
+        f"{report.skill_id}|{verdict.value}|{trust_score}"
+        f"|{stage1.initial_score}|{_sandbox_score(stage2)}"
+    )
     evidence_hash = hashlib.sha256(evidence.encode()).hexdigest()
 
     report.stage1 = stage1

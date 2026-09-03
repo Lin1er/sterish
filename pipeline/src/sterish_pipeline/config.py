@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +20,7 @@ class PipelineConfig(BaseModel):
 
     # On-chain settings.
     registry_contract_id: str = ""
-    network_passphrase: str = "Test SDF Network ; September 2024"
+    network_passphrase: str = "Test SDF Network ; September 2015"
     rpc_url: str = "https://soroban-testnet.stellar.org:443"
 
     # Risk scoring deductions.

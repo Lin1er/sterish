@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
+from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.models import Capability, Severity, SkillManifest, ToolDef
 from sterish_pipeline.stages.stage1_desc_scanner import scan_description
-from sterish_pipeline.config import PipelineConfig
 
 
 def _make_manifest(caps: list[Capability]) -> SkillManifest:
@@ -13,12 +13,14 @@ def _make_manifest(caps: list[Capability]) -> SkillManifest:
         description="A test skill",
         version="1.0.0",
         permissions=[],
-        tools=[ToolDef(
-            name="tool1",
-            description="A tool",
-            input_schema={},
-            capabilities=caps,
-        )],
+        tools=[
+            ToolDef(
+                name="tool1",
+                description="A tool",
+                input_schema={},
+                capabilities=caps,
+            )
+        ],
     )
 
 
@@ -40,11 +42,13 @@ class TestStage1:
         assert len(high_flags) == 2
 
     def test_mixed_caps(self):
-        manifest = _make_manifest([
-            Capability.WALLET_ACCESS,
-            Capability.FILE_WRITE,
-            Capability.FILE_READ,
-        ])
+        manifest = _make_manifest(
+            [
+                Capability.WALLET_ACCESS,
+                Capability.FILE_WRITE,
+                Capability.FILE_READ,
+            ]
+        )
         result = scan_description(manifest)
         # 100 - 25 - 10 - 3 = 62
         assert result.initial_score == 62
@@ -77,8 +81,18 @@ class TestStage1:
             version="1.0.0",
             permissions=[],
             tools=[
-                ToolDef(name="a", description="", input_schema={}, capabilities=[Capability.WALLET_ACCESS]),
-                ToolDef(name="b", description="", input_schema={}, capabilities=[Capability.WALLET_ACCESS]),
+                ToolDef(
+                    name="a",
+                    description="",
+                    input_schema={},
+                    capabilities=[Capability.WALLET_ACCESS],
+                ),
+                ToolDef(
+                    name="b",
+                    description="",
+                    input_schema={},
+                    capabilities=[Capability.WALLET_ACCESS],
+                ),
             ],
         )
         result = scan_description(manifest)

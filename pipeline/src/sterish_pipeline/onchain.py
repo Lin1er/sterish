@@ -40,21 +40,17 @@ def submit_verdict_to_chain(
     contract = Contract(contract_id)
     evidence_bytes = bytes.fromhex(evidence_hash)
 
-    tx = (
-        server
-        .prepare_transaction(
-            contract.call(
-                "submit_verdict",
-                scval.to_string(skill_id),
-                scval.to_uint32(_VERDIT_MAP[verdict]),
-                scval.to_uint32(score),
-                scval.to_bytes(evidence_bytes),
-            ),
-            source_account=account,
-            network_passphrase=cfg.network_passphrase,
-        )
-        .build()
-    )
+    tx = server.prepare_transaction(
+        contract.call(
+            "submit_verdict",
+            scval.to_string(skill_id),
+            scval.to_uint32(_VERDIT_MAP[verdict]),
+            scval.to_uint32(score),
+            scval.to_bytes(evidence_bytes),
+        ),
+        source_account=account,
+        network_passphrase=cfg.network_passphrase,
+    ).build()
 
     tx.sign(kp)
     response = server.submit_transaction(tx)
@@ -76,18 +72,14 @@ def query_skill_from_chain(
     account = server.load_account(public_key)
 
     contract = Contract(contract_id)
-    tx = (
-        server
-        .prepare_transaction(
-            contract.call(
-                "query_skill",
-                scval.to_string(skill_id),
-            ),
-            source_account=account,
-            network_passphrase=cfg.network_passphrase,
-        )
-        .build()
-    )
+    tx = server.prepare_transaction(
+        contract.call(
+            "query_skill",
+            scval.to_string(skill_id),
+        ),
+        source_account=account,
+        network_passphrase=cfg.network_passphrase,
+    ).build()
 
     response = server.simulate_transaction(tx)
     result_xdr = ""

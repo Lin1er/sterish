@@ -74,12 +74,18 @@ def run_sandbox_check(
 def _run_docker_sandbox(manifest: SkillManifest, image: str, timeout: int) -> str:
     """Execute the skill manifest in a sandboxed Docker container."""
     cmd = [
-        "docker", "run", "--rm",
-        "--network", "none",
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
         "--read-only",
-        "--cap-drop", "ALL",
-        "--memory", "128m",
-        "--cpus", "0.5",
+        "--cap-drop",
+        "ALL",
+        "--memory",
+        "128m",
+        "--cpus",
+        "0.5",
         image,
         "sterish-sandbox-runner",
         json.dumps(manifest.model_dump()),
@@ -138,7 +144,9 @@ def _static_fallback(declared_caps: set[Capability]) -> list[BehavioralFlag]:
                 syscall=cap.value,
                 expected=True,
                 severity=sev,
-                description=f"Declared {cap.value} could not be sandbox-verified (Docker unavailable).",
+                description=(
+                    f"Declared {cap.value} could not be sandbox-verified (Docker unavailable)."
+                ),
             )
         )
     return flags

@@ -1,7 +1,7 @@
 [project]
 name = "sterish-pipeline"
 version = "0.1.0"
-description = "LLM-based audit pipeline for AI agent skills"
+description = "Audit pipeline for AI agent skills"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
@@ -13,7 +13,6 @@ dependencies = [
 
 [project.optional-dependencies]
 sandbox = ["docker>=7.0"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.8"]
 
 [build-system]
 requires = ["hatchling"]
@@ -24,9 +23,18 @@ packages = ["src/sterish_pipeline"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
+    "pytest>=8.0",
+    "ruff>=0.8",
 ]

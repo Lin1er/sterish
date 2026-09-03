@@ -10,9 +10,6 @@ dependencies = [
     "uvicorn>=0.32",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8.0", "httpx"]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -22,3 +19,18 @@ packages = ["src/sterish_api"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]

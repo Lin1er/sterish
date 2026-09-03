@@ -20,7 +20,9 @@ _CAPABILITY_SEVERITY: dict[Capability, Severity] = {
 }
 
 _SEVERITY_DESCRIPTIONS: dict[Severity, str] = {
-    Severity.HIGH: "This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+    Severity.HIGH: (
+        "This capability grants direct access to sensitive resources and cannot be fully sandboxed."
+    ),
     Severity.MEDIUM: "This capability could leak information or mutate state in unexpected ways.",
     Severity.LOW: "Low-risk read-only access; generally safe but worth noting.",
 }
@@ -65,7 +67,9 @@ def scan_description(
             reasons.append(f"LOW: {flag.description}")
 
     score = max(0, 100 - deduction)
-    reasoning = "\n".join(reasons) if reasons else "No risk flags found. Skill appears safe by description."
+    reasoning = (
+        "\n".join(reasons) if reasons else "No risk flags found. Skill appears safe by description."
+    )
 
     return Stage1Result(risk_flags=deduped, initial_score=score, reasoning=reasoning)
 

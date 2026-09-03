@@ -6,15 +6,27 @@ on:
     paths:
       - 'pipeline/**'
       - 'api/**'
+      - '.github/workflows/pipeline.yml'
   pull_request:
     branches: [main]
     paths:
       - 'pipeline/**'
       - 'api/**'
+      - '.github/workflows/pipeline.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: ${{ matrix.project }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [pipeline, api]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,22 +34,22 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           version: 'latest'
+          enable-cache: true
+          cache-dependency-glob: '${{ matrix.project }}/uv.lock'
 
       - name: Set up Python 3.12
         run: uv python install 3.12
 
-      - name: Install pipeline dependencies
-        working-directory: pipeline
+      - name: Install dependencies
+        working-directory: ${{ matrix.project }}
         run: uv sync
 
-      - name: Run pipeline tests
-        working-directory: pipeline
+      - name: Lint
+        working-directory: ${{ matrix.project }}
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+
+      - name: Test
+        working-directory: ${{ matrix.project }}
         run: uv run pytest tests/ -v
-
-      - name: Install API dependencies
-        working-directory: api
-        run: uv sync
-
-      - name: Run API lint
-        working-directory: api
-        run: uv run python -m py_compile src/sterish_api/main.py
