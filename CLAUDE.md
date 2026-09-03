@@ -52,6 +52,23 @@ Yang boleh dilaporkan/di-commit cuma **public address (G...)** dan **contract ad
 ## Git & workflow (ACC GATE per tiket)
 - **Branch baru per tiket** (nama dari deskripsi tiket, base main).
 - **Commit kecil-kecil**, pesan rujuk STE-#.
-- **GATE ACC:** kerjakan SATU tiket sampai code-complete + test hijau, LALU **BERHENTI** (jangan merge, jangan mulai tiket berikutnya), update worktree comment diawali `MENUNGGU ACC AXEL:` + ringkas, **tunggu Axel bilang "acc"**. Baru setelah ACC: merge ke main + update Linear tiket jadi **Done** (jangan lupa flip status) + comment.
+- **GATE ACC:** kerjakan SATU tiket sampai code-complete + test hijau, LALU **BERHENTI** (jangan merge, jangan mulai tiket berikutnya), update worktree comment diawali `MENUNGGU ACC AXEL:` + ringkas, **tunggu Axel bilang "acc"**.
+
+### Alur merge SETELAH ACC = WAJIB lewat PR (berlaku mulai STE-9)
+**JANGAN merge langsung ke main.** Urutan wajib setelah Axel bilang "acc":
+1. `git fetch origin --prune` + rebase/merge `origin/main` terbaru ke branch tiket, test hijau lagi.
+2. **Push branch tiket** ke origin: `git push -u origin <branch>`.
+3. **Buka PR ke main**: `gh pr create --base main --head <branch> --title "STE-#: <ringkas>" --body "..."`.
+   Body ringkas WAJIB memuat: fix/fitur yang dibuat, jumlah test hijau, angka coverage, link commit/issue Linear.
+   **Mention @Axel + @fable** di body untuk review.
+4. **BARU merge PR itu**: `gh pr merge --squash` (atau `--merge` kalau riwayat commit kecil-kecil mau dipertahankan).
+5. Update Linear tiket jadi **Done** (flip status, jangan cuma comment) + comment ringkas + link PR.
+
+Kalau `gh` belum ter-auth: **push branch saja**, kasih Axel URL `Compare & PR`
+(`https://github.com/Lin1er/sterish/compare/main...<branch>?expand=1`), dan **JANGAN merge sebelum PR ada**.
+
+Tujuan: tiap tiket terdokumentasi sebagai PR yang bisa dilacak.
+(Catatan historis: STE-5 terlanjur merge fast-forward langsung ke main sebelum konvensi ini ada — dibiarkan.)
+
 - Deploy WAJIB bukti (CA + stellar.expert / URL) di `docs/deployments.md`.
 - Update CLAUDE.md ini kalau ada keputusan/konvensi baru.
