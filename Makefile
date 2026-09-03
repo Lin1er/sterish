@@ -1,4 +1,6 @@
-.PHONY: build-contracts test-contracts deploy-registry deploy-escrow \
+.PHONY: build-contracts test-contracts coverage-contracts \
+        build-wasm verify-wasm \
+        deploy-registry deploy-escrow \
         install-pipeline test-pipeline run-pipeline \
         install-api run-api test-api \
         install-dashboard dev-dashboard \
@@ -33,6 +35,24 @@ build-contracts:
 
 test-contracts:
 	cd contracts && cargo test
+
+# coverage-contracts (STE-12) prints the workspace line/region coverage AND
+# fails when line coverage drops below 80%. Same two commands CI runs, so a red
+# CI job is reproducible locally with one target.
+coverage-contracts:
+	cd contracts && cargo llvm-cov --workspace --summary-only
+	cd contracts && cargo llvm-cov --workspace --fail-under-lines 80
+
+# build-wasm (STE-12) is the CANONICAL wasm build: it is the only one that
+# remaps $$CARGO_HOME out of the artifacts, so it is the only one whose sha256
+# matches contracts/wasm-hashes.txt. Use it, not `build-contracts`, for anything
+# that gets uploaded on-chain.
+build-wasm:
+	bash scripts/build-wasm.sh
+
+# verify-wasm rebuilds and fails if any artifact drifted from the recorded hash.
+verify-wasm:
+	bash scripts/build-wasm.sh --check
 
 deploy-registry:
 	soroban-cli deploy --wasm target/wasm32v1-none/release/sterish_registry.wasm --source account --network testnet
