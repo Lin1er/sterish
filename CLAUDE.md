@@ -29,6 +29,15 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
 ## Testing (WAJIB, no bug)
 - e2e + edge + positive + negative tiap tiket. Kontrak: `cargo llvm-cov` **>80%**, semua revert/guard path.
 
+## Sync dengan origin/main (WAJIB, tim kerja paralel)
+Teammate (James, Ancung, Nabil) push ke `main` terus, jadi **SEBELUM mulai tiap tiket**:
+1. `git fetch origin --prune`
+2. Sync ke `origin/main` TERBARU (`git merge --ff-only origin/main` / rebase kalau ada commit lokal).
+3. **Base branch tiket dari `origin/main` terbaru**, JANGAN dari branch lama/stale.
+4. Cek PR/push terbaru: `gh pr list --state all`, `git log --oneline origin/main -10`.
+
+**SEBELUM merge** tiket: `git fetch origin` lagi + rebase/merge `origin/main` terbaru ke branch tiket, resolve konflik, test hijau lagi, BARU merge.
+
 ## Git & workflow (ACC GATE per tiket)
 - **Branch baru per tiket** (nama dari deskripsi tiket, base main).
 - **Commit kecil-kecil**, pesan rujuk STE-#.
