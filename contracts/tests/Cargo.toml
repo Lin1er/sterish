@@ -1,0 +1,19 @@
+[package]
+name = "sterish-integration-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Test-only crate: it produces no wasm and is never deployed. The lib target is
+# an empty `#![no_std]` shell purely so the crate is a valid workspace member
+# that still builds for `wasm32v1-none` alongside the three contracts. All the
+# actual work lives in `tests/integration.rs`, which Cargo compiles for the host.
+[lib]
+crate-type = ["lib"]
+doctest = false
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+sterish-registry = { path = "../registry" }
+sterish-escrow = { path = "../escrow" }
+sterish-tokens = { path = "../tokens" }

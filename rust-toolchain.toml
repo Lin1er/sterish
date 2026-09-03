@@ -1,0 +1,11 @@
+# Pinned so that `cargo build --target wasm32v1-none --release` produces the SAME
+# wasm — and therefore the same sha256 / Soroban wasm hash — on every machine and
+# in CI. `contracts/wasm-hashes.txt` records the hashes this exact toolchain
+# produces; `scripts/build-wasm.sh --check` re-verifies them.
+#
+# Changing `channel` will change the wasm hashes. That is a deliberate act: it
+# means re-running `bash scripts/build-wasm.sh` and re-uploading the contracts.
+[toolchain]
+channel = "1.93.0"
+targets = ["wasm32v1-none"]
+components = ["llvm-tools-preview", "clippy", "rustfmt"]
