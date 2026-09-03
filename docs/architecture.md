@@ -115,26 +115,90 @@ enum DataKey {
 
 The escrow contract ensures economic accountability in the audit process:
 requestors fund audits, auditors post bonds, and misbehavior results in slashing.
+Payment asset is the official **USDC SAC on testnet** — the contract never issues
+an asset of its own; the SAC address is fixed at construction time.
 
 ### Audit Status Lifecycle
 
 ```rust
 enum AuditStatus {
-    Open,     // Request created, awaiting auditor bond
-    Bonded,   // Auditor posted bond, audit in progress
-    Settled,  // Audit completed honestly — bond returned + fee paid
-    Slashed,  // Auditor acted maliciously — bond forfeited to requestor
+    Open,     // Fee escrowed, waiting for an auditor to post the AGREED bond
+    Bonded,   // Auditor bonded; the only state in which funds can still move
+    Settled,  // Terminal — fee + bond paid out to the auditor
+    Slashed,  // Terminal — bond paid to the reporter, fee refunded to requestor
 }
 ```
+
+`Settled` and `Slashed` are terminal. Once a job leaves `Bonded` no further
+money can move for it, which is what makes every payout exactly-once.
 
 ### Contract Operations
 
 | Function | Auth | Description |
 |---|---|---|
-| `create_audit_request(skill_id, fee)` | Requestor | Lock USDC fee in escrow; status → `Open` |
-| `post_bond(request_id, bond_amount)` | Auditor | Lock USDC bond; status → `Bonded` |
-| `settle(request_id, verdict)` | Anyone (after proof) | Release bond + fee to auditor; status → `Settled` |
-| `slash(request_id, evidence)` | Anyone (with proof) | Forfeit auditor bond to requestor; status → `Slashed` |
+| `__constructor(usdc_token, admin)` | — | Runs atomically at deploy; there is no separate `initialize` to front-run |
+| `create_audit_request(requestor, skill_id, version, fee_amount, bond_amount)` | Requestor | Pulls `fee_amount` USDC into escrow, fixes the bond, status → `Open`, returns `request_id` |
+| `post_bond(auditor, request_id)` | Auditor | Transfers exactly `request.bond_amount`, status → `Bonded` |
+| `settle(request_id)` | Admin | Pays `fee + bond` to the auditor, status → `Settled` |
+| `slash(request_id, reporter)` | Admin | Bond → `reporter`, fee refunded to requestor, status → `Slashed` |
+| `claim_forfeited(request_id)` | Admin | Fallback: exactly `slash(request_id, admin)` when there is no external reporter |
+| `get_request` / `get_usdc_token` / `get_admin` / `get_request_count` | None | Read-only views |
+
+Errors are typed (`EscrowError`, codes 1–9: `NotInitialized`, `RequestNotFound`,
+`NotOpen`, `NotBonded`, `AlreadySettled`, `AlreadySlashed`, `InvalidAmount`,
+`InvalidInput`, `SelfAudit`). The numbers are public ABI and must never be
+renumbered. Four events are emitted for the off-chain indexer: `request_created`,
+`bond_posted`, `settled`, `slashed`.
+
+### Link to the Registry
+
+Every job carries the `skill_id` and `version` of the Registry `VersionRecord`
+it is paying for, so an escrowed job can always be tied back to the exact
+artifact under audit.
+
+### Gating of `settle` / `slash` — MVP testnet
+
+**`settle` and `slash` are gated to the `admin` address**, which is the same key
+that holds the auditor role on the Registry contract. The source of truth for a
+verdict is the Registry's `version_recorded` event; it is read **off-chain** by
+the operator, who then calls `settle` or `slash`. **Nothing in the escrow
+contract verifies the verdict on-chain.** This is a deliberate MVP simplification
+and is the trust assumption a reviewer should focus on.
+
+Consequences accepted for the MVP:
+
+- the admin key is trusted not to settle a failing audit or slash an honest one;
+- there is no dispute window: a settle/slash lands in the same ledger it is
+  submitted in, and being terminal it cannot be reversed;
+- `reporter` is named by the admin, so who gets a forfeited bond is an admin
+  decision, not an on-chain proof.
+
+**Roadmap (outside the SOW scope), per the "MVP auth note" in SYSTEM_DESIGN §4.2:**
+
+1. **Dispute window** — a timelock between the verdict and the payout, during
+   which the auditor or requestor can contest.
+2. **Verdict-gated settlement** — the escrow calls into the Registry and reads
+   the `VersionRecord` for `(skill_id, version)` itself, so `settle` is only
+   possible on `Safe` and `slash` only on `Dangerous`, removing the admin from
+   the decision entirely.
+3. **TEE attestation** of the audit pipeline, so the verdict written to the
+   Registry is itself provable rather than asserted by the operator.
+
+### Deliberate simplifications
+
+- **Single-step funding.** SYSTEM_DESIGN §4.2 sketches `open` + a separate
+  `fund_fee`. The contract keeps the scaffold's single-step pull instead: the
+  fee is transferred inside `create_audit_request`, so a job is never `Open`
+  while unfunded and there is no half-created state to garbage-collect.
+- **`claim_forfeited` is kept**, not deleted, because an audit can be caught
+  internally with no external reporter to pay. It is now defined as exactly
+  `slash(request_id, admin)`: it requires `Bonded` and performs the terminal
+  transition itself. Previously it required `Slashed`, mutated nothing, and
+  could therefore be called repeatedly — each call moving another `bond_amount`
+  out of the *shared* contract balance, i.e. out of other jobs' escrowed funds.
+- **The bond is agreed by the requestor at create time.** `post_bond` takes no
+  amount argument, so an auditor cannot bond a token amount and still collect
+  `fee + bond` at settle.
 
 ### Escrow Flow
 
@@ -142,31 +206,37 @@ enum AuditStatus {
  Requestor                Escrow Contract              Auditor
     │                         │                          │
     │  create_audit_request   │                          │
-    │  (locks USDC fee)       │                          │
+    │  (fee pulled; bond      │                          │
+    │   amount agreed here)   │                          │
     │────────────────────────▶│                          │
     │                         │  Status: Open            │
     │                         │                          │
-    │                         │  post_bond               │
-    │                         │  (locks USDC bond)       │
+    │                         │  post_bond (no amount:   │
+    │                         │  exactly bond_amount)    │
     │                         │◀─────────────────────────│
     │                         │  Status: Bonded          │
     │                         │                          │
     │                         │      ┌──────────┐        │
-    │                         │      │  Audit    │        │
-    │                         │      │  Runs     │        │
+    │                         │      │  Audit   │        │
+    │                         │      │  runs    │        │
     │                         │      └─────┬────┘        │
-    │                         │            │              │
-    │                         │   ┌───────┴────────┐      │
-    │                         │   │                │      │
-    │                         │   ▼                ▼      │
-    │                         │  Honest?        Malicious?│
-    │                         │   │                │      │
-    │                         │   ▼                ▼      │
-    │  (fee goes to           │ settle          slash     │
-    │   auditor, bond         │ (bond returned  (bond     │
-    │   returned)             │  to auditor)    forfeited)│
-    │◀────────────────────────│  Status:        Status:  │
-    │                         │  Settled        Slashed   │
+    │                         │            │             │
+    │                         │  admin reads the         │
+    │                         │  Registry verdict        │
+    │                         │  OFF-CHAIN               │
+    │                         │   ┌────────┴───────┐     │
+    │                         │   ▼                ▼     │
+    │                         │  Safe          Dangerous │
+    │                         │   │                │     │
+    │                         │   ▼                ▼     │
+    │                         │ settle()        slash(reporter)
+    │                         │ fee + bond      bond ──▶ reporter
+    │                         │   ──▶ auditor   fee  ──▶ requestor
+    │◀────────────────────────│ Status:         Status:  │
+    │  (fee refunded on slash)│ Settled         Slashed  │
+    │                         │                          │
+    │                         │  contract balance for    │
+    │                         │  this job is now 0       │
 ```
 
 ---
