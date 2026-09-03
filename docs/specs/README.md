@@ -4,7 +4,7 @@ Kontrak handoff antar-owner. Setelah dokumen di folder ini merged, James dan Anc
 membangun paralel tanpa menunggu implementasi selesai penuh — selama semua pihak patuh
 pada isi folder ini.
 
-**Status: FROZEN v1.0.0** (STE-10, 2026-09-03).
+**Status: FROZEN v1.1.0** (STE-11, 2026-09-03).
 
 ---
 
@@ -13,12 +13,13 @@ pada isi folder ini.
 | Dokumen | Apa yang dibekukan | Dipakai oleh |
 |---|---|---|
 | [`content-hash.md`](content-hash.md) | Canonical bytes v1 + `content_hash = sha256(...)`, byte-exact | pipeline (intake), kontrak (`lookup_by_hash`), dashboard (check-before-install) |
-| [`interfaces.md`](interfaces.md) | Seluruh function signature publik Registry + Escrow (+ rencana token) | semua |
-| [`events.md`](events.md) | Seluruh layout `#[contractevent]` termasuk field yang jadi topic | indexer, API, dashboard |
+| [`interfaces.md`](interfaces.md) | Seluruh function signature publik Registry + Escrow + Tokens | semua |
+| [`events.md`](events.md) | Seluruh layout `#[contractevent]` termasuk field yang jadi topic (10 event) | indexer, API, dashboard |
 | [`verdict-json.md`](verdict-json.md) + [`verdict.schema.json`](verdict.schema.json) | Skema verdict JSON output pipeline | stage 3, on-chain submitter, API, dashboard |
 | [`../api-spec.md`](../api-spec.md) | Bentuk response API termasuk check by `content_hash` + evidence links | dashboard, agen pemanggil |
 | [`vectors/`](vectors/) | Test vectors `content_hash` (+ error cases) | ketiga implementasi |
 | [`reference/`](reference/) | Implementasi referensi `content_hash` (Python + TypeScript) | pipeline, dashboard |
+| [`examples/`](examples/) | Contoh verdict JSON valid + invalid | stage 3, submitter, API |
 
 Sisi Rust hidup sebagai test di `contracts/registry/src/test.rs` dan meng-hash lewat
 `env.crypto().sha256()` — host function yang sama dengan kontrak ter-deploy.
@@ -29,8 +30,10 @@ Sisi Rust hidup sebagai test di `contracts/registry/src/test.rs` dan meng-hash l
 
 ```bash
 make verify-spec
-# atau langsung:
-bash scripts/verify-content-hash.sh
+# atau satu per satu:
+bash scripts/verify-content-hash.sh    # hash identik di Python + TypeScript + Rust
+bash scripts/verify-verdict-json.sh    # contoh verdict lolos/ditolak sesuai skema
+bash scripts/verify-soulbound.sh       # contract spec tokens tidak punya transfer/approve/burn
 ```
 
 Runner menjalankan **tiga** implementasi (Python, TypeScript, Rust), mem-`diff` laporannya
@@ -62,7 +65,7 @@ skema verdict JSON, atau bentuk response API:
   **baru** (`sterish-content-hash/v2\n` sebagai MAGIC), bukan edit terhadap v1. Hash lama harus
   tetap bisa dihitung ulang selamanya, kalau tidak setiap verdict yang sudah tertulis on-chain
   jadi tidak terverifikasi.
-- **Kode error kontrak** (`RegistryError` 1–9, `EscrowError` 1–9) adalah ABI publik.
+- **Kode error kontrak** (`RegistryError` 1–9, `EscrowError` 1–9, `TokenError` 1–6) adalah ABI publik.
   Boleh **menambah** varian di nomor berikutnya; **tidak boleh** me-renumber atau menghapus.
 - **Event**: menambah event baru = additive, aman. Mengubah field/topic event yang sudah ada =
   breaking, wajib lewat aturan di atas.
@@ -70,6 +73,41 @@ skema verdict JSON, atau bentuk response API:
 ---
 
 ## Changelog
+
+### v1.1.0 — 2026-09-03 (STE-11, PR TBD)
+
+Aditif. Tidak ada bentuk v1.0.0 yang berubah.
+
+- **§5 `interfaces.md` naik dari `PLANNED` ke FROZEN**: kontrak `sterish_tokens` (badge VERIFIED
+  + license token, keduanya soulbound) sekarang punya ABI hasil generate, tabel fungsi,
+  invariant T1–T7, dan kode error publik `TokenError` 1–6.
+- **`events.md` §3b**: dua event baru `verified_minted` dan `license_minted` + baris emission order.
+- Tiga open question di §5.3 lama sudah dijawab dan dicatat di §5.5: license terikat
+  `(skill_id, version)` (bukan `content_hash`), royalties **di-drop** (tidak ada resale di token
+  soulbound), dan `mint_license` dipanggil `MinterRole` tunggal yang bisa dirotasi admin.
+
+Keputusan yang berbeda dari teks tiket STE-11, beserta alasannya:
+
+- **Tanpa OpenZeppelin.** `stellar-tokens` 0.7.2 butuh `soroban-sdk ^26.1.0` sementara workspace
+  frozen di `27.0.6` — cargo meresolusi dua salinan SDK yang tidak kompatibel. Terlepas dari itu,
+  modul `non_fungible` OZ 0.7.2 **tidak punya dukungan soulbound**: meng-`contractimpl` trait
+  `NonFungibleToken` justru meng-export `transfer`/`approve` yang dilarang tiket. Kontrak custom
+  adalah satu-satunya cara memenuhi stack frozen DAN done-criteria soulbound sekaligus.
+- **`mint_verified(skill_id, version, owner)`** menerima `owner` sebagai parameter, tidak membacanya
+  dari Registry — membacanya menuntut duplikasi struct `SkillEntry` di crate tokens, yang menciptakan
+  drift terhadap ABI frozen. Verdict `Safe` tetap dicek on-chain, dan itu bagian yang penting.
+- **`mint_license` mengecek Registry live**, bukan cuma badge lokal. Badge adalah snapshot saat mint
+  dan tidak bisa di-burn (soulbound), jadi tanpa cek ini versi yang di-re-audit `Dangerous` masih
+  bisa terus menjual lisensi lewat badge basi. Lisensi yang sudah terjual tetap sah.
+- **`TokenError::NotAuthorized` dibuang** sebelum freeze (varian mati — semua role check gagal lewat
+  `require_auth()` sebagai host error). Setelah freeze ini kode error jadi ABI publik.
+
+Batasan yang diketahui dan sengaja dibiarkan:
+
+- **Badge tidak bisa dicabut** (invariant T7). Tanpa `burn`, `is_verified_token` bisa tetap `true`
+  setelah versi di-re-audit `Dangerous`. Konsumen yang butuh jawaban live WAJIB baca
+  `SkillRegistry::is_verified`. Jalur yang berbahaya — penjualan lisensi baru — sudah ditutup.
+
 
 ### v1.0.0 — 2026-09-03 (STE-10, PR TBD)
 

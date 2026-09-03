@@ -2,7 +2,7 @@
         install-pipeline test-pipeline run-pipeline \
         install-api run-api test-api \
         install-dashboard dev-dashboard \
-        verify-spec verify-content-hash
+        verify-spec verify-content-hash verify-soulbound
 
 # Frozen specs (STE-10)
 # verify-content-hash proves Python, TypeScript and Rust compute byte-identical
@@ -10,9 +10,17 @@
 verify-content-hash:
 	bash scripts/verify-content-hash.sh
 
+# verify-soulbound (STE-11) reads the contract spec out of the built
+# sterish_tokens.wasm and fails if any transfer/approve/burn entrypoint is
+# exported. It proves the VERIFIED badge and the license token are soulbound by
+# ABI shape, not by a runtime guard.
+verify-soulbound:
+	bash scripts/verify-soulbound.sh
+
 # verify-spec is the umbrella gate for docs/specs/. It runs the content_hash
-# cross-language proof, plus the verdict-JSON schema runner once that lands.
-verify-spec: verify-content-hash
+# cross-language proof, the soulbound ABI proof, plus the verdict-JSON schema
+# runner once that lands.
+verify-spec: verify-content-hash verify-soulbound
 	@if [ -x scripts/verify-verdict-json.sh ]; then \
 		echo ""; bash scripts/verify-verdict-json.sh; \
 	else \

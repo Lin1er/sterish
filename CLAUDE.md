@@ -9,6 +9,14 @@ Design lengkap: **`docs/SYSTEM_DESIGN.md`**. WAJIB dibaca sebelum kerja.
 - Tiket Axel (Sterish): **STE-5, STE-9, STE-10, STE-11, STE-12, STE-13, STE-14, STE-18, STE-27, STE-30**.
 - Kerja HANYA di worktree ini (repo Lin1er/sterish). JANGAN sentuh repo lain (web3-rich, sterun).
 
+## 🚨 STANDING RULE (paling atas, tidak bisa ditawar)
+1. **HARAM bertanya ke user / pakai AskUserQuestion.** Ada tension, keputusan, atau ambiguity?
+   **Ambil opsi rekomendasi sendiri, putuskan, JALAN.** Jangan berhenti nanya.
+   Catat keputusan + alasannya di commit message, comment Linear, dan PR body biar transparan.
+   **Satu-satunya titik berhenti = MENUNGGU ACC setelah tiket code-complete + test hijau.**
+2. **HARAM mengerjakan tiket yang bukan assign ke Axel** (axelmatsama@gmail.com).
+   Cek assignee via Linear MCP DULU. Bukan Axel = SKIP + lapor, jangan disentuh.
+
 ## Model & effort
 - PM + worker = **Opus, effort TINGGI (high/xhigh)**. **JANGAN pakai fable** (boros token).
 
