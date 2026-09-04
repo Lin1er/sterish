@@ -171,10 +171,60 @@ lolos. Bond benar-benar berpindah ke pihak ketiga yang bukan pembayar dan bukan 
 | x402 seller (STE-19) | `TOKENS_CA` + secret **minter** (saat ini = deployer; rotasi lewat `set_minter_role`) |
 | Env deploy (STE-21/22) | seluruh blok CA di atas |
 
-⚠️ **STE-16 harus memperbaiki `pipeline/src/sterish_pipeline/onchain.py` dulu.** Submitter itu
-memanggil `submit_verdict` dengan 4 argumen tanpa `version` dan meng-encode verdict sebagai `u32`;
-ABI beku butuh 5 argumen dengan verdict sebagai enum. Melawan kontrak yang sekarang live, submitter
-itu **pasti gagal**.
+✅ **Selesai di STE-16.** `pipeline/src/sterish_pipeline/onchain.py` sudah ditulis ulang.
+Kondisi sebelumnya bahkan lebih parah dari catatan awal ini: modul itu **tidak bisa di-import
+sama sekali** (`from stellar_sdk.contract import Contract` — modul itu tidak mengekspor
+`Contract`) dan memakai `Server` (Horizon, yang tidak punya `prepare_transaction` maupun
+`simulate_transaction`), selain memang memanggil `submit_verdict` dengan 4 argumen dan verdict
+sebagai `u32`. Tidak ada satu pun kode yang meng-import-nya, jadi semua itu tidak pernah jalan.
+Bukti jalur barunya ada di bagian "orchestrator pipeline (STE-16)" di bawah.
+
+## Bukti on-chain — orchestrator pipeline (STE-16)
+
+Jalur penuh `audit -> register -> submit_verdict -> mint_verified` dieksekusi dari
+`sterish_pipeline.orchestrator` melawan kontrak kanonik di atas. Skill uji dibuat dengan
+id ber-timestamp supaya `register_skill` benar-benar dijalankan, bukan di-skip.
+
+**Skill SAFE — `com.sterish.e2e-1788541618`** (score 90):
+
+| Langkah | tx |
+|---|---|
+| `register_skill` | [`c7fa57577317a474…`](https://stellar.expert/explorer/testnet/tx/c7fa57577317a474e301a0d5ae5a6012a52e9ab004cf1602ccd07309d383b69b) |
+| `submit_verdict` | [`193b6be0c1b00b03…`](https://stellar.expert/explorer/testnet/tx/193b6be0c1b00b030c2a5e31e5f63921e737ef0a20e9ee0560b3db3acd2ce765) |
+| `mint_verified` | [`11615d79803ed451…`](https://stellar.expert/explorer/testnet/tx/11615d79803ed451bf34330c7a82b6bee530f0aa008649901ede2b4046906b70) |
+
+Jalur ekonomi pada escrow rehearsal (aset yang kami kontrol — lihat peringatan di atas):
+
+| Langkah | tx |
+|---|---|
+| `create_audit_request` | [`2fcecf65bd81f63e…`](https://stellar.expert/explorer/testnet/tx/2fcecf65bd81f63e7654c6aa7426cb29f905168f424ab4ddf56552245132b2b2) |
+| `post_bond` | [`ed798f4ddb357669…`](https://stellar.expert/explorer/testnet/tx/ed798f4ddb3576698c7a12e59e42fb94d53d86ce2028ca55cc4cf611ad65749e) |
+| **`settle`** | [`34c42da63b00ea7b…`](https://stellar.expert/explorer/testnet/tx/34c42da63b00ea7b3474c955a076f59ab6a05bf6673c63af09d4eb1143b252fc) |
+
+Diverifikasi dengan membaca ulang dari chain, bukan dari objek hasil orchestrator:
+`lookup_by_hash` mengembalikan `Safe` dengan score yang sama dengan report,
+`registry.is_verified` dan `tokens.is_verified_token` keduanya `true`, dan
+`evidence_hash` on-chain **sama persis** dengan `sha256` byte report yang dipublish
+(pihak ketiga bisa menghitung ulang sendiri).
+
+Skill DANGEROUS diaudit lewat jalur yang sama **tidak pernah** mendapat badge:
+`mint_verified` di-skip orchestrator, dan kontrak sendiri menolaknya lewat
+`registry.is_verified` — dua gerbang independen.
+
+### Tiga perilaku RPC yang ditemukan lewat pengujian, bukan dari dokumen
+
+1. **Transaction meta sekarang `v4`, bukan `v3`.** Membaca `meta.v3.soroban_meta.return_value`
+   diam-diam menghasilkan `None`. Ini bukan kehilangan yang tidak berbahaya: `request_id`
+   dari `create_audit_request` datang lewat jalur itu, dan fallback tebakan
+   (`get_request_count() - 1`) sempat menunjuk request **milik STE-13**, sehingga
+   `post_bond` nyaris mengunci bond di job orang lain. Sekarang semua versi meta dicoba
+   dan orchestrator **menolak menebak** kalau id tidak ada.
+2. **`prepare_transaction` melempar pesan generik** ("Simulation transaction failed…") dan
+   menyimpan detailnya di response yang menempel. Tanpa menggali detail itu, penolakan
+   kontrak terlihat seperti gangguan jaringan dan di-retry tiga kali percuma.
+3. **Enum unit variant di-encode sebagai `vec[symbol]`.** Dibuktikan dengan simulasi:
+   `vec[symbol]` -> `Error(Contract, #3)` (diterima, ditolak logika bisnis); `u32` dan
+   symbol telanjang -> `Error(WasmVm, InvalidAction)`; 4 argumen -> `UnexpectedSize`.
 
 ## Catatan operasional
 
