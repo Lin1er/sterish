@@ -47,3 +47,6 @@ Thumbs.db
 coverage/
 
 test_snapshots/
+
+# Orchestrator resume journal — local run state, never shared (STE-16)
+.sterish-journal.json
