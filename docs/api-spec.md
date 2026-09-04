@@ -26,14 +26,45 @@ not caught up.
 | A5 | `audit_timestamp` as an ISO string | on-chain `audited_at` is a `u64` ledger timestamp | Both are served: `audited_at` (integer, authoritative) and `audited_at_iso` (convenience). |
 | A6 | verdict enum listed as `UNAUDITED, SAFE, DANGEROUS, WARNING` | correct, and matches `AuditVerdict` | Unchanged — but `UNAUDITED` now has a documented meaning per version, and the API must never render it as "safe". |
 
-### Implementation status (be honest about this)
+### Implementation status
 
-Nothing below is implemented yet. `api/src/sterish_api/` currently serves **mock data**
-(`client.py::_mock_skills`, still shaped around the removed `latest_verdict`), and
-`routes/check.py` additionally has a broken import (`from .models import ... SkillListItem` —
-that module lives one level up and defines no `SkillListItem`) plus field names that do not
-match `models.py::CheckResponse`. **This file is the target for STE-12**, not a description of
-running code. Marked `PLANNED` where it goes beyond the registry contract that exists today.
+**Implemented in STE-17** (2026-09-04) and serving live chain reads against the STE-13
+testnet deployment. Sections 3.1-3.5 are real; 3.6 and 3.7 remain `PLANNED`.
+
+| Section | Status |
+|---|---|
+| 3.1 `GET /check/by-hash/{content_hash}` | implemented |
+| 3.2 `GET /check/{skill_id}/{version}` | implemented |
+| 3.3 `GET /skills/{skill_id}` | implemented |
+| 3.4 `GET /skills` | implemented |
+| 3.5 `GET /health` | implemented |
+| 3.6 `GET /reports/{skill_id}/{version}` | **PLANNED** — `report_uri` is advertised only when `REPORT_BASE_URL` is set, so clients are never handed a link that 404s |
+| 3.7 `POST /use/{skill_id}/{version}` | **PLANNED** (STE-19, x402) |
+| `GET /feed` | **added** — indexed registry activity, newest first (dashboard, STE-21) |
+
+What the scaffold had, and what replaced it:
+
+- `client.py::_mock_skills` returned mock data unconditionally — even with a contract
+  deployed, because the `TODO` branch and the fallback branch were the same line. The
+  module is deleted; `chain.py` reads the contract over Stellar RPC.
+- `routes/check.py` imported `SkillListItem` from a module that does not exist, so the
+  package could not even be imported. Rewritten against the models in this spec.
+- Transaction hashes now come from `indexer.py`, which tails `skill_registered`,
+  `version_registered`, `version_recorded` and `verdict_flipped` into SQLite.
+
+Two behaviours worth stating because they were found empirically against testnet rather
+than read from documentation:
+
+- **`getEvents` scans only a bounded window forward from `start_ledger`.** A start 5 000
+  ledgers before a known event still returned it; 10 000 before returned nothing, with no
+  error. Asking once for the whole retained range silently yields zero events, so the
+  indexer walks forward in `INDEXER_CHUNK_LEDGERS` steps.
+- **A contract `Err(...)` arrives as text, not an exception.** It surfaces in
+  `simulateTransaction`'s `error` field as `Error(Contract, #N)`, which is what the
+  mapping in section 4 parses.
+
+Verified end-to-end against testnet: the poisoned fixture reads back `DANGEROUS`, the safe
+fixture reads back `SAFE`, and flipping one byte of a registered hash returns `404`.
 
 ---
 
@@ -331,9 +362,19 @@ storage; only `evidence_hash` is on the ledger.
   versions per response and paginate beyond that.
 - **Rate limiting.** 100 req/min per IP by default (configurable).
 - **CORS.** Open — everything served is public ledger data.
-- **Config.** `REGISTRY_CONTRACT_ID`, `STELLAR_RPC_URL`, `STELLAR_NETWORK_PASSPHRASE`. Starting
-  without `REGISTRY_CONTRACT_ID` must fail loudly, not silently fall back to mock data (which
-  is what `client.py` does today).
+- **Config.** `REGISTRY_CONTRACT_ID` (or `REGISTRY_CA`, the name the deploy scripts write),
+  `STELLAR_RPC_URL`, `STELLAR_NETWORK_PASSPHRASE`. Full list with defaults in
+  `api/.env.example`. Starting without a contract id logs an error and every read returns
+  `503 NOT_CONFIGURED` — it never falls back to mock data.
+- **Reads need no keys.** Every read is a `simulateTransaction` from a throwaway source
+  account that does not exist on the ledger, so the API holds no secrets.
+- **The index is a cache, never a source of truth.** Verdicts are always read from the
+  chain per request; the index only supplies the transaction links and `/feed`. Deleting
+  the database changes no verdict — it only makes `registration_tx` / `audit_tx` null.
+  Rebuild procedure: stop the API, delete `STERISH_DB_PATH`, start it again (or call
+  `indexer.rebuild()`); the next poll refills from chain. Covered by
+  `api/tests/test_cache_is_not_source_of_truth.py` and the live
+  `test_rebuild_from_chain_is_consistent`.
 
 ## 7. Change process
 
