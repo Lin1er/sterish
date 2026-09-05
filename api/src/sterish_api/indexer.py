@@ -174,7 +174,9 @@ def _decode_event(ev: Any) -> dict | None:
         # constraint, so a NULL version would let overlapping polls insert the same
         # skill_registered row twice. Served back as null by the feed.
         "version": str(topics[2]) if len(topics) > 2 else "",
-        "content_hash": bytes(content_hash).hex() if isinstance(content_hash, (bytes, bytearray)) else None,
+        "content_hash": (
+            bytes(content_hash).hex() if isinstance(content_hash, (bytes, bytearray)) else None
+        ),
         "verdict": decode_verdict(verdict_raw) if verdict_raw is not None else None,
         "trust_score": int(value["trust_score"]) if value.get("trust_score") is not None else None,
         "owner": address_str(value.get("owner")),
@@ -276,7 +278,9 @@ def poll_once() -> int:
             if exc.oldest is None or exc.oldest <= start:
                 logger.warning("indexer: cannot recover ledger range at %s: %s", start, exc)
                 break
-            logger.info("indexer: cursor %s fell out of retention, resuming at %s", start, exc.oldest)
+            logger.info(
+                "indexer: cursor %s fell out of retention, resuming at %s", start, exc.oldest
+            )
             start = exc.oldest
             continue
         except Exception as exc:

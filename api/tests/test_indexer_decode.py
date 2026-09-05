@@ -12,8 +12,12 @@ HASH = bytes.fromhex("c2bd4a316415b4919e3f1f40d9925f4052d020cf3dc2ecabe0e7c9dd28
 
 def _event(topics, value, successful=True, ledger=4482518, tx="ab" * 32):
     ev = Mock()
-    ev.topic = [scval.to_symbol(t).to_xdr() if isinstance(t, str) and t.islower() and "." not in t
-                else scval.to_string(t).to_xdr() for t in topics]
+    ev.topic = [
+        scval.to_symbol(t).to_xdr()
+        if isinstance(t, str) and t.islower() and "." not in t
+        else scval.to_string(t).to_xdr()
+        for t in topics
+    ]
     ev.value = value.to_xdr()
     ev.ledger = ledger
     ev.transaction_hash = tx
@@ -29,7 +33,8 @@ def test_version_recorded_decodes_to_indexable_row():
         scval.to_symbol("trust_score"): scval.to_uint32(5),
         scval.to_symbol("auditor"): scval.to_address(Address(G)),
     })
-    row = indexer._decode_event(_event(["version_recorded", "com.evil.token-drainer", "1.0.0"], value))
+    event = _event(["version_recorded", "com.evil.token-drainer", "1.0.0"], value)
+    row = indexer._decode_event(event)
     assert row["event"] == "version_recorded"
     assert row["skill_id"] == "com.evil.token-drainer"
     assert row["version"] == "1.0.0"
