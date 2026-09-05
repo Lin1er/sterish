@@ -1,5 +1,7 @@
 # Rust
 target/
+/target/
+contracts/target/
 **/*.rs.bk
 *.wasm
 .soroban/
@@ -24,12 +26,21 @@ node_modules/
 .next/
 out/
 *.tsbuildinfo
+.eslintcache
 
-# Environment (SECRET - lihat CLAUDE.md 'Secret & wallet key')
+# Environment — only *.env.example is tracked. Never commit a real secret key.
+# (see CLAUDE.md 'Secret & wallet key')
 .env
 .env.keys
 .env.local
 .env.*.local
+*/.env
+
+# Local service state
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # IDE
 .idea/
@@ -47,3 +58,6 @@ Thumbs.db
 coverage/
 
 test_snapshots/
+
+# Corpus audit run artifact
+pipeline/corpus/last-run.json
