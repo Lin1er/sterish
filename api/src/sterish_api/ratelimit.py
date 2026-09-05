@@ -20,7 +20,9 @@ _EXEMPT = {"/health"}
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, limit_per_minute: int | None = None):
         super().__init__(app)
-        self.limit = limit_per_minute if limit_per_minute is not None else settings.rate_limit_per_minute
+        self.limit = (
+            limit_per_minute if limit_per_minute is not None else settings.rate_limit_per_minute
+        )
         self._hits: dict[tuple[str, int], int] = defaultdict(int)
         self._lock = Lock()
 
@@ -42,7 +44,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if count > self.limit:
             return JSONResponse(
                 status_code=429,
-                content={"error": "RATE_LIMITED", "detail": f"more than {self.limit} requests per minute"},
+                content={
+                    "error": "RATE_LIMITED",
+                    "detail": f"more than {self.limit} requests per minute",
+                },
                 headers={"Retry-After": str(60 - int(time.time() % 60))},
             )
         return await call_next(request)

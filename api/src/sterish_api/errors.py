@@ -17,7 +17,9 @@ from .config import (
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, error: str, detail: str = "", extra: dict | None = None):
+    def __init__(
+        self, status: int, error: str, detail: str = "", extra: dict | None = None
+    ):
         super().__init__(detail or error)
         self.status = status
         self.error = error
@@ -32,7 +34,9 @@ def error_body(error: str, detail: str, extra: dict | None = None) -> dict:
 
 
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status, content=error_body(exc.error, exc.detail, exc.extra))
+    return JSONResponse(
+        status_code=exc.status, content=error_body(exc.error, exc.detail, exc.extra)
+    )
 
 
 async def contract_error_handler(request: Request, exc: ContractError) -> JSONResponse:

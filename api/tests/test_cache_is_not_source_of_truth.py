@@ -59,7 +59,10 @@ def test_storing_the_same_events_twice_is_idempotent(client):
 
 def test_a_broken_index_never_breaks_a_chain_answer(client, monkeypatch):
     monkeypatch.setattr(chain, "lookup_by_hash", lambda h: dict(SAFE_RECORD, content_hash=h))
-    monkeypatch.setattr(indexer, "_connect", lambda: (_ for _ in ()).throw(indexer.sqlite3.Error("disk gone")))
+    def broken():
+        raise indexer.sqlite3.Error("disk gone")
+
+    monkeypatch.setattr(indexer, "_connect", broken)
     r = client.get("/check/by-hash/" + "a" * 64)
     assert r.status_code == 200
     assert r.json()["verdict"] == "SAFE"
