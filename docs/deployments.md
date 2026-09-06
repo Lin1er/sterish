@@ -304,12 +304,59 @@ pun, termasuk jalur errornya — justru itu yang membusuk diam-diam.
    membuat Caddy **menolak start sama sekali** — `{$VAR:default}` hanya berlaku
    kalau variabelnya tidak di-set, bukan kalau kosong.
 
-### Yang masih tersisa
+### Live — sudah ter-deploy
 
-Deploy ke VPS sungguhan beserta TLS domain nyata belum dilakukan: butuh mesin dan
-DNS yang belum tersedia. Semua yang bisa disiapkan tanpa server sudah siap dan
-teruji; begitu host-nya ada, prosedurnya satu perintah `docker compose up -d --build`
-lalu `bash deploy/verify.sh https://<domain>`.
+| | |
+|---|---|
+| **URL publik** | **https://pve02.tail4d50d6.ts.net** |
+| Host | Proxmox `pve02`, LXC **204 `ct-sterish`**, `192.168.18.43/24` |
+| Spesifikasi | 2 core · 2 GB RAM · 20 GB `local-lvm` · unprivileged · `nesting=1,keyctl=1` · `onboot=1` |
+| TLS | Let's Encrypt asli lewat Tailscale (`ssl_verify_result: 0`), berlaku s/d 5 Des 2026 |
+| Akses publik | Tailscale Funnel di pve02 |
+
+Diverifikasi **lewat URL publik**, bukan dari dalam host: seluruh `deploy/verify.sh`
+lolos (`/health`, `/skills`, 404/400 pada jalur error, `/use` 402 dengan challenge,
+`/use` DANGEROUS 403), dan **agen baru benar-benar membeli license lewat HTTPS
+publik** — mint tx
+[`9e59297638174ee3…`](https://stellar.expert/explorer/testnet/tx/9e59297638174ee3a063877e815cb78362ad46dbf276e6454dbee0232b0ad4df).
+
+**Restart otomatis terbukti:** CT di-reboot, layanan pulih sendiri dalam ~20 detik
+tanpa campur tangan (`onboot=1` + `restart: unless-stopped`).
+
+Dipilih pve02 karena **Funnel pve01 sudah dipakai `ct-sterun`** (proxy ke
+`192.168.18.42:3001`); mengambil root path di sana akan mematikan layanan itu.
+Konvensi CT (pola nama, nameserver, bridge, unprivileged, onboot) disalin dari
+`ct-sterun` alih-alih dikarang sendiri.
+
+### Bug produksi yang hanya muncul setelah ter-deploy
+
+Dua request balik **503 tanpa pernah sampai ke aplikasi**, salah satunya tepat
+setelah `mint_license`. Mudah dikira gangguan jaringan karena lolos saat diulang.
+
+Penyebabnya: setiap handler `async def` sementara **semua panggilan di dalamnya
+blocking** — simulasi Soroban, round trip facilitator, dan mint. Semuanya berjalan
+di atas event loop, jadi satu mint yang polling ledger beberapa detik membekukan
+seluruh API. Dengan satu klien ini tidak pernah terlihat; dengan URL publik, akan
+terlihat seperti layanan yang rewel.
+
+Diperbaiki dengan melepas `async` (FastAPI menjalankan handler sync di threadpool).
+Dibuktikan di deployment: 12 request paralel, terlama 4,07 detik, total wall **4,17
+detik** — kalau masih terblokir, wall time akan sekitar 12×.
+
+### Operasional
+
+```bash
+# di dalam CT 204
+bash /usr/local/bin/ctredeploy          # fetch origin/main, rebuild, restart
+cd /opt/sterish/deploy && docker compose logs -f api
+```
+
+`deploy/.env` di CT ber-mode 600 dan dikirim lewat stdin, jadi `MINTER_SECRET` dan
+`OZ_API_KEY` tidak pernah masuk process list host maupun log SSH.
+
+**Funnel = terekspos ke internet publik**, sesuai syarat tiket ("URL publik
+ber-TLS"). Untuk membatasi ke tailnet saja: `tailscale funnel --https=443 off` di
+pve02.
 
 ## Catatan operasional
 
