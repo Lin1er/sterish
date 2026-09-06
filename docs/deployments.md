@@ -272,6 +272,45 @@ badge VERIFIED.
 - **`/supported` melaporkan `areFeesSponsored: true`**, yang membuat agen pembeli tidak perlu XLM
   sama sekali — dia hanya menandatangani auth entry, facilitator yang merakit dan membayar fee.
 
+## Deployment backend (STE-25)
+
+Stack Docker Compose di `deploy/`: API (indexer jalan di dalam prosesnya) + Caddy
+sebagai reverse proxy dengan TLS otomatis. Prosedur lengkap di `deploy/README.md`.
+
+**Diverifikasi lokal end-to-end**, bukan sekadar ditulis: image dibangun, stack
+dijalankan, dan seluruh permukaan diuji **lewat reverse proxy** — `/health`,
+`/check`, `/skills`, `/use` (402 dengan challenge), dan `/use` untuk skill
+DANGEROUS (403, tidak pernah ditawarkan). Lalu **agen baru benar-benar membeli
+license lewat stack ter-container**: mint tx
+[`739428bf85f92386…`](https://stellar.expert/explorer/testnet/tx/739428bf85f92386981a5858273b013956456238b8c7ee1c639e680b0939275f).
+
+`deploy/verify.sh <base-url>` menjalankan pemeriksaan yang sama terhadap host mana
+pun, termasuk jalur errornya — justru itu yang membusuk diam-diam.
+
+### Tiga hal yang ketahuan karena benar-benar dijalankan
+
+1. **Build context 3,8 GB.** Context-nya adalah root repo, jadi tanpa
+   `.dockerignore` setiap build mengirim `contracts/target` (3,3 GB) plus dua
+   virtualenv dan `node_modules`. Setelah ditambahkan: **340 kB**.
+2. **`docs/` itu dependensi runtime, bukan dokumentasi.** `sterish_pipeline.specs`
+   menemukan repo lewat `docs/specs/verdict.schema.json` dan memuat implementasi
+   referensi `content_hash` dari `docs/specs/reference/`; `/use` meng-hash artefak
+   lewat modul itu sebelum menyajikannya. Mengecualikan `docs/` membuat jalur
+   berbayar melempar `SpecsNotFound` **di produksi** sementara semua test offline
+   tetap hijau.
+3. **Volume dan direktif Caddy yang kosong.** Container jalan sebagai uid 10001
+   tapi named volume datang milik root (`unable to open database file`), dan
+   `STERISH_ACME_EMAIL` kosong menghasilkan direktif `email` tanpa argumen yang
+   membuat Caddy **menolak start sama sekali** — `{$VAR:default}` hanya berlaku
+   kalau variabelnya tidak di-set, bukan kalau kosong.
+
+### Yang masih tersisa
+
+Deploy ke VPS sungguhan beserta TLS domain nyata belum dilakukan: butuh mesin dan
+DNS yang belum tersedia. Semua yang bisa disiapkan tanpa server sudah siap dan
+teruji; begitu host-nya ada, prosedurnya satu perintah `docker compose up -d --build`
+lalu `bash deploy/verify.sh https://<domain>`.
+
 ## Catatan operasional
 
 - **v1 non-upgradeable.** Kalau interface berubah, redeploy dan perbarui dokumen ini.
