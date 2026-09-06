@@ -25,6 +25,13 @@ from ..models import (
 
 router = APIRouter()
 
+# Handlers here are sync `def`, not `async def`, on purpose. Every call they make
+# — the Soroban simulations, the facilitator round trips, the licence mint — is
+# blocking IO. Declared async they would run ON the event loop and stall every
+# other request for their duration; a mint polls the ledger for several seconds,
+# so one purchase made the whole API unresponsive. FastAPI runs sync handlers in
+# a threadpool, which is exactly what this work wants.
+
 _HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
 # api-spec section 6: one get_version per version is one RPC round trip, so cap the
@@ -74,7 +81,7 @@ def _check_response(record: dict) -> VersionCheckResponse:
 
 
 @router.get("/check/by-hash/{content_hash}", response_model=VersionCheckResponse)
-async def check_by_hash(content_hash: str):
+def check_by_hash(content_hash: str):
     """The primary path: 'are *these bytes* audited?'.
 
     A single changed byte produces a different hash, which misses — that is what stops
@@ -103,7 +110,7 @@ async def check_by_hash(content_hash: str):
 
 
 @router.get("/check/{skill_id}/{version}", response_model=VersionCheckResponse)
-async def check_by_name(skill_id: str, version: str):
+def check_by_name(skill_id: str, version: str):
     """Same body as check-by-hash, resolved by name. Use it for display; prefer
     by-hash for a security decision, because asking by name trusts the name."""
     if not skill_id or not version:
@@ -112,7 +119,7 @@ async def check_by_name(skill_id: str, version: str):
 
 
 @router.get("/skills/{skill_id}", response_model=SkillDetailResponse)
-async def skill_detail(skill_id: str):
+def skill_detail(skill_id: str):
     if not skill_id:
         raise ApiError(400, "INVALID_PARAMETER", "skill_id must be non-empty")
 
@@ -160,7 +167,7 @@ async def skill_detail(skill_id: str):
 
 
 @router.get("/skills", response_model=SkillListResponse)
-async def list_skills(
+def list_skills(
     start: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
 ):
@@ -198,7 +205,7 @@ async def list_skills(
 
 
 @router.get("/feed", response_model=FeedResponse)
-async def activity_feed(
+def activity_feed(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
