@@ -83,6 +83,38 @@ The next poll refills it from the chain. Verdicts are unaffected while it is
 empty — only the transaction links in `evidence` and the `/feed` list are, and
 they come back as `null` rather than wrong.
 
+## Publishing on a public hostname
+
+Two paths are wired, and they can run together:
+
+| | |
+|---|---|
+| **Cloudflare Tunnel** | `https://api-sterish.jameshub.fun` — `docker compose --profile tunnel up -d` |
+| **Tailscale** | `https://pve02.tail4d50d6.ts.net` — `tailscale serve`/`funnel` on the host |
+
+Both terminate at Caddy, so request handling, health checks and logging stay
+defined in one place rather than drifting apart depending on how a client
+arrived.
+
+The tunnel is locally managed: `deploy/cloudflared-config.yml` decides the
+routing, not the Cloudflare dashboard. Creating one needs an origin certificate
+(`cloudflared tunnel login`), then:
+
+```bash
+cloudflared tunnel create sterish-api
+cloudflared tunnel route dns sterish-api api-sterish.jameshub.fun
+# copy the generated credentials JSON to deploy/secrets/, then:
+chown 65532:65532 deploy/secrets/cloudflared-credentials.json
+```
+
+**That chown is not optional.** The official cloudflared image runs as nonroot
+(uid 65532); a root-owned 0600 file yields "permission denied" and a container
+that restarts forever while every other service looks healthy.
+
+**One level of subdomain.** Cloudflare's Universal SSL covers `jameshub.fun` and
+`*.jameshub.fun` — a single level. `api.sterish.jameshub.fun` would need a
+wildcard that is not covered, so the name is `api-sterish.jameshub.fun`.
+
 ## Two things that will bite otherwise
 
 **The build context is the repo root.** Without `.dockerignore` every build ships

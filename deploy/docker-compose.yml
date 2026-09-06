@@ -73,6 +73,10 @@ services:
       # service regardless of profile, so a required variable on a profiled
       # service breaks EVERY command — even `docker compose ps` on a host that
       # will never run this profile.
+      # The credentials file must be owned by uid 65532 on the host, not root:
+      # the official cloudflared image runs as nonroot, and a root-owned 0600
+      # file gives "permission denied" and a container that restarts forever.
+      #   chown 65532:65532 deploy/secrets/cloudflared-credentials.json
       - ${TUNNEL_CREDENTIALS_FILE:-./secrets/cloudflared-credentials.json}:/etc/cloudflared/credentials.json:ro
 
 volumes:
