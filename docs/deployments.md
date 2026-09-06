@@ -124,7 +124,12 @@ tx nyata. Kode kontrak, script, dan aktornya **identik**; yang berbeda hanya ala
 | Aset rehearsal | `TUSDC` SAC `CDAYXDIDIINSVQVQRFCH7JSHTFZN4KIZKMNUZRVACHHFLTYGZEZV4OF2`, issuer `GAYCOQ5AMBT3FCIDU5DVIHEGN2QJND5HJOVXSRNT7OKRYETNU5V6MQGI` |
 | Nominal | fee 5.0000000 · bond 10.0000000 |
 
-**Untuk menyelesaikan jalur kanonik:** isi USDC ke `GD73M4F7RN74KBLF…` (developer) dan
+✅ **Jalur kanonik sudah dijalankan (STE-16, 2026-09-06).** USDC testnet diisi lewat Circle
+faucet, lalu seluruh alur dieksekusi di escrow kanonik dengan **USDC asli** — bukti di bagian
+"orchestrator pipeline (STE-16)" di bawah. Bagian di bawah ini dipertahankan sebagai catatan
+kondisi saat STE-13, dan sebagai prosedur kalau saldo habis lagi.
+
+**Kalau perlu diulang:** isi USDC ke `GD73M4F7RN74KBLF…` (developer) dan
 `GCFCURTZ7XHMTKZR…` (auditor) lewat Circle faucet, lalu jalankan satu perintah:
 
 ```bash
@@ -175,6 +180,64 @@ lolos. Bond benar-benar berpindah ke pihak ketiga yang bukan pembayar dan bukan 
 memanggil `submit_verdict` dengan 4 argumen tanpa `version` dan meng-encode verdict sebagai `u32`;
 ABI beku butuh 5 argumen dengan verdict sebagai enum. Melawan kontrak yang sekarang live, submitter
 itu **pasti gagal**.
+
+## Bukti on-chain — orchestrator pipeline (STE-16)
+
+Alur penuh dijalankan dari `sterish_pipeline.orchestrator` melawan kontrak kanonik di atas,
+dengan **USDC testnet asli** di escrow kanonik. Skill uji dibuat dengan id ber-timestamp
+supaya `register_skill` benar-benar dijalankan, bukan di-skip.
+
+**Skill SAFE — `com.sterish.canon-safe-1788685783`** (score 90)
+`evidence_hash` `c99ed231df7b42bf…`
+
+| Langkah | tx |
+|---|---|
+| `register_skill` | [`ed6bf00bed0c72fb…`](https://stellar.expert/explorer/testnet/tx/ed6bf00bed0c72fbeee86dd3726b74a467b0f688fcffeb087625f6d5d1abbd96) |
+| `submit_verdict` | [`a04fdefac6b41297…`](https://stellar.expert/explorer/testnet/tx/a04fdefac6b41297f53258c0d9ea06626070cde79db786588f4c93da36603c96) |
+| `mint_verified` | [`7feb228ac6e49065…`](https://stellar.expert/explorer/testnet/tx/7feb228ac6e49065fcd24811d766812cf2355399dff44af1f26c23f834e137c0) |
+| `create_audit_request` | [`d3e1650c9821e685…`](https://stellar.expert/explorer/testnet/tx/d3e1650c9821e685314e1b832cce8e989f8b10558c7ff7d41d65712d6f0ba8ee) |
+| `post_bond` | [`16452fb9441a4aa3…`](https://stellar.expert/explorer/testnet/tx/16452fb9441a4aa3009a959fab881e511b76b256d349c77c1b3e60fab14f4c5f) |
+| **`settle`** | [`55ba337ed2ab8d15…`](https://stellar.expert/explorer/testnet/tx/55ba337ed2ab8d15955737331ab44fbfe44bc63e8e3c1dd0398ea63f003b43db) |
+
+**Skill DANGEROUS — `com.sterish.canon-poisoned-1788685812`** (score 10)
+`evidence_hash` `a818b83de04c1190…`
+
+| Langkah | tx |
+|---|---|
+| `register_skill` | [`b7840228becdecd5…`](https://stellar.expert/explorer/testnet/tx/b7840228becdecd5648f842d59519821aa8aeabb217e7247c3e0764c7d0361a9) |
+| `submit_verdict` | [`58eb78df233aaa94…`](https://stellar.expert/explorer/testnet/tx/58eb78df233aaa947f24aba0632395aa57cd539380516d47da4bc1a7adad9432) |
+| `mint_verified` | **di-skip** — verdict DANGEROUS, tidak ada badge |
+| `create_audit_request` | [`b90851bd81a5297e…`](https://stellar.expert/explorer/testnet/tx/b90851bd81a5297e96462ce5c89bcd20cce24de72866ce0a48fa1e73bcf0b209) |
+| `post_bond` | [`5195684ee23236a7…`](https://stellar.expert/explorer/testnet/tx/5195684ee23236a7263cc885cfbd9d42ccb2ef262c0007fe3b22e80f4cf54baf) |
+| **`slash`** | [`4518657fdc161a8c…`](https://stellar.expert/explorer/testnet/tx/4518657fdc161a8cc5b7669e1a6de67cc303f2bcfed1d980375c4c2c2e12abd8) |
+
+Diverifikasi dengan membaca ulang dari chain, bukan dari objek hasil orchestrator:
+`lookup_by_hash` mengembalikan verdict dan score yang sama dengan report, `registry.is_verified`
+dan `tokens.is_verified_token` keduanya `true` untuk yang SAFE dan `false` untuk yang DANGEROUS,
+dan `evidence_hash` on-chain sama persis dengan `sha256` byte report yang dipublish.
+
+Nominal di suite live sengaja kecil (fee 0.1 · bond 0.2 USDC), bukan 5/10. Uangnya mengalir satu
+arah — developer membayar tiap fee, auditor dan admin menerima tiap settle dan slash — jadi suite
+seukuran 5 USDC per request menguras pembayar dalam tiga run, lalu gagal karena saldo kosong
+alih-alih karena hal yang sebenarnya diuji. Mengisi ulang butuh Circle faucet yang ber-Captcha.
+
+### Empat perilaku yang ditemukan lewat pengujian, bukan dari dokumen
+
+1. **Transaction meta sekarang `v4`, bukan `v3`.** Membaca `meta.v3.soroban_meta.return_value`
+   diam-diam menghasilkan `None`. `request_id` dari `create_audit_request` datang lewat jalur itu,
+   dan fallback tebakan (`get_request_count() - 1`) sempat menunjuk request **milik STE-13**,
+   sehingga `post_bond` nyaris mengunci bond di job orang lain. Orchestrator sekarang **menolak
+   menebak** kalau id-nya tidak ada.
+2. **`prepare_transaction` melempar pesan generik** ("Simulation transaction failed…") dan
+   menyimpan detailnya di response yang menempel. Tanpa menggali detail itu, penolakan kontrak
+   terlihat seperti gangguan jaringan dan di-retry tiga kali percuma.
+3. **Enum unit variant di-encode sebagai `vec[symbol]`.** Dibuktikan lewat simulasi: `vec[symbol]`
+   -> `Error(Contract, #3)` (diterima, ditolak logika bisnis); `u32` dan symbol telanjang ->
+   `Error(WasmVm, InvalidAction)`; 4 argumen -> `UnexpectedSize`.
+4. **Nomor error bertabrakan antar kontrak.** Escrow `#3` = `NotOpen`, registry `#3` =
+   `SkillNotFound`, dan `#10` datang dari **USDC SAC** (kontrak pihak lain) menembus lewat escrow
+   saat pembayar tidak sanggup menutup transfer. Satu tabel error milik registry membuat kegagalan
+   escrow yang nyata terbaca `Unknown (#10)`.
 
 ## Catatan operasional
 
