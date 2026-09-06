@@ -33,6 +33,19 @@ class Settings:
     # in chunks rather than asking for the whole retained history in one call.
     indexer_chunk_ledgers: int
     report_base_url: str
+    # --- x402 (STE-19) ---
+    tokens_contract_id: str
+    facilitator_url: str
+    facilitator_api_key: str
+    # Classic G... account that receives USDC. NOT the SAC address — sending USDC
+    # lands in this account's classic balance, so it needs a USDC trustline.
+    pay_to: str
+    # SAC C... address the protocol invokes `transfer` on.
+    usdc_sac: str
+    # Base units, 7 decimals: 1_000_000 = 0.10 USDC.
+    price_base_units: int
+    minter_secret: str
+    skills_dir: str
 
     @property
     def network(self) -> str:
@@ -74,6 +87,21 @@ def load_settings() -> Settings:
     ).strip()
     return Settings(
         registry_contract_id=contract_id,
+        tokens_contract_id=(
+            os.getenv("TOKENS_CONTRACT_ID") or os.getenv("TOKENS_CA") or ""
+        ).strip(),
+        facilitator_url=os.getenv(
+            "X402_FACILITATOR_URL", "https://channels.openzeppelin.com/x402/testnet"
+        ).rstrip("/"),
+        facilitator_api_key=os.getenv("OZ_API_KEY", "").strip(),
+        pay_to=(os.getenv("X402_PAY_TO") or os.getenv("DEVELOPER_ADDRESS") or "").strip(),
+        usdc_sac=(
+            os.getenv("USDC_SAC_ADDRESS")
+            or "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+        ).strip(),
+        price_base_units=_env_int("X402_PRICE_BASE_UNITS", 1_000_000),
+        minter_secret=os.getenv("MINTER_SECRET", os.getenv("DEPLOYER_SECRET", "")).strip(),
+        skills_dir=os.getenv("STERISH_SKILLS_DIR", "").strip(),
         rpc_url=os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org").strip(),
         network_passphrase=os.getenv("STELLAR_NETWORK_PASSPHRASE", TESTNET_PASSPHRASE),
         db_path=os.getenv("STERISH_DB_PATH", "sterish_index.db"),

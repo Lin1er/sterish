@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import chain, indexer
+from . import chain, indexer, x402
 from .chain import ChainError, ContractError, NotConfiguredError
 from .config import settings
 from .errors import (
@@ -25,6 +25,7 @@ from .errors import (
 from .models import HealthResponse
 from .ratelimit import RateLimitMiddleware
 from .routes.check import router as check_router
+from .routes.use import router as use_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,6 +80,14 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET"],
     allow_headers=["*"],
+    # Buyers read the challenge and the receipt off these; without expose_headers a
+    # browser client sees neither.
+    expose_headers=[
+        "PAYMENT-REQUIRED",
+        "X-PAYMENT-RESPONSE",
+        "X-STERISH-LICENSE",
+        "X-STERISH-LICENSE-TX",
+    ],
 )
 app.add_middleware(RateLimitMiddleware)
 
@@ -88,6 +97,7 @@ app.add_exception_handler(ChainError, chain_error_handler)
 app.add_exception_handler(NotConfiguredError, not_configured_handler)
 
 app.include_router(check_router, prefix="", tags=["verification"])
+app.include_router(use_router, prefix="", tags=["x402"])
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -101,6 +111,14 @@ async def health_check():
     if reachable and latest is not None and indexed is not None:
         lag = max(0, latest - indexed)
 
+    facilitator_ok: bool | None = None
+    if settings.facilitator_api_key:
+        try:
+            await asyncio.to_thread(x402.supported)
+            facilitator_ok = True
+        except x402.FacilitatorError:
+            facilitator_ok = False
+
     body = HealthResponse(
         status="ok" if reachable else "degraded",
         version=API_VERSION,
@@ -109,5 +127,6 @@ async def health_check():
         rpc_url=settings.rpc_url,
         rpc_reachable=reachable,
         indexer_lag_ledgers=lag,
+        facilitator_reachable=facilitator_ok,
     )
     return JSONResponse(status_code=200 if reachable else 503, content=body.model_dump())

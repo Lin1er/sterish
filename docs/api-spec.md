@@ -29,7 +29,7 @@ not caught up.
 ### Implementation status
 
 **Implemented in STE-17** (2026-09-04) and serving live chain reads against the STE-13
-testnet deployment. Sections 3.1-3.5 are real; 3.6 and 3.7 remain `PLANNED`.
+testnet deployment. Sections 3.1-3.5 and 3.7 are real; only 3.6 remains `PLANNED`.
 
 | Section | Status |
 |---|---|
@@ -39,7 +39,7 @@ testnet deployment. Sections 3.1-3.5 are real; 3.6 and 3.7 remain `PLANNED`.
 | 3.4 `GET /skills` | implemented |
 | 3.5 `GET /health` | implemented |
 | 3.6 `GET /reports/{skill_id}/{version}` | **PLANNED** — `report_uri` is advertised only when `REPORT_BASE_URL` is set, so clients are never handed a link that 404s |
-| 3.7 `POST /use/{skill_id}/{version}` | **PLANNED** (STE-19, x402) |
+| 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19) |
 | `GET /feed` | **added** — indexed registry activity, newest first (dashboard, STE-21) |
 
 What the scaffold had, and what replaced it:
@@ -294,12 +294,59 @@ Serves the full verdict JSON (`specs/verdict-json.md`). Bytes MUST hash to the `
 published on-chain for that version; clients are expected to check. Depends on the pipeline
 emitting a conforming document (see `verdict-json.md` §7, gaps P1–P8).
 
-### 3.7 `POST /use/{skill_id}/{version}` — **PLANNED (STE-18, x402)**
+### 3.7 `GET /use/{skill_id}/{version}` — the paid path (STE-19)
 
-The paid path: returns `402 Payment Required` with an x402 challenge when the caller holds no
-license, and the skill payload plus a freshly minted license token once a USDC micropayment
-settles. Depends on the license token contract, which is **not frozen** — see
-`specs/interfaces.md` §5.
+Implemented. `GET`, not `POST`: the request is a read of a licensed artifact, and x402 clients
+negotiate on the same verb they retry with.
+
+Three outcomes, checked in this order:
+
+| Condition | Response |
+|---|---|
+| caller holds a licence for this exact version | `200` + artifact, `X-STERISH-LICENSE: held` |
+| no licence, no payment | `402` + `PAYMENT-REQUIRED` header, empty body |
+| no licence, `X-PAYMENT` attached | verify → settle → mint → `200`, `X-STERISH-LICENSE: minted` |
+
+A version the registry did not call `SAFE` returns `403 NOT_VERIFIED` and is never offered for
+sale. The tokens contract enforces this too (`mint_license` is gated on the VERIFIED badge), so
+the check is defence in depth and a clearer error than a contract revert.
+
+**Identifying the caller.** Before a payment exists there is nothing to derive an address from,
+so a client that wants the "already licensed" shortcut sends `X-AGENT-ADDRESS: G…` (or `?agent=`).
+After payment the payer is taken from the payment payload itself.
+
+**The 402 body.** Requirements travel in the `PAYMENT-REQUIRED` header as base64 JSON, with an
+empty body. This shape was captured from the reference `@x402/express` server against the same
+facilitator, not inferred:
+
+```json
+{"x402Version": 2, "error": "Payment required",
+ "resource": {"url": "…", "description": "License for <skill>@<version>", "mimeType": "application/json"},
+ "accepts": [{"scheme": "exact", "network": "stellar:testnet",
+              "amount": "1000000", "asset": "CBIELTK6…", "payTo": "GD73M4F7…",
+              "maxTimeoutSeconds": 300, "extra": {"areFeesSponsored": true}}]}
+```
+
+`amount` is in 7-decimal base units — `1000000` is 0.10 USDC. **`payTo` is a classic `G…`
+account** that receives the USDC and needs a USDC trustline; **`asset` is the SAC `C…` contract**
+the protocol invokes `transfer` on. Confusing the two is the documented common stumble, so they
+come from separate settings and neither is derived from the other.
+
+**Content pinning.** The bytes are re-hashed and compared with the `content_hash` the registry
+holds for that version before they leave the process. A mismatch is `500 ARTIFACT_HASH_MISMATCH`,
+never a `200` with the wrong bytes — a buyer must not pay for one artifact and receive another.
+
+**Degradation.** The facilitator is a third party. If it is unreachable the response is
+`503 FACILITATOR_UNAVAILABLE`, never `402`: telling a buyer who just paid that they did not
+invites them to pay twice. Reads (`/check`, `/skills`) and existing licence holders are
+unaffected, and `/health` reports `facilitator_reachable` separately from `rpc_reachable`.
+
+Verify runs before settle deliberately: settling first would move money for a request that is
+about to be refused.
+
+**Errors:** `403 NOT_VERIFIED`, `400 INVALID_PAYMENT`, `402 PAYMENT_REJECTED` (carries the
+facilitator's own reason), `503 FACILITATOR_UNAVAILABLE`, `404 ARTIFACT_NOT_FOUND`,
+`500 ARTIFACT_HASH_MISMATCH`.
 
 ---
 
