@@ -57,13 +57,28 @@ def orch_cfg(tmp_path) -> OrchestratorConfig:
     return OrchestratorConfig(
         registry_id=os.environ["REGISTRY_CA"],
         tokens_id=os.environ["TOKENS_CA"],
-        escrow_id=os.environ.get("ESCROW_REHEARSAL_CA", ""),
+        # Canonical escrow, wired to the real USDC SAC. It only became runnable
+        # once DEVELOPER and AUDITOR held testnet USDC (Circle faucet, web-only).
+        # Set STERISH_USE_REHEARSAL_ESCROW=1 to fall back to the rehearsal escrow
+        # and its asset when those balances are empty again.
+        escrow_id=(
+            os.environ.get("ESCROW_REHEARSAL_CA", "")
+            if os.getenv("STERISH_USE_REHEARSAL_ESCROW") == "1"
+            else os.environ.get("ESCROW_CA", "")
+        ),
         owner_secret=os.environ["DEVELOPER_SECRET"],
         auditor_secret=os.environ["AUDITOR_SECRET"],
         admin_secret=os.environ["DEPLOYER_SECRET"],
         reports_dir=tmp_path / "reports",
         journal_path=tmp_path / "journal.json",
         run_escrow=LIVE_ESCROW,
+        # 0.1 / 0.2 USDC, not the 5 / 10 the orchestrator defaults to. The money
+        # only flows one way — the developer pays every fee, the auditor and admin
+        # collect every settle and slash — so a suite sized at 5 USDC a request
+        # drains the payer in three runs and then fails on an empty balance
+        # rather than on anything real. Testnet USDC is Captcha-gated to refill.
+        fee_amount=1_000_000,
+        bond_amount=2_000_000,
     )
 
 
@@ -186,6 +201,9 @@ def test_registering_the_same_hash_under_a_new_id_is_refused(tmp_path, pipeline_
     """Hash squatting is impossible: one content_hash maps to one (skill_id, version)."""
     skill_dir, _ = _fresh_skill(tmp_path, "safe_skill")
     document = _audit(skill_dir, pipeline_cfg)
+    # This asserts a registry invariant; opening an escrow job would only spend
+    # balance and give the test a second way to fail for an unrelated reason.
+    orch_cfg.run_escrow = False
     orchestrator.orchestrate(document, orch_cfg, pipeline_cfg)
 
     with pytest.raises(onchain.ContractCallError) as exc:

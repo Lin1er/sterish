@@ -55,3 +55,26 @@ def test_contract_error_carries_the_frozen_abi_number():
     # The numbers are the public ABI; a rename here would silently mislabel failures.
     assert onchain.REGISTRY_ERRORS[3] == "SkillNotFound"
     assert onchain.REGISTRY_ERRORS[6] == "HashAlreadyRegistered"
+
+
+class TestErrorNaming:
+    """Error numbers collide across contracts, so the name depends on which one answered."""
+
+    def test_the_same_number_names_a_different_error_per_contract(self):
+        assert "SkillNotFound" in str(onchain.ContractCallError(3, "query_skill"))
+        assert "NotOpen" in str(onchain.ContractCallError(3, "post_bond"))
+
+    def test_escrow_functions_resolve_against_the_escrow_abi(self):
+        err = onchain.ContractCallError(2, "settle")
+        assert err.contract == "escrow"
+        assert "RequestNotFound" in str(err)
+
+    def test_sac_error_is_named_rather_than_reported_as_unknown(self):
+        """Found live: create_audit_request surfaced the SAC's #10 through the escrow,
+        and the registry-only table rendered a payer-cannot-pay failure as 'Unknown'."""
+        err = onchain.ContractCallError(10, "create_audit_request")
+        assert "BalanceOutOfRange" in str(err)
+        assert "Unknown" not in str(err)
+
+    def test_an_unmapped_number_still_says_unknown(self):
+        assert "Unknown" in str(onchain.ContractCallError(99, "settle"))

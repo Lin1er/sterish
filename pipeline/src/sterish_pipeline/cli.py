@@ -160,6 +160,80 @@ def hash(skill: str) -> None:
     click.echo(specs.hash_dir(skill))
 
 
+@cli.command()
+@click.argument("skill", type=click.Path(exists=True))
+@click.option("--config", "-c", default=None, help="Path to pipeline config JSON")
+@click.option("--skip-sandbox", is_flag=True, help="Skip stage 2 sandbox check")
+@click.option("--no-llm", is_flag=True, help="Deterministic only: never call the model")
+@click.option("--reports-dir", default="reports", help="Where the published report is written")
+@click.option("--report-base-url", default="", help="Public base URL for report_uri")
+@click.option("--journal", default=".sterish-journal.json", help="Resume journal path")
+@click.option("--escrow/--no-escrow", default=False,
+              help="Also run create_audit_request -> post_bond -> settle/slash")
+@click.option("--dry-run", is_flag=True, help="Resolve everything but submit nothing")
+def submit(skill, config, skip_sandbox, no_llm, reports_dir, report_base_url,
+           journal, escrow, dry_run) -> None:
+    """Audit SKILL and land the verdict on chain.
+
+    Reads contract addresses and signers from the environment (see .env.example);
+    secrets are never accepted as flags, so they cannot end up in shell history.
+    """
+    import os
+
+    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate
+
+    cfg = PipelineConfig.load(config)
+    if no_llm:
+        cfg.use_llm = False
+    for name, value in (
+        ("registry_contract_id", os.getenv("REGISTRY_CA")),
+        ("rpc_url", os.getenv("STELLAR_RPC_URL")),
+        ("network_passphrase", os.getenv("STELLAR_NETWORK_PASSPHRASE")),
+    ):
+        if value:
+            setattr(cfg, name, value)
+
+    missing = [k for k in ("REGISTRY_CA", "DEVELOPER_SECRET", "AUDITOR_SECRET") if not os.getenv(k)]
+    if missing:
+        raise click.ClickException(f"missing environment variables: {', '.join(missing)}")
+
+    run = run_audit(skill, config=cfg, skip_sandbox=skip_sandbox)
+    run.validate(submittable=True)
+    document = run.verdict_json()
+
+    result = orchestrate(
+        document,
+        OrchestratorConfig(
+            registry_id=os.environ["REGISTRY_CA"],
+            tokens_id=os.getenv("TOKENS_CA", ""),
+            escrow_id=os.getenv("ESCROW_CA", ""),
+            owner_secret=os.environ["DEVELOPER_SECRET"],
+            auditor_secret=os.environ["AUDITOR_SECRET"],
+            admin_secret=os.getenv("DEPLOYER_SECRET", ""),
+            reports_dir=Path(reports_dir),
+            report_base_url=report_base_url,
+            journal_path=Path(journal),
+            run_escrow=escrow,
+        ),
+        cfg,
+        dry_run=dry_run,
+    )
+
+    click.echo(f"{result.skill_id}@{result.version}  {result.verdict}  score={result.score}")
+    for step in result.steps:
+        line = f"  {str(step.step):<22} {step.status}"
+        if step.tx_hash:
+            line += f"  {step.tx_url}"
+        elif step.detail:
+            line += f"  ({step.detail})"
+        click.echo(line)
+    if result.evidence_hash:
+        click.echo(f"  evidence_hash          {result.evidence_hash}")
+        click.echo(f"  report_uri             {result.report_uri}")
+    if not result.ok:
+        raise click.ClickException("orchestration did not complete cleanly")
+
+
 def main() -> None:
     cli()
 
