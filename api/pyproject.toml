@@ -5,6 +5,11 @@ description = "Verification REST API for Sterish audited skill marketplace"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    # The one write path this service has (mint_license) reuses the pipeline's
+    # Soroban writer rather than growing a second one. That module carries hard-won
+    # detail — v4 transaction meta, per-contract error tables, retry rules that do
+    # not retry a contract rejection — and a copy here would drift from it.
+    "sterish-pipeline",
     "httpx>=0.27",
     "stellar-sdk>=13.0",
     "pydantic>=2.0",
@@ -31,3 +36,6 @@ target-version = "py312"
 [tool.ruff.lint]
 # Same rule set as pipeline/pyproject.toml so one repo lints one way.
 select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.uv.sources]
+sterish-pipeline = { path = "../pipeline" }

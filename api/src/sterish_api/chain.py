@@ -21,7 +21,7 @@ import logging
 import re
 from typing import Any
 
-from stellar_sdk import Account, SorobanServer, TransactionBuilder, scval
+from stellar_sdk import Account, Address, SorobanServer, TransactionBuilder, scval
 from stellar_sdk import xdr as stellar_xdr
 
 from .config import settings
@@ -57,15 +57,20 @@ def _server() -> SorobanServer:
 
 
 def _invoke(function: str, args: list) -> Any:
-    """Simulate a read-only contract call and return the decoded native value."""
+    """Simulate a read-only registry call and return the decoded native value."""
     if not settings.registry_contract_id:
         raise NotConfiguredError("REGISTRY_CONTRACT_ID (or REGISTRY_CA) is not set")
+    return _invoke_on(settings.registry_contract_id, function, args)
+
+
+def _invoke_on(contract_id: str, function: str, args: list) -> Any:
+    """Simulate a read-only call against any of our contracts."""
 
     try:
         tx = (
             TransactionBuilder(Account(NULL_ACCOUNT, 0), settings.network_passphrase, base_fee=100)
             .add_time_bounds(0, 0)
-            .append_invoke_contract_function_op(settings.registry_contract_id, function, args)
+            .append_invoke_contract_function_op(contract_id, function, args)
             .build()
         )
         sim = _server().simulate_transaction(tx)
@@ -191,3 +196,36 @@ def rpc_reachable() -> tuple[bool, int | None]:
     except Exception as exc:
         logger.warning("RPC health probe failed: %s", exc)
         return False, None
+
+
+# --- tokens contract reads (STE-19) -----------------------------------------
+
+
+def _tokens_invoke(function: str, args: list) -> Any:
+    if not settings.tokens_contract_id:
+        raise NotConfiguredError("TOKENS_CONTRACT_ID (or TOKENS_CA) is not set")
+    return _invoke_on(settings.tokens_contract_id, function, args)
+
+
+def has_license(agent: str, skill_id: str, version: str) -> bool:
+    """`has_license(Address, String, String) -> bool` on the tokens contract."""
+    return bool(
+        _tokens_invoke(
+            "has_license",
+            [
+                scval.to_address(Address(agent)),
+                scval.to_string(skill_id),
+                scval.to_string(version),
+            ],
+        )
+    )
+
+
+def is_verified_token(skill_id: str, version: str) -> bool:
+    """True when a VERIFIED badge exists for this exact version."""
+    return bool(
+        _tokens_invoke(
+            "is_verified_token",
+            [scval.to_string(skill_id), scval.to_string(version)],
+        )
+    )
