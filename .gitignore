@@ -67,3 +67,6 @@ demo/*/node_modules/
 
 # Deployment artifacts served by /use — operator-supplied, not repo content (STE-25)
 deploy/artifacts/
+
+# Cloudflare Tunnel credentials — the tunnel UUID is public, this is not (STE-25)
+deploy/secrets/
