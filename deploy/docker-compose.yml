@@ -1,0 +1,63 @@
+# Sterish backend, production (STE-25).
+#
+#   docker compose --env-file .env up -d
+#
+# The indexer runs inside the API process, so there is no separate worker service:
+# it is an asyncio task started by the app's lifespan, and splitting it out would
+# mean two processes sharing one SQLite file for no gain.
+#
+# The cache stays SQLite rather than Postgres. It is a cache — every verdict is
+# read from the chain per request, and the documented rebuild is "delete the file
+# and restart". Adding a database server would add a failure mode without adding
+# an answer the chain does not already hold.
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      REGISTRY_CONTRACT_ID: ${REGISTRY_CONTRACT_ID:?set REGISTRY_CONTRACT_ID}
+      TOKENS_CONTRACT_ID: ${TOKENS_CONTRACT_ID:?set TOKENS_CONTRACT_ID}
+      STELLAR_RPC_URL: ${STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}
+      STELLAR_NETWORK_PASSPHRASE: ${STELLAR_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
+      INDEXER_ENABLED: ${INDEXER_ENABLED:-1}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-100}
+      REPORT_BASE_URL: ${REPORT_BASE_URL:-}
+      # x402 paid path. Without OZ_API_KEY the reads still work and /health reports
+      # facilitator_reachable false; only new purchases are unavailable.
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://channels.openzeppelin.com/x402/testnet}
+      OZ_API_KEY: ${OZ_API_KEY:-}
+      X402_PAY_TO: ${X402_PAY_TO:-}
+      USDC_SAC_ADDRESS: ${USDC_SAC_ADDRESS:-CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA}
+      X402_PRICE_BASE_UNITS: ${X402_PRICE_BASE_UNITS:-1000000}
+      MINTER_SECRET: ${MINTER_SECRET:-}
+      STERISH_SKILLS_DIR: /artifacts
+    volumes:
+      - index:/data
+      # Pinned artifacts served by /use. Read-only: this service publishes them,
+      # it never writes them.
+      - ${STERISH_ARTIFACTS_DIR:-./artifacts}:/artifacts:ro
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      STERISH_DOMAIN: ${STERISH_DOMAIN:?set STERISH_DOMAIN, or :80 for a local run}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  index:
+  caddy_data:
+  caddy_config:

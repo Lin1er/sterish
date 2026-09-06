@@ -1,0 +1,28 @@
+# Caddy terminates TLS and proxies to the API.
+#
+# Certificates are obtained and renewed automatically from Let's Encrypt for
+# STERISH_DOMAIN; nothing here needs a cron job or a manual renewal step. Set
+# STERISH_DOMAIN to `:80` for a local run — Caddy then serves plain HTTP and
+# skips ACME entirely, which is what the local verification below does.
+# No global options block. An `email` directive is useful for ACME contact, but
+# `{$VAR:default}` only substitutes when the variable is UNSET — an operator who
+# leaves STERISH_ACME_EMAIL empty in .env gets a bare `email` with no argument,
+# and Caddy then refuses to start at all rather than falling back. Certificates
+# are issued fine without a contact address; to add one, put `tls you@example.com`
+# inside the site block below.
+
+{$STERISH_DOMAIN} {
+	encode gzip
+
+	# Everything Sterish serves is public ledger data, so there is no auth here.
+	# The API applies its own per-IP rate limit.
+	reverse_proxy api:8000 {
+		health_uri /health
+		health_interval 30s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
