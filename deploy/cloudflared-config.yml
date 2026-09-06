@@ -1,0 +1,40 @@
+# Cloudflare Tunnel for the Sterish API.
+#
+# The tunnel is **locally managed**: created with `cloudflared tunnel create`, so
+# the rules below are what decide where traffic goes — not the dashboard. That is
+# deliberate. Routing that lives in someone's UI cannot be reviewed in a PR, does
+# not roll back with a revert, and cannot be answered with `git log`.
+#
+# The alternative (`--token`) moves these rules into the Cloudflare dashboard. If
+# that is ever chosen, delete this file so there are not two sources of truth
+# quietly disagreeing.
+#
+# The UUID below is **not a secret** — it is published in the DNS record. The
+# secret is the credentials JSON, which never enters the repo (see .gitignore).
+
+tunnel: 0cce8c0e-6239-4454-9ec6-a2a4515e4c9d
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # One level deep, and that is not a preference. Cloudflare's Universal SSL
+  # issues certificates for `jameshub.fun` and `*.jameshub.fun` only — a single
+  # level. A two-level name like `api.sterish.jameshub.fun` would need
+  # `*.sterish.jameshub.fun`, which Universal SSL does not cover.
+  - hostname: api-sterish.jameshub.fun
+    # `caddy` is the compose service name, NOT localhost: cloudflared runs in its
+    # own container, so localhost there is itself.
+    #
+    # Pointed at Caddy rather than straight at the API so both entry paths — this
+    # tunnel and the Tailscale one — go through the same proxy. Request handling,
+    # health checks and logging are then defined in one place instead of drifting
+    # apart depending on how a client arrived.
+    service: http://caddy:80
+
+  # A tunnel must not have an open default. This closes it: any hostname not
+  # named above gets a 404 rather than being forwarded somewhere. Without it a
+  # mistyped sub-domain could land on this API.
+  - service: http_status:404
+
+# Without this cloudflared writes a line per request. The API already has its own
+# log with the status and path; two copies just means one of them stops being read.
+loglevel: info

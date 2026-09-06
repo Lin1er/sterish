@@ -57,6 +57,24 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
+  # Public hostname: https://api-sterish.jameshub.fun
+  #
+  # Opt-in via a profile, so a local `docker compose up` does not try to dial
+  # Cloudflare. Start it with:  docker compose --profile tunnel up -d
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    depends_on: [caddy]
+    volumes:
+      - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+      # `${VAR:-default}` rather than `${VAR:?}`: compose interpolates every
+      # service regardless of profile, so a required variable on a profiled
+      # service breaks EVERY command — even `docker compose ps` on a host that
+      # will never run this profile.
+      - ${TUNNEL_CREDENTIALS_FILE:-./secrets/cloudflared-credentials.json}:/etc/cloudflared/credentials.json:ro
+
 volumes:
   index:
   caddy_data:
