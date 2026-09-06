@@ -3,7 +3,12 @@ registry on testnet (see the probe notes in chain.py) rather than assumed from d
 
 from stellar_sdk import Address
 
-from sterish_api.chain import address_str, decode_skill_entry, decode_verdict, decode_version_record
+from sterish_api.chain import (
+    address_str,
+    decode_skill_entry,
+    decode_verdict,
+    decode_version_record,
+)
 
 ZERO = bytes(32)
 G = "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU"

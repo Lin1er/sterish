@@ -45,7 +45,8 @@ class Settings:
     @property
     def explorer_base(self) -> str:
         """stellar.expert base for this network. Never hardcode one (api-spec section 2)."""
-        return f"https://stellar.expert/explorer/{'public' if self.network == 'public' else 'testnet'}"
+        network = "public" if self.network == "public" else "testnet"
+        return f"https://stellar.expert/explorer/{network}"
 
     def contract_url(self, contract_id: str) -> str:
         return f"{self.explorer_base}/contract/{contract_id}"

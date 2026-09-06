@@ -40,8 +40,19 @@ jobs:
 
       # Needed by verify-soulbound.sh and build-wasm.sh, both of which read the
       # contract spec back out of the built wasm.
-      - name: Install stellar-cli
-        run: cargo install --locked stellar-cli --version 27.0.0
+      #
+      # Installed from the released binary rather than `cargo install stellar-cli`.
+      # Building it from source pulls in libdbus-sys, whose build script needs
+      # libdbus-1-dev; that package is not on the runner, so this step panicked and
+      # every Contracts run had been red since 2026-09-03. The binary is the same
+      # pinned 27.0.0 and skips several minutes of compilation.
+      - name: Install stellar-cli 27.0.0
+        run: |
+          set -euo pipefail
+          curl -sSLf -o /tmp/stellar-cli.tar.gz \
+            https://github.com/stellar/stellar-cli/releases/download/v27.0.0/stellar-cli-27.0.0-x86_64-unknown-linux-gnu.tar.gz
+          sudo tar -xzf /tmp/stellar-cli.tar.gz -C /usr/local/bin stellar
+          stellar --version
 
       - name: Format check
         working-directory: contracts

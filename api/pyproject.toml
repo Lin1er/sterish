@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "httpx"]
+dev = ["pytest>=8.0", "httpx", "ruff>=0.6"]
 
 [build-system]
 requires = ["hatchling"]
@@ -23,3 +23,11 @@ packages = ["src/sterish_api"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Same rule set as pipeline/pyproject.toml so one repo lints one way.
+select = ["E", "F", "W", "I", "UP", "B"]

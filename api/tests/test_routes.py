@@ -103,7 +103,7 @@ def test_skill_detail_warns_when_latest_is_not_the_audited_version(client, monke
 
 
 def test_skills_list_prefixes_verdict_fields(client, monkeypatch):
-    monkeypatch.setattr(chain, "query_all_skills", lambda s, l: [{
+    monkeypatch.setattr(chain, "query_all_skills", lambda start, limit: [{
         "skill_id": "com.acme.pdf-suite", "owner": "G" + "A" * 55,
         "versions": ["1.0.0"], "latest_version": "1.0.0",
         "latest_audited_version": "1.0.0", "registered_at": 1,

@@ -2,13 +2,14 @@ import os
 
 # Point every test at a throwaway DB and a known contract id before the app imports
 # its settings (config.py reads the environment once, at import time).
-os.environ.setdefault("REGISTRY_CONTRACT_ID", "CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND")
+os.environ.setdefault(
+    "REGISTRY_CONTRACT_ID", "CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND"
+)
 os.environ.setdefault("STELLAR_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015")
 os.environ.setdefault("INDEXER_ENABLED", "0")
 
-import tempfile  # noqa: E402
 
-import pytest  # noqa: E402
+import pytest
 
 
 @pytest.fixture(autouse=True)

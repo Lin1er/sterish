@@ -6,7 +6,7 @@ The scaffold's models predated the STE-10 freeze: they carried a skill-level
 skill_id alone.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 def iso_or_none(ts: int | None) -> str | None:
     if not ts:
         return None
-    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class Evidence(BaseModel):
