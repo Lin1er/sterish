@@ -1,0 +1,15 @@
+{
+  "name": "sterish-x402-buyer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo agent that buys a Sterish skill licence over x402.",
+  "scripts": {
+    "buy": "node buy.js"
+  },
+  "dependencies": {
+    "@x402/fetch": "^2.25.0",
+    "@x402/stellar": "^2.25.0",
+    "@stellar/stellar-sdk": "^14.0.0"
+  }
+}
