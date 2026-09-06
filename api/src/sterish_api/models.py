@@ -124,6 +124,10 @@ class HealthResponse(BaseModel):
     rpc_url: str
     rpc_reachable: bool
     indexer_lag_ledgers: int | None = None
+    # The paid path depends on a third party. Reported separately so a caller can
+    # tell "Sterish is down" from "you cannot buy a licence right now": reads and
+    # existing licence holders are unaffected when this is false.
+    facilitator_reachable: bool | None = None
 
 
 class ErrorResponse(BaseModel):

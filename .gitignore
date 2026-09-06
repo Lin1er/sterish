@@ -61,3 +61,6 @@ test_snapshots/
 
 # Corpus audit run artifact
 pipeline/corpus/last-run.json
+
+# x402 demo buyer deps (STE-19)
+demo/*/node_modules/
