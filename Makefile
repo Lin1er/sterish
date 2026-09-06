@@ -99,7 +99,7 @@ test-pipeline: ## Run pipeline tests
 # any formatter run, and reformatting 15 files owned by other tickets from an infra
 # ticket would bury real changes in noise. Adopt it in its own change if wanted.
 lint-pipeline: ## Lint the pipeline
-	cd pipeline && uv run ruff check src tests
+	cd pipeline && uv run ruff check src tests scripts
 
 run-pipeline: ## Audit one skill: make run-pipeline SKILL_ID=... MANIFEST=...
 	cd pipeline && uv run python -m sterish_pipeline.cli audit \

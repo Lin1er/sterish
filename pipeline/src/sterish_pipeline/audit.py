@@ -22,11 +22,14 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sterish_pipeline import specs
 from sterish_pipeline.config import PipelineConfig
+from sterish_pipeline.content_hash import content_hash
 from sterish_pipeline.llm import (
     LLMOpinion,
     StructuredClient,
@@ -47,6 +50,9 @@ from sterish_pipeline.stages.stage3_verdict_synthesis import (
     build_verdict_document,
     synthesize_verdict,
 )
+
+if TYPE_CHECKING:  # avoids a cycle: intake.normalize imports this module
+    from sterish_pipeline.intake.normalize import NormalizedSkill
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +78,42 @@ class AuditRun:
     def validate(self, submittable: bool = False) -> None:
         """Raise ``ValueError`` unless the emitted document satisfies the frozen schema."""
         specs.validate_verdict_document(self.verdict_json(), submittable=submittable)
+
+
+def audit_normalized(
+    skill: NormalizedSkill,
+    config: PipelineConfig | None = None,
+    skip_sandbox: bool = False,
+    llm_client: StructuredClient | None = None,
+) -> AuditReport:
+    """Audit a skill that was normalised from a non-manifest source.
+
+    Corpus entries are SKILL.md files and MCP JSON, not ``manifest.json``, so
+    ``run_audit`` cannot read them directly — the intake normaliser produces the
+    manifest first.
+
+    The normalised bytes are materialised into a temporary directory and stage 1
+    is pointed at it, so the injection scanner reads exactly the bytes the
+    content_hash was taken over. That also means the markdown bodies and MCP env
+    blocks are covered by STE-14's scanner rather than by a second text-collection
+    path of this module's own.
+    """
+    cfg = config or PipelineConfig()
+
+    with tempfile.TemporaryDirectory(prefix="sterish-normalized-") as tmp:
+        root = Path(tmp)
+        for rel, raw in skill.files.items():
+            target = root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+
+        stage1 = run_stage1(skill.manifest, cfg, root)
+
+    stage2 = Stage2Result() if skip_sandbox else run_sandbox_check(skill.manifest, config=cfg)
+
+    report = AuditReport(skill_id=skill.manifest.skill_id, version=skill.manifest.version)
+    report.content_hash = content_hash(skill.files)
+    return synthesize_verdict(report, stage1, stage2, cfg)
 
 
 def load_skill(path: Path | str) -> tuple[SkillManifest, Path]:

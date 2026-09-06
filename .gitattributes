@@ -1,0 +1,5 @@
+# Corpus snapshots carry recorded per-file digests over their RAW bytes
+# (see docs/specs/content-hash.md and pipeline/corpus/index.json). Git must
+# never translate their line endings, or the file-digest integrity check in
+# `intake verify` fails on checkout.
+pipeline/corpus/** -text
