@@ -3,3 +3,7 @@
 # never translate their line endings, or the file-digest integrity check in
 # `intake verify` fails on checkout.
 pipeline/corpus/** -text
+
+# Force LF line endings everywhere — prevents CRLF breakage on Windows
+# (core.autocrlf=true converts on checkout, breaking byte-for-byte tests)
+* text=auto eol=lf
