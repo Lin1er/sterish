@@ -8,6 +8,19 @@ os.environ.setdefault(
 os.environ.setdefault("STELLAR_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015")
 os.environ.setdefault("INDEXER_ENABLED", "0")
 
+# x402 settings the paid-path tests assert on. Set here, not inherited: these tests
+# passed locally only because a developer shell had .env loaded, and CI — which has
+# no .env — caught that the assertions were reading ambient values rather than
+# fixed ones.
+os.environ.setdefault(
+    "TOKENS_CONTRACT_ID", "CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX"
+)
+os.environ.setdefault(
+    "X402_PAY_TO", "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU"
+)
+os.environ.setdefault("X402_PRICE_BASE_UNITS", "1000000")
+os.environ.setdefault("OZ_API_KEY", "test-key-not-used-offline")
+
 
 import pytest
 
