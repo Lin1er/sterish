@@ -106,7 +106,10 @@ def rehash(corpus_dir: str) -> None:
     console.print(f"[green]Rehashed {len(entries)} entries[/green]")
 
 
-@click.command("audit-corpus")
+# Registered on the group, not a bare click.command: as a loose command it was
+# never reachable through `intake`, so the batch audit the ticket asks for could
+# not be invoked at all.
+@intake.command("audit-corpus")
 @click.option("--corpus", "corpus_dir", default=str(DEFAULT_CORPUS), type=click.Path())
 @click.option("--config", "-c", default=None, help="Pipeline config JSON")
 @click.option("--skip-sandbox", is_flag=True, default=True, help="Skip stage 2 (default on)")
@@ -137,7 +140,7 @@ def audit_corpus(
         report = audit_normalized(skill, config=cfg, skip_sandbox=skip_sandbox)
 
         verdict = report.final_verdict.value
-        injection = len(report.stage1.injection_flags)
+        injection = len(report.stage1.injection_findings)
         result = "—"
         if entry.expected_verdict:
             ok = verdict == entry.expected_verdict
@@ -169,7 +172,7 @@ def audit_corpus(
                 "expected_verdict": entry.expected_verdict,
                 "verdict": verdict,
                 "trust_score": report.trust_score,
-                "injection_flags": [f.model_dump() for f in report.stage1.injection_flags],
+                "injection_findings": [f.model_dump() for f in report.stage1.injection_findings],
                 "evidence_hash": report.evidence_hash,
                 "provenance": {
                     "source": entry.provenance.source,
