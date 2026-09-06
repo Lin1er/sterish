@@ -29,6 +29,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Handlers here are sync `def`, not `async def`, on purpose. Every call they make
+# — the Soroban simulations, the facilitator round trips, the licence mint — is
+# blocking IO. Declared async they would run ON the event loop and stall every
+# other request for their duration; a mint polls the ledger for several seconds,
+# so one purchase made the whole API unresponsive. FastAPI runs sync handlers in
+# a threadpool, which is exactly what this work wants.
+
 AGENT_HEADER = "X-AGENT-ADDRESS"
 
 
@@ -103,7 +110,7 @@ def _mint_license(agent: str, skill_id: str, version: str) -> str:
 
 
 @router.get("/use/{skill_id}/{version}")
-async def use_skill(skill_id: str, version: str, request: Request):
+def use_skill(skill_id: str, version: str, request: Request):
     record = chain.get_version(skill_id, version)
 
     # A licence is only sellable for a version the registry called SAFE. The tokens
