@@ -239,6 +239,39 @@ alih-alih karena hal yang sebenarnya diuji. Mengisi ulang butuh Circle faucet ya
    saat pembayar tidak sanggup menutup transfer. Satu tabel error milik registry membuat kegagalan
    escrow yang nyata terbaca `Unknown (#10)`.
 
+## Bukti on-chain — pembayaran x402 (STE-19)
+
+Loop berbayar penuh dijalankan di testnet dengan **agen baru** yang tidak punya riwayat apa pun:
+402 → bayar USDC → license ter-mint → 200, lalu panggilan kedua **200 tanpa bayar lagi**.
+
+| | |
+|---|---|
+| Agen | `GBFXMHA77OLBYF3JJB43O6CKZ4QR35AAQALJK72MUIHTZNBVAQGTTZWY` |
+| Facilitator | OZ Channels `https://channels.openzeppelin.com/x402/testnet` |
+| Aset | USDC SAC `CBIELTK6…` · `payTo` akun klasik `GD73M4F7…` |
+| Harga | `1000000` base unit = **0.10 USDC** |
+| Mint license | [`5768516f156b74e7…`](https://stellar.expert/explorer/testnet/tx/5768516f156b74e7e97ac733c45261f59ec38d550a990159743d5fb6720a9ef9) |
+
+Diverifikasi dengan membaca ulang dari chain, bukan dari respons API:
+
+- saldo USDC agen **2.0000000 → 1.9000000** — terbayar tepat 0.10, tidak lebih
+- `tokens.has_license(agen, skill, versi)` → **true**
+- `total_supply` token bertambah
+
+Skill DANGEROUS **tidak pernah ditawarkan**: `/use` mengembalikan `403 NOT_VERIFIED` tanpa
+challenge pembayaran sama sekali, dan kontrak token menolaknya secara independen lewat gerbang
+badge VERIFIED.
+
+### Catatan yang menghemat waktu berikutnya
+
+- **Key facilitator testnet tidak butuh autentikasi.** `curl https://channels.openzeppelin.com/testnet/gen`
+  langsung mengembalikan `{"apiKey": "..."}` — tidak ada Captcha, tidak ada OAuth (itu hanya untuk
+  mainnet). Jadi jalur berbayar tidak terblokir langkah manual seperti Circle faucet.
+- **Bentuk 402 ditangkap dari server referensi**, bukan ditebak: requirements ada di header
+  `PAYMENT-REQUIRED` sebagai base64 JSON dengan body kosong. `amount` 7 desimal.
+- **`/supported` melaporkan `areFeesSponsored: true`**, yang membuat agen pembeli tidak perlu XLM
+  sama sekali — dia hanya menandatangani auth entry, facilitator yang merakit dan membayar fee.
+
 ## Catatan operasional
 
 - **v1 non-upgradeable.** Kalau interface berubah, redeploy dan perbarui dokumen ini.
