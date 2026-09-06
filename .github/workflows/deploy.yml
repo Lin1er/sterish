@@ -1,0 +1,99 @@
+name: Deploy stack
+
+# Only the deployment surface. The API's own tests live in the Pipeline & API
+# workflow; this one answers a different question: does the thing we ship still
+# build and start?
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/**'
+      - '.dockerignore'
+      - 'api/**'
+      - 'pipeline/**'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'deploy/**'
+      - '.dockerignore'
+      - 'api/**'
+      - 'pipeline/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack:
+    name: build + boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the compose file
+        working-directory: deploy
+        env:
+          REGISTRY_CONTRACT_ID: C_PLACEHOLDER
+          TOKENS_CONTRACT_ID: C_PLACEHOLDER
+          STERISH_DOMAIN: ':80'
+        run: docker compose config --quiet
+
+      - name: Build the image
+        working-directory: deploy
+        env:
+          REGISTRY_CONTRACT_ID: C_PLACEHOLDER
+          TOKENS_CONTRACT_ID: C_PLACEHOLDER
+          STERISH_DOMAIN: ':80'
+        run: docker compose build api
+
+      # Two real failures were found this way rather than by reading YAML: the
+      # named volume arriving owned by root (the unprivileged process died at
+      # startup), and an empty STERISH_ACME_EMAIL producing a bare `email`
+      # directive that made Caddy refuse to start. Both show up as a container
+      # that exits immediately, so booting the stack is the check.
+      #
+      # Deliberately not asserting /health 200: that needs Stellar RPC, and CI
+      # must not go red because testnet is having a bad afternoon.
+      - name: Boot the stack and confirm it stays up
+        working-directory: deploy
+        env:
+          REGISTRY_CONTRACT_ID: CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND
+          TOKENS_CONTRACT_ID: CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX
+          STERISH_DOMAIN: ':80'
+          HTTP_PORT: '8088'
+          HTTPS_PORT: '8443'
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          docker compose up -d
+          sleep 25
+          docker compose ps
+
+          for service in api caddy; do
+            state=$(docker compose ps --format '{{.State}}' "$service")
+            echo "$service: $state"
+            case "$state" in
+              running|*healthy*) ;;
+              *) echo "::error::$service is '$state', expected running"
+                 docker compose logs "$service"
+                 exit 1 ;;
+            esac
+          done
+
+          # A crash loop reads as "running" between restarts, so require that the
+          # container has not restarted at all.
+          restarts=$(docker inspect -f '{{.RestartCount}}' "$(docker compose ps -q api)")
+          echo "api restart count: $restarts"
+          [ "$restarts" -eq 0 ] || { docker compose logs api; exit 1; }
+
+      - name: Tear down
+        if: always()
+        working-directory: deploy
+        env:
+          REGISTRY_CONTRACT_ID: C_PLACEHOLDER
+          TOKENS_CONTRACT_ID: C_PLACEHOLDER
+          STERISH_DOMAIN: ':80'
+        run: docker compose down -v || true
