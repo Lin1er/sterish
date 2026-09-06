@@ -308,7 +308,8 @@ pun, termasuk jalur errornya — justru itu yang membusuk diam-diam.
 
 | | |
 |---|---|
-| **URL publik** | **https://pve02.tail4d50d6.ts.net** |
+| **URL publik** | **https://api-sterish.jameshub.fun** (Cloudflare Tunnel) |
+| URL alternatif | https://pve02.tail4d50d6.ts.net (Tailscale) |
 | Host | Proxmox `pve02`, LXC **204 `ct-sterish`**, `192.168.18.43/24` |
 | Spesifikasi | 2 core · 2 GB RAM · 20 GB `local-lvm` · unprivileged · `nesting=1,keyctl=1` · `onboot=1` |
 | TLS | Let's Encrypt asli lewat Tailscale (`ssl_verify_result: 0`), berlaku s/d 5 Des 2026 |
@@ -319,6 +320,19 @@ lolos (`/health`, `/skills`, 404/400 pada jalur error, `/use` 402 dengan challen
 `/use` DANGEROUS 403), dan **agen baru benar-benar membeli license lewat HTTPS
 publik** — mint tx
 [`9e59297638174ee3…`](https://stellar.expert/explorer/testnet/tx/9e59297638174ee3a063877e815cb78362ad46dbf276e6454dbee0232b0ad4df).
+
+**Lewat Cloudflare** (`server: cloudflare`, `via: 1.1 Caddy`): seluruh `verify.sh`
+lolos dan **agen baru membeli license lewat domain itu** — mint tx
+[`7d01568dd1ccebf4…`](https://stellar.expert/explorer/testnet/tx/7d01568dd1ccebf4c9bc5fc10aa9f91e92bcf3faae5b4ae33705f14e8a9af9ad).
+Tunnel-nya *locally managed*: routing ditentukan `deploy/cloudflared-config.yml`,
+bukan dashboard. Satu tingkat subdomain karena Universal SSL hanya mencakup
+`*.jameshub.fun` — pelajaran yang sudah dicatat Sterun lebih dulu.
+
+**Jebakan yang memakan waktu:** file credentials tunnel harus dimiliki **uid
+65532**, bukan root. Image cloudflared resmi jalan sebagai nonroot, jadi file
+0600 milik root menghasilkan `permission denied` dan container yang restart terus
+sementara semua service lain terlihat sehat. Jawabannya sebenarnya sudah terlihat
+di deployment Sterun sejak awal (`-rw------- 1 65532 65532`).
 
 **Restart otomatis terbukti:** CT di-reboot, layanan pulih sendiri dalam ~20 detik
 tanpa campur tangan (`onboot=1` + `restart: unless-stopped`).
