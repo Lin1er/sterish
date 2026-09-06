@@ -64,3 +64,6 @@ pipeline/corpus/last-run.json
 
 # x402 demo buyer deps (STE-19)
 demo/*/node_modules/
+
+# Deployment artifacts served by /use — operator-supplied, not repo content (STE-25)
+deploy/artifacts/

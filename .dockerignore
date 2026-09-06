@@ -1,0 +1,45 @@
+# The build context for deploy/Dockerfile is the repo root, so anything not
+# excluded here is shipped to the Docker daemon on every build. Measured before
+# this file existed: contracts/target alone is 3.3 GB, and the context was still
+# climbing past 37 MB of virtualenvs and node_modules when it was interrupted.
+
+.git/
+.github/
+
+# Virtualenvs and caches
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/*.pyc
+
+# Node
+**/node_modules/
+dashboard/.next/
+
+# Rust build output — by far the largest offender
+contracts/target/
+**/target/
+
+# Secrets must never enter an image layer, not even a discarded build stage.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local state
+**/*.db
+**/*.db-journal
+.sterish-journal.json
+deploy/artifacts/
+
+# Not needed at runtime.
+#
+# docs/ is deliberately NOT excluded: sterish_pipeline.specs locates the repo by
+# looking for docs/specs/verdict.schema.json and reads the frozen content_hash
+# reference from docs/specs/reference/ at runtime. /use hashes the artifact
+# through that module before serving it, so dropping docs/ would leave the paid
+# path raising SpecsNotFound in production while every test still passed.
+demo/
+dashboard/
+contracts/
+**/tests/
