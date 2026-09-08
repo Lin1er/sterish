@@ -42,41 +42,46 @@ type Swatch = {
 };
 
 const surfaces: Swatch[] = [
-  { token: "--bg", hex: "#0a0a0f", note: "Page" },
-  { token: "--surface", hex: "#12121a", note: "Card, table row" },
-  { token: "--surface-2", hex: "#1a1a24", note: "Popover, hovered row" },
-  { token: "--border", hex: "#1e1e2e", note: "Hairline" },
-  { token: "--border-strong", hex: "#2c2c40", note: "Input, focused card" },
+  { token: "--bg-deep", hex: "#0c1c32", note: "Code, terminal. Sinks below" },
+  { token: "--bg", hex: "#122c4f", note: "Page canvas. Nabil primary" },
+  { token: "--surface", hex: "#1f3757", note: "Card, table row" },
+  { token: "--elevated", hex: "#29405e", note: "Popover, nav on scroll" },
+  { token: "--hairline", hex: "#374d67", note: "Row and section borders" },
+  { token: "--hairline-strong", hex: "#536579", note: "Focused input, active tab" },
 ];
 
 const text: Swatch[] = [
-  { token: "--text", hex: "#e8e8ed", onBg: "16.17:1", note: "Primary" },
-  { token: "--text-muted", hex: "#a1a1ab", onBg: "7.71:1", note: "Secondary" },
-  {
-    token: "--text-subtle",
-    hex: "#71717a",
-    onBg: "4.09:1",
-    note: "Decorative and disabled only",
-    failsBodyText: true,
-  },
+  { token: "--text", hex: "#fbf9e4", onBg: "13.19:1", note: "Nabil primary. Cream, never white" },
+  { token: "--text-secondary", hex: "#bac0ba", onBg: "7.56:1", note: "Body copy, descriptions" },
+  { token: "--text-tertiary", hex: "#8b979c", onBg: "4.67:1", note: "Captions and metadata only" },
 ];
 
 const brand: Swatch[] = [
   {
     token: "--accent",
-    hex: "#c2320a",
-    onBg: "3.53:1",
-    note: "Fill only. White on it clears AA at 5.59:1",
+    hex: "#5c89b3",
+    onBg: "3.79:1",
+    note: "Fill and graphics only. Never text, never a filled button",
     failsBodyText: true,
   },
   {
     token: "--accent-lift",
-    hex: "#ff6a3d",
-    onBg: "6.94:1",
-    note: "Accent as text, links, focus ring",
+    hex: "#89a8c1",
+    onBg: "5.63:1",
+    note: "The blue as text",
   },
-  { token: "--accent-surface", hex: "#2c1715", note: "Badge fill" },
-  { token: "--accent-border", hex: "#5d2b1f", note: "Badge outline" },
+  {
+    token: "--keyword",
+    hex: "#bf8ce5",
+    onBg: "5.40:1",
+    note: "The one leading accent: links, active tab, focus ring, keywords",
+  },
+  {
+    token: "--tan",
+    hex: "#bda094",
+    onBg: "5.75:1",
+    note: "Metadata, code comments, quiet marks",
+  },
 ];
 
 /** One swatch inside a verdict triplet. The two ratio fields are mutually
@@ -103,33 +108,33 @@ const verdicts: {
     verdict: "SAFE" as const,
     icon: ShieldCheck,
     meaning: "Passed every stage. The only verdict that mints a VERIFIED token.",
-    fg: { token: "--safe", hex: "#3ddc84", onBg: "11.07:1" },
-    surface: { token: "--safe-surface", hex: "#11271f", onFill: "8.82:1" },
-    border: { token: "--safe-border", hex: "#1b5137" },
+    fg: { token: "--safe", hex: "#3ddc84", onBg: "7.85:1" },
+    surface: { token: "--safe-surface", hex: "#14352f" },
+    border: { token: "--safe-border", hex: "#245b45" },
   },
   {
     verdict: "WARNING" as const,
     icon: AlertTriangle,
     meaning: "Findings worth reading before you install. Not blocked.",
-    fg: { token: "--warning", hex: "#f5b301", onBg: "10.66:1" },
-    surface: { token: "--warning-surface", hex: "#2b220d", onFill: "8.47:1" },
-    border: { token: "--warning-border", hex: "#5a430a" },
+    fg: { token: "--warning", hex: "#f5b301", onBg: "7.56:1" },
+    surface: { token: "--warning-surface", hex: "#2e3220" },
+    border: { token: "--warning-border", hex: "#5c541c" },
   },
   {
     verdict: "DANGEROUS" as const,
     icon: ShieldX,
     meaning: "Blocked. A poisoned skill must always land here.",
-    fg: { token: "--danger", hex: "#ff5c4d", onBg: "6.48:1" },
-    surface: { token: "--danger-surface", hex: "#2c1518", onFill: "5.61:1" },
-    border: { token: "--danger-border", hex: "#5d2624" },
+    fg: { token: "--danger", hex: "#ff7a6b", onBg: "5.50:1" },
+    surface: { token: "--danger-surface", hex: "#33262f" },
+    border: { token: "--danger-border", hex: "#633c3f" },
   },
   {
     verdict: "UNAUDITED" as const,
     icon: CircleHelp,
     meaning: "Hash not in the registry. Absence of a verdict, not a pass.",
-    fg: { token: "--unaudited", hex: "#8b8b96", onBg: "5.86:1" },
-    surface: { token: "--unaudited-surface", hex: "#1c1c22", onFill: "5.03:1" },
-    border: { token: "--unaudited-border", hex: "#36363d" },
+    fg: { token: "--unaudited", hex: "#a3adb8", onBg: "6.16:1" },
+    surface: { token: "--unaudited-surface", hex: "#232f45" },
+    border: { token: "--unaudited-border", hex: "#414f61" },
   },
 ];
 
@@ -163,14 +168,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-border pt-10">
+    <section className="border-t border-hairline pt-10">
       <div className="mb-6">
-        <div className="numeric text-xs font-semibold tracking-widest text-accent-lift">
+        <div className="numeric text-xs font-semibold tracking-widest text-keyword">
           {n}
         </div>
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
         {lede ? (
-          <p className="mt-2 max-w-2xl text-sm text-text-muted">{lede}</p>
+          <p className="mt-2 max-w-2xl text-sm text-text-secondary">{lede}</p>
         ) : null}
       </div>
       {children}
@@ -180,15 +185,15 @@ function Section({
 
 function Chip({ s }: { s: Swatch }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="overflow-hidden rounded-lg border border-hairline bg-surface">
       <div className="h-16 w-full" style={{ backgroundColor: s.hex }} />
       <div className="flex flex-col gap-1 p-3">
         <div className="numeric font-mono text-xs text-text">{s.token}</div>
-        <div className="numeric font-mono text-xs uppercase text-text-subtle">
+        <div className="numeric font-mono text-xs uppercase text-text-tertiary">
           {s.hex}
         </div>
         {s.note ? (
-          <div className="text-xs text-text-muted">{s.note}</div>
+          <div className="text-xs text-text-secondary">{s.note}</div>
         ) : null}
         {s.onBg ? (
           <Badge variant={s.failsBodyText ? "warning" : "outline"}>
@@ -214,21 +219,20 @@ export default function TokenPreview() {
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <header className="mb-12 flex flex-col gap-3">
-        <Badge variant="warning">Proposal, not signed off</Badge>
+        <Badge variant="unaudited">STE-7 brand, applied</Badge>
         <h1 className="text-4xl font-extrabold tracking-tight">
           Sterish design tokens
         </h1>
-        <p className="max-w-2xl text-text-muted">
-          STE-7 owns the final brand. This page exists so STE-8 has something
-          concrete to build on, and so there is one artefact to argue about
-          instead of a hex scattered through twenty components. Every value below
-          is a token in{" "}
-          <span className="numeric font-mono text-sm text-accent-lift">
+        <p className="max-w-2xl text-text-secondary">
+          Nabil set the brand: navy, cream, and three accents. Everything below
+          is derived from those five values, so changing one of them changes the
+          app rather than one component. Every value below is a token in{" "}
+          <span className="numeric font-mono text-sm text-keyword">
             src/app/globals.css
           </span>
-          . Change the values, keep the shape.
+          . Never write a raw hex in a component.
         </p>
-        <p className="max-w-2xl text-sm text-text-muted">
+        <p className="max-w-2xl text-sm text-text-secondary">
           Contrast ratios are computed against{" "}
           <span className="numeric font-mono">--bg</span>, not eyeballed. The bar
           is 4.5:1 for body text and 3:1 for large text and non-text UI.
@@ -239,7 +243,7 @@ export default function TokenPreview() {
         <Section
           n="01"
           title="Surfaces"
-          lede="Five steps, dark only. A light theme is a STE-7 decision, so v1 does not ship one and .dark inherits :root rather than redefining it."
+          lede="Six steps built from the navy. It is a mid-dark canvas rather than a near-black, so the layer a reader looks into, meaning code and terminal output, sinks below the page instead of rising above it. Cards and popovers still lift."
         >
           <Chips items={surfaces} />
         </Section>
@@ -247,7 +251,7 @@ export default function TokenPreview() {
         <Section
           n="02"
           title="Text"
-          lede="Three roles. The third one fails the body-text bar on purpose and is labelled as such, because a token that quietly fails is worse than no token."
+          lede="Three roles, all derived from the cream. Cream rather than white is the point: it is warmer, it is Nabil's, and at 13.19:1 on the navy it is stronger than most white-on-black pairs."
         >
           <Chips items={text} />
         </Section>
@@ -255,21 +259,21 @@ export default function TokenPreview() {
         <Section
           n="03"
           title="Brand"
-          lede="The scaffold's rust, split in two. This is the one finding on this page that changes how you write code: the brand colour cannot be used as text."
+          lede="Nabil's three accents, sorted by what each can actually do. The finding that changes how you write code: the blue cannot be text, and it cannot be a filled button either, because cream on it is 3.48:1 and navy on it is 3.79:1. Both fail."
         >
           <Chips items={brand} />
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="text-danger">
-                  Wrong: accent as text
+                  Wrong: the blue as text
                 </CardTitle>
                 <CardDescription>
-                  3.53:1 against the page. Fails AA for body text.
+                  3.79:1 against the page. Fails AA for body text.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p style={{ color: "#c2320a" }}>
+                <p style={{ color: "#5c89b3" }}>
                   Check the hash before you install this skill.
                 </p>
               </CardContent>
@@ -279,7 +283,7 @@ export default function TokenPreview() {
                 <CardTitle className="text-safe">
                   Right: accent-lift as text
                 </CardTitle>
-                <CardDescription>6.94:1 against the page. Passes.</CardDescription>
+                <CardDescription>5.63:1 against the page. Passes.</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-accent-lift">
@@ -312,26 +316,26 @@ export default function TokenPreview() {
                     {[v.fg, v.surface, v.border].map((c) => (
                       <div
                         key={c.token}
-                        className="flex items-center gap-3 rounded-md border border-border p-2"
+                        className="flex items-center gap-3 rounded-md border border-hairline p-2"
                       >
                         <div
-                          className="size-9 shrink-0 rounded-sm border border-border-strong"
+                          className="size-9 shrink-0 rounded-sm border border-hairline-strong"
                           style={{ backgroundColor: c.hex }}
                         />
                         <div className="flex min-w-0 flex-col">
                           <span className="numeric truncate font-mono text-xs">
                             {c.token}
                           </span>
-                          <span className="numeric font-mono text-xs uppercase text-text-subtle">
+                          <span className="numeric font-mono text-xs uppercase text-text-tertiary">
                             {c.hex}
                           </span>
                           {c.onBg ? (
-                            <span className="numeric text-xs text-text-muted">
+                            <span className="numeric text-xs text-text-secondary">
                               on bg {c.onBg}
                             </span>
                           ) : null}
                           {c.onFill ? (
-                            <span className="numeric text-xs text-text-muted">
+                            <span className="numeric text-xs text-text-secondary">
                               text on fill {c.onFill}
                             </span>
                           ) : null}
@@ -380,8 +384,8 @@ export default function TokenPreview() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1 rounded-md border border-border p-4">
-                  <span className="text-xs text-text-subtle">Without</span>
+                <div className="flex flex-col gap-1 rounded-md border border-hairline p-4">
+                  <span className="text-xs text-text-tertiary">Without</span>
                   <span className="font-mono text-2xl tracking-widest">
                     0 O 1 l 8 B
                   </span>
@@ -392,8 +396,8 @@ export default function TokenPreview() {
                     111000
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 rounded-md border border-accent-border bg-accent-surface p-4">
-                  <span className="text-xs text-accent-lift">With .numeric</span>
+                <div className="flex flex-col gap-1 rounded-md border border-hairline-strong bg-elevated p-4">
+                  <span className="text-xs text-keyword">With .numeric</span>
                   <span className="numeric font-mono text-2xl tracking-widest">
                     0 O 1 l 8 B
                   </span>
@@ -414,7 +418,7 @@ export default function TokenPreview() {
                 <div key={cls}>
                   {i > 0 ? <Separator /> : null}
                   <div className="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:gap-6">
-                    <div className="numeric w-28 shrink-0 font-mono text-xs text-text-subtle">
+                    <div className="numeric w-28 shrink-0 font-mono text-xs text-text-tertiary">
                       {cls} {px}
                     </div>
                     <div className={cls}>{sample}</div>
@@ -436,12 +440,12 @@ export default function TokenPreview() {
                 {radii.map(([cls, px, use]) => (
                   <div key={cls} className="text-center">
                     <div
-                      className={`${cls} size-16 border border-border-strong bg-surface-2`}
+                      className={`${cls} size-16 border border-hairline-strong bg-elevated`}
                     />
-                    <div className="numeric mt-2 font-mono text-xs text-text-subtle">
+                    <div className="numeric mt-2 font-mono text-xs text-text-tertiary">
                       {px}
                     </div>
-                    <div className="text-xs text-text-muted">{use}</div>
+                    <div className="text-xs text-text-secondary">{use}</div>
                   </div>
                 ))}
               </div>
@@ -531,7 +535,7 @@ export default function TokenPreview() {
                       <TableCell>
                         <VerdictBadge verdict="UNAUDITED" />
                       </TableCell>
-                      <TableCell className="numeric text-right text-text-subtle">
+                      <TableCell className="numeric text-right text-text-tertiary">
                         n/a
                       </TableCell>
                     </TableRow>
@@ -556,7 +560,7 @@ export default function TokenPreview() {
                 </li>
                 <li>
                   <span className="numeric font-mono">--accent</span> is a fill,
-                  never text. Reach for{" "}
+                  never text and never a filled button. Reach for{" "}
                   <span className="numeric font-mono">--accent-lift</span>.
                 </li>
                 <li>

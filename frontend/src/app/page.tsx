@@ -5,9 +5,9 @@ export default function Home() {
     <div className="mx-auto max-w-6xl px-6 py-12">
       <section className="mb-16 text-center">
         <h2 className="text-4xl font-extrabold tracking-tight">
-          Audited Skills for <span className="text-accent-lift">AI Agents</span>
+          Audited Skills for <span className="text-keyword">AI Agents</span>
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-text-muted">
+        <p className="mx-auto mt-4 max-w-xl text-text-secondary">
           On-chain registry with multi-stage LLM audit, trust scoring, and
           pay-per-use licensing, built on Stellar.
         </p>
