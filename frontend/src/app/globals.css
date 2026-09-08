@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   Sterish design tokens - PROPOSAL for STE-7 (owner: Nabil)
+   ----------------------------------------------------------------------------
+   STE-7 owns the final brand. This file exists so STE-8 has something concrete
+   to build on, and so there is one artefact to argue about instead of a hex
+   scattered through twenty components. Nabil: change the values, keep the
+   shape. The token names are what the rest of the app imports.
+
+   Two rules for anyone consuming this file:
+     1. Never write a raw hex, font name or pixel value in a component. If the
+        value you need is missing, add a token here.
+     2. Verdict is never communicated by colour alone. Every verdict surface
+        pairs the colour with an icon and the verdict word (STE-20 requires it,
+        and it is the only version that survives colour blindness).
+
+   Contrast ratios in the comments are computed against --bg (#0a0a0f), the
+   page background, so nobody has to trust the eye. WCAG AA body text is 4.5:1,
+   large text and non-text UI is 3:1.
+   ========================================================================= */
+
+:root {
+  /* --- Surfaces ------------------------------------------------------- */
+  --bg: #0a0a0f; /* page */
+  --surface: #12121a; /* card, table row */
+  --surface-2: #1a1a24; /* raised: popover, hovered row */
+  --border: #1e1e2e; /* hairline */
+  --border-strong: #2c2c40; /* input, focused card */
+
+  /* --- Text ----------------------------------------------------------- */
+  --text: #e8e8ed; /* 16.17:1 - primary */
+  --text-muted: #a1a1ab; /* 7.71:1 - secondary, still body-legible */
+  --text-subtle: #71717a; /* 4.09:1 - BELOW AA. Decorative and disabled only,
+                             never a label a user must read. */
+
+  /* --- Brand ---------------------------------------------------------- */
+  /* The scaffold's rust. At 3.53:1 on --bg it is not legible as text, so it is
+     a FILL colour only (white on it clears AA at 5.59:1). --accent-lift is the
+     same hue raised until it passes as text: use that for links and emphasis. */
+  --accent: #c2320a; /* fill. white on this = 5.59:1 */
+  --accent-lift: #ff6a3d; /* 6.94:1 - accent as text, links, focus ring */
+  --accent-surface: #2c1715; /* accent-lift at 14% over --bg */
+  --accent-border: #5d2b1f;
+
+  /* --- Verdict -------------------------------------------------------- */
+  /* Four values, fixed by the Registry contract. Each is a triplet:
+       <name>          the text/icon colour, AA on --bg
+       <name>-surface  the badge fill
+       <name>-border   the badge outline
+     Hues are kept far apart so safe/danger survive red-green colour blindness,
+     and warning sits in amber rather than orange so it does not read as danger. */
+  --safe: #3ddc84; /* 11.07:1 */
+  --safe-surface: #11271f; /* safe text on it: 8.82:1 */
+  --safe-border: #1b5137;
+
+  --warning: #f5b301; /* 10.66:1 */
+  --warning-surface: #2b220d; /* warning text on it: 8.47:1 */
+  --warning-border: #5a430a;
+
+  --danger: #ff5c4d; /* 6.48:1 */
+  --danger-surface: #2c1518; /* danger text on it: 5.61:1 */
+  --danger-border: #5d2624;
+
+  --unaudited: #8b8b96; /* 5.86:1 */
+  --unaudited-surface: #1c1c22; /* unaudited text on it: 5.03:1 */
+  --unaudited-border: #36363d;
+
+  /* --- Radius --------------------------------------------------------- */
+  --radius: 0.625rem;
+
+  /* --- shadcn semantic tokens ----------------------------------------- */
+  /* shadcn components read these names. Mapped onto the palette above so an
+     imported Button inherits Sterish rather than shadcn's default neutral. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --input: var(--border-strong);
+  --ring: var(--accent-lift);
+  --chart-1: var(--safe);
+  --chart-2: var(--warning);
+  --chart-3: var(--danger);
+  --chart-4: var(--accent-lift);
+  --chart-5: var(--unaudited);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--accent-lift);
+}
+
+/* Dark is the only theme in v1, so `.dark` inherits `:root` rather than
+   redefining it. A light theme is a STE-7 decision, not one to make here. */
+
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Sterish-specific, addressable as utilities: text-safe, bg-danger-surface. */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent-lift: var(--accent-lift);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-border: var(--accent-border);
+  --color-safe: var(--safe);
+  --color-safe-surface: var(--safe-surface);
+  --color-safe-border: var(--safe-border);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-border: var(--danger-border);
+  --color-unaudited: var(--unaudited);
+  --color-unaudited-surface: var(--unaudited-surface);
+  --color-unaudited-border: var(--unaudited-border);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Digits that must not jitter or be misread: trust scores, content hashes,
+   contract addresses, USDC amounts. Apply with class="numeric". */
+.numeric {
+  font-variant-numeric: tabular-nums slashed-zero;
+}

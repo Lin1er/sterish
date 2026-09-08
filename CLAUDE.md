@@ -21,7 +21,7 @@ Design lengkap: **`docs/SYSTEM_DESIGN.md`**. WAJIB dibaca sebelum kerja.
 - PM + worker = **Opus, effort TINGGI (high/xhigh)**. **JANGAN pakai fable** (boros token).
 
 ## Bangun DI ATAS scaffold (bukan dari nol)
-Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80% D1), `pipeline/` (3-stage + poisoned fixture), `api/` (FastAPI, masih mock), `dashboard/` (Next.js skeleton), `docs/`. Tiket = **finish/harden/deploy/buktikan**, bukan tulis ulang. Tiap tiket tandai apa yang sudah ada vs kurang.
+Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80% D1), `pipeline/` (3-stage + poisoned fixture), `api/` (FastAPI, masih mock), `frontend/` (Next.js skeleton, dulu `dashboard/`), `docs/`. Tiket = **finish/harden/deploy/buktikan**, bukan tulis ulang. Tiap tiket tandai apa yang sudah ada vs kurang.
 
 ## Keputusan FINAL
 - Asset bayar = **USDC SAC testnet resmi** via `@x402/stellar` (BUKAN issue asset sendiri).

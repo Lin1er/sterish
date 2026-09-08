@@ -70,3 +70,8 @@ deploy/artifacts/
 
 # Cloudflare Tunnel credentials — the tunnel UUID is public, this is not (STE-25)
 deploy/secrets/
+
+# Agent skill installs (npx skills add) - local tooling, not repo content
+.agents/
+.claude/
+skills-lock.json

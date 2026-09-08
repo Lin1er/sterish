@@ -92,7 +92,7 @@ sterish/
 │   │   ├── ratelimit.py             # per-IP fixed window
 │   │   └── routes/check.py          # /check/by-hash, /check, /skills, /feed
 │   └── tests/
-├── dashboard/                       # Next.js 14 + TypeScript
+├── frontend/                        # Next.js + TypeScript
 │   ├── package.json
 │   └── src/{app,components}/
 ├── docs/
@@ -124,7 +124,8 @@ shipped code.
 | Stellar CLI | 22.x | `cargo install --locked stellar-cli --version "^22"` | contract deploy |
 | Python | 3.12+ | `uv python install 3.12` | pipeline, api |
 | uv | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | pipeline, api |
-| Node.js | 18+ (20 recommended) | `nvm install 20` | dashboard |
+| Node.js | 20+ (22 recommended) | `nvm install 22` | frontend |
+| pnpm | 10+ (12 recommended) | `corepack enable pnpm` | frontend |
 | Docker | latest | system package manager | pipeline stage 2 (optional) |
 
 > The binary is `stellar`, not `soroban`. `soroban-cli` was renamed to
@@ -216,10 +217,10 @@ your own secret keys.
 | `make run-api` | Start FastAPI on `:8000` with reload |
 | `make test-api` | Run API tests |
 | `make lint-api` | `ruff check` + `ruff format --check` the API |
-| `make install-dashboard` | `npm ci` in `dashboard/` |
-| `make dev-dashboard` | Next.js dev server on `:3000` |
-| `make build-dashboard` | `next build` (production build) |
-| `make lint-dashboard` | `next lint` |
+| `make install-frontend` | `pnpm install --frozen-lockfile` in `frontend/` |
+| `make dev-frontend` | Next.js dev server on `:3000` |
+| `make build-frontend` | `next build` (production build) |
+| `make lint-frontend` | `next lint` |
 | `make lint` | All linters (Rust + Python + TypeScript) |
 | `make verify` | Everything CI runs, in order |
 | `make clean` | Remove build artifacts and virtualenvs |
@@ -289,10 +290,10 @@ Three workflows run on every pull request to `main`:
 |---|---|
 | `contracts.yml` | `cargo fmt --check` + `cargo clippy` (advisory), `cargo test`, release WASM build |
 | `pipeline.yml` | `uv sync` + `ruff` + `pytest` for both `pipeline/` and `api/` |
-| `dashboard.yml` | `npm ci` + `next lint` + `next build` |
+| `frontend.yml` | `pnpm install --frozen-lockfile` + `tsc --noEmit` + `next lint` + `next build` |
 
 All three must be green before a PR is merged. Dependency caches (cargo
-registry, uv cache, npm cache) are enabled so a warm run is a few minutes.
+registry, uv cache, pnpm store) are enabled so a warm run is a few minutes.
 
 `cargo fmt`/`cargo clippy` are advisory (`continue-on-error`) while the contract
 interfaces are still being frozen in STERISH-1/5 — they report but do not block.

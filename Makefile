@@ -118,30 +118,30 @@ test-api: ## Run API tests
 lint-api: ## Lint the API
 	cd api && uv run --extra dev ruff check src tests
 
-# --- Dashboard ---------------------------------------------------------------
-install-dashboard: ## Install dashboard dependencies (locked)
-	npm ci --prefix dashboard
+# --- Frontend ----------------------------------------------------------------
+install-frontend: ## Install frontend dependencies (locked)
+	pnpm --dir frontend install --frozen-lockfile
 
-dev-dashboard: ## Dashboard dev server on :3000
-	npm run dev --prefix dashboard
+dev-frontend: ## Frontend dev server on :3000
+	pnpm --dir frontend dev
 
-build-dashboard: ## Production build of the dashboard
-	npm run build --prefix dashboard
+build-frontend: ## Production build of the frontend
+	pnpm --dir frontend build
 
-lint-dashboard: ## Lint the dashboard
-	npm run lint --prefix dashboard
+lint-frontend: ## Lint the frontend
+	pnpm --dir frontend lint
 
 # --- Rollups -----------------------------------------------------------------
-lint: lint-pipeline lint-api lint-dashboard ## Lint pipeline + api + dashboard
+lint: lint-pipeline lint-api lint-frontend ## Lint pipeline + api + frontend
 	@echo "Rust lint runs via: make fmt-contracts lint-contracts"
 
-verify: ## Run the CI sequence for pipeline + api + dashboard
+verify: ## Run the CI sequence for pipeline + api + frontend
 	$(MAKE) install-pipeline
 	$(MAKE) lint-pipeline
 	$(MAKE) test-pipeline
 	$(MAKE) install-api
 	$(MAKE) lint-api
 	$(MAKE) test-api
-	$(MAKE) install-dashboard
-	$(MAKE) lint-dashboard
-	$(MAKE) build-dashboard
+	$(MAKE) install-frontend
+	$(MAKE) lint-frontend
+	$(MAKE) build-frontend
