@@ -6,7 +6,7 @@
         deploy-registry deploy-escrow deploy-tokens deploy-testnet \
         install-pipeline test-pipeline lint-pipeline run-pipeline \
         install-api run-api test-api lint-api \
-        install-dashboard dev-dashboard build-dashboard lint-dashboard \
+        install-fe dev-fe build-fe lint-fe \
         verify-spec verify-content-hash verify-soulbound \
         lint verify
 
@@ -119,29 +119,29 @@ lint-api: ## Lint the API
 	cd api && uv run --extra dev ruff check src tests
 
 # --- Dashboard ---------------------------------------------------------------
-install-dashboard: ## Install dashboard dependencies (locked)
-	npm ci --prefix dashboard
+install-fe: ## Install fe dependencies (locked)
+	npm ci --prefix fe
 
-dev-dashboard: ## Dashboard dev server on :3000
-	npm run dev --prefix dashboard
+dev-fe: ## Dashboard dev server on :3000
+	npm run dev --prefix fe
 
-build-dashboard: ## Production build of the dashboard
-	npm run build --prefix dashboard
+build-fe: ## Production build of the fe
+	npm run build --prefix fe
 
-lint-dashboard: ## Lint the dashboard
-	npm run lint --prefix dashboard
+lint-fe: ## Lint the fe
+	npm run lint --prefix fe
 
 # --- Rollups -----------------------------------------------------------------
-lint: lint-pipeline lint-api lint-dashboard ## Lint pipeline + api + dashboard
+lint: lint-pipeline lint-api lint-fe ## Lint pipeline + api + fe
 	@echo "Rust lint runs via: make fmt-contracts lint-contracts"
 
-verify: ## Run the CI sequence for pipeline + api + dashboard
+verify: ## Run the CI sequence for pipeline + api + fe
 	$(MAKE) install-pipeline
 	$(MAKE) lint-pipeline
 	$(MAKE) test-pipeline
 	$(MAKE) install-api
 	$(MAKE) lint-api
 	$(MAKE) test-api
-	$(MAKE) install-dashboard
-	$(MAKE) lint-dashboard
-	$(MAKE) build-dashboard
+	$(MAKE) install-fe
+	$(MAKE) lint-fe
+	$(MAKE) build-fe

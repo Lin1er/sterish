@@ -1,20 +1,20 @@
-name: Dashboard
+name: fe
 
 on:
   push:
     branches: [main]
     paths:
-      - 'dashboard/**'
-      - '.github/workflows/dashboard.yml'
+      - 'fe/**'
+      - '.github/workflows/fe.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'dashboard/**'
-      - '.github/workflows/dashboard.yml'
+      - 'fe/**'
+      - '.github/workflows/fe.yml'
   workflow_dispatch:
 
 concurrency:
-  group: dashboard-${{ github.ref }}
+  group: fe-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: dashboard
+        working-directory: fe
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: dashboard/package-lock.json
+          cache-dependency-path: fe/package-lock.json
 
       - name: Install dependencies
         run: npm ci

@@ -7,7 +7,7 @@
 
 [![Contracts](https://github.com/Lin1er/sterish/actions/workflows/contracts.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/contracts.yml)
 [![Pipeline & API](https://github.com/Lin1er/sterish/actions/workflows/pipeline.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/pipeline.yml)
-[![Dashboard](https://github.com/Lin1er/sterish/actions/workflows/dashboard.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/dashboard.yml)
+[![Dashboard](https://github.com/Lin1er/sterish/actions/workflows/fe.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/fe.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Stellar](https://img.shields.io/badge/network-Stellar%20Testnet-6b21a8)
 
@@ -92,7 +92,7 @@ sterish/
 │   │   ├── ratelimit.py             # per-IP fixed window
 │   │   └── routes/check.py          # /check/by-hash, /check, /skills, /feed
 │   └── tests/
-├── dashboard/                       # Next.js 14 + TypeScript
+├── fe/                       # Next.js 14 + TypeScript
 │   ├── package.json
 │   └── src/{app,components}/
 ├── docs/
@@ -102,7 +102,7 @@ sterish/
 │   ├── delivery-plan.md
 │   └── specs/                       # frozen interfaces, events, verdict schema
 ├── scripts/                         # deploy-testnet.sh, verify-*.sh
-├── .github/workflows/               # contracts.yml, pipeline.yml, dashboard.yml
+├── .github/workflows/               # contracts.yml, pipeline.yml, fe.yml
 ├── Makefile
 └── README.md
 ```
@@ -124,7 +124,7 @@ shipped code.
 | Stellar CLI | 22.x | `cargo install --locked stellar-cli --version "^22"` | contract deploy |
 | Python | 3.12+ | `uv python install 3.12` | pipeline, api |
 | uv | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | pipeline, api |
-| Node.js | 18+ (20 recommended) | `nvm install 20` | dashboard |
+| Node.js | 18+ (20 recommended) | `nvm install 20` | fe |
 | Docker | latest | system package manager | pipeline stage 2 (optional) |
 
 > The binary is `stellar`, not `soroban`. `soroban-cli` was renamed to
@@ -155,8 +155,8 @@ make test-api
 make run-api                 # http://127.0.0.1:8000/health -> {"status":"ok",...}
 
 # 4. Dashboard (separate terminal)
-make install-dashboard
-make dev-dashboard           # http://localhost:3000
+make install-fe
+make dev-fe           # http://localhost:3000
 ```
 
 Everything above is expected to complete in well under 30 minutes on a clean
@@ -165,7 +165,7 @@ machine; the bulk of that is the Rust toolchain download.
 ### Verify the install
 
 ```bash
-make verify                  # contracts + pipeline + api + dashboard build
+make verify                  # contracts + pipeline + api + fe build
 ```
 
 `make verify` is exactly what CI runs, so a green `make verify` locally means a
@@ -216,10 +216,10 @@ your own secret keys.
 | `make run-api` | Start FastAPI on `:8000` with reload |
 | `make test-api` | Run API tests |
 | `make lint-api` | `ruff check` + `ruff format --check` the API |
-| `make install-dashboard` | `npm ci` in `dashboard/` |
-| `make dev-dashboard` | Next.js dev server on `:3000` |
-| `make build-dashboard` | `next build` (production build) |
-| `make lint-dashboard` | `next lint` |
+| `make install-fe` | `npm ci` in `fe/` |
+| `make dev-fe` | Next.js dev server on `:3000` |
+| `make build-fe` | `next build` (production build) |
+| `make lint-fe` | `next lint` |
 | `make lint` | All linters (Rust + Python + TypeScript) |
 | `make verify` | Everything CI runs, in order |
 | `make clean` | Remove build artifacts and virtualenvs |
@@ -289,7 +289,7 @@ Three workflows run on every pull request to `main`:
 |---|---|
 | `contracts.yml` | `cargo fmt --check` + `cargo clippy` (advisory), `cargo test`, release WASM build |
 | `pipeline.yml` | `uv sync` + `ruff` + `pytest` for both `pipeline/` and `api/` |
-| `dashboard.yml` | `npm ci` + `next lint` + `next build` |
+| `fe.yml` | `npm ci` + `next lint` + `next build` |
 
 All three must be green before a PR is merged. Dependency caches (cargo
 registry, uv cache, npm cache) are enabled so a warm run is a few minutes.
