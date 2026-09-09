@@ -8,6 +8,8 @@ what the scaffold's client.py did.
 import os
 from dataclasses import dataclass
 
+from . import fanout
+
 TESTNET_PASSPHRASE = "Test SDF Network ; September 2015"
 PUBLIC_PASSPHRASE = "Public Global Stellar Network ; September 2015"
 
@@ -46,6 +48,10 @@ class Settings:
     price_base_units: int
     minter_secret: str
     skills_dir: str
+    # Ceiling on the per-row chain reads a single /skills request may have in flight
+    # (STE-33). Not a thread pool size for the app — FastAPI already has one; this
+    # bounds the fan-out *inside* one handler. See fanout.py.
+    chain_concurrency: int
 
     @property
     def network(self) -> str:
@@ -102,6 +108,7 @@ def load_settings() -> Settings:
         price_base_units=_env_int("X402_PRICE_BASE_UNITS", 1_000_000),
         minter_secret=os.getenv("MINTER_SECRET", os.getenv("DEPLOYER_SECRET", "")).strip(),
         skills_dir=os.getenv("STERISH_SKILLS_DIR", "").strip(),
+        chain_concurrency=_env_int("STERISH_CHAIN_CONCURRENCY", fanout.DEFAULT_CONCURRENCY),
         rpc_url=os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org").strip(),
         network_passphrase=os.getenv("STELLAR_NETWORK_PASSPHRASE", TESTNET_PASSPHRASE),
         db_path=os.getenv("STERISH_DB_PATH", "sterish_index.db"),
