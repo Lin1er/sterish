@@ -6,6 +6,8 @@ import { ErrorNotice } from "@/components/elements/ErrorNotice";
 import { ApiError, getSkill } from "@/lib/api";
 import type { AuditedVersion, SkillDetail as Skill, Verdict } from "@/lib/types";
 import { formatLedgerTime } from "@/utils/format";
+import { AuditTrail } from "./component/AuditTrail";
+import { TrustScorePanel } from "./component/TrustScorePanel";
 import { VerdictBanner } from "./component/VerdictBanner";
 import { VersionCard } from "./component/VersionCard";
 
@@ -88,6 +90,18 @@ function SkillBody({ skill }: { skill: Skill }) {
           />
         ))}
       </div>
+
+      {/* Only for a version that actually has a score. An unaudited version has
+          no number to explain, and a zero rendered as a bar would read as a
+          very low score rather than the absence of one. */}
+      {latest?.audited ? (
+        <TrustScorePanel
+          score={latest.audited.trust_score}
+          auditTxUrl={latest.audited.evidence.audit_tx_url}
+        />
+      ) : null}
+
+      <AuditTrail skillId={skill.skill_id} />
     </>
   );
 }
