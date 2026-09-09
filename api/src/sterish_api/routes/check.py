@@ -8,7 +8,7 @@ import re
 
 from fastapi import APIRouter, Query
 
-from .. import chain, indexer
+from .. import chain, fanout, indexer
 from ..config import settings
 from ..errors import ApiError
 from ..models import (
@@ -37,6 +37,19 @@ _HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 # api-spec section 6: one get_version per version is one RPC round trip, so cap the
 # fan-out rather than letting a skill with many versions stall the request.
 MAX_VERSION_FANOUT = 50
+
+
+def _version_record_or_none(skill_id: str, version: str) -> dict | None:
+    """One row's chain read, with the per-row failure policy applied.
+
+    Returned rather than raised so a version that is listed but unreadable is skipped
+    instead of failing the whole page. This runs on a fan-out worker thread, so it must
+    not touch the indexer's SQLite connection — evidence is built by the caller.
+    """
+    try:
+        return chain.get_version(skill_id, version)
+    except chain.ContractError:
+        return None
 
 
 def _report_uri(skill_id: str, version: str) -> str | None:
@@ -124,14 +137,18 @@ def skill_detail(skill_id: str):
         raise ApiError(400, "INVALID_PARAMETER", "skill_id must be non-empty")
 
     entry = chain.query_skill(skill_id)
-    audited: list[AuditedVersion] = []
 
-    for version in entry["versions"][:MAX_VERSION_FANOUT]:
-        try:
-            record = chain.get_version(skill_id, version)
-        except chain.ContractError:
-            continue  # listed but unreadable; skip rather than fail the whole response
-        if record["verdict"] == "UNAUDITED":
+    # One RPC per version, overlapped (STE-33). `_evidence` stays out here on the
+    # request thread: it reads the indexer's SQLite handle, which the workers must not.
+    records = fanout.map_bounded(
+        lambda version: _version_record_or_none(skill_id, version),
+        entry["versions"][:MAX_VERSION_FANOUT],
+        settings.chain_concurrency,
+    )
+
+    audited: list[AuditedVersion] = []
+    for record in records:
+        if record is None or record["verdict"] == "UNAUDITED":
             continue
         audited.append(
             AuditedVersion(
@@ -172,19 +189,25 @@ def list_skills(
     limit: int = Query(default=20, ge=1, le=100),
 ):
     entries = chain.query_all_skills(start, limit)
-    items: list[SkillListItem] = []
 
-    for entry in entries:
+    def _latest_audited_record(entry: dict) -> dict | None:
+        latest_audited = entry["latest_audited_version"]
+        if not latest_audited:
+            return None
+        return _version_record_or_none(entry["skill_id"], latest_audited)
+
+    # The row reads are independent, so overlap them instead of paying one RPC round
+    # trip per row in series (STE-33). Order is preserved, so this zips back cleanly.
+    records = fanout.map_bounded(_latest_audited_record, entries, settings.chain_concurrency)
+
+    items: list[SkillListItem] = []
+    for entry, record in zip(entries, records, strict=True):
         latest_audited = entry["latest_audited_version"]
         verdict = score = verified = None
-        if latest_audited:
-            try:
-                record = chain.get_version(entry["skill_id"], latest_audited)
-                verdict = record["verdict"]
-                score = record["trust_score"]
-                verified = record["is_verified"]
-            except chain.ContractError:
-                pass
+        if record is not None:
+            verdict = record["verdict"]
+            score = record["trust_score"]
+            verified = record["is_verified"]
         items.append(
             SkillListItem(
                 skill_id=entry["skill_id"],
