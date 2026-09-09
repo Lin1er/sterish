@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
+
+import { ConnectWallet } from "@/components/connect-wallet";
+import { WalletProvider } from "@/lib/wallet/wallet-provider";
 import "./globals.css";
 
 // Two families, and only two. JetBrains Mono is OFL, so next/font self-hosts it
@@ -43,30 +46,35 @@ export default function RootLayout({
         <link rel="stylesheet" href={SATOSHI_CSS} />
       </head>
       <body className="min-h-screen">
-        <header className="border-b border-border px-6 py-4">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
-            <Link href="/" className="text-xl font-bold tracking-wider">
-              STERISH
-            </Link>
-            <nav className="flex gap-4 text-sm text-text-secondary">
-              <Link className="hover:text-keyword" href="/">
-                Registry
+        <WalletProvider>
+          <header className="border-b border-border px-6 py-4">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+              <Link href="/" className="text-xl font-bold tracking-wider">
+                STERISH
               </Link>
-              <Link className="hover:text-keyword" href="/tokens">
-                Tokens
-              </Link>
-              <a
-                className="hover:text-keyword"
-                href="https://github.com/Lin1er/sterish"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                GitHub
-              </a>
-            </nav>
-          </div>
-        </header>
-        <main>{children}</main>
+              <div className="flex items-center gap-6">
+                <nav className="flex gap-4 text-sm text-text-secondary">
+                  <Link className="hover:text-keyword" href="/">
+                    Registry
+                  </Link>
+                  <Link className="hover:text-keyword" href="/tokens">
+                    Tokens
+                  </Link>
+                  <a
+                    className="hover:text-keyword"
+                    href="https://github.com/Lin1er/sterish"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    GitHub
+                  </a>
+                </nav>
+                <ConnectWallet />
+              </div>
+            </div>
+          </header>
+          <main>{children}</main>
+        </WalletProvider>
       </body>
     </html>
   );

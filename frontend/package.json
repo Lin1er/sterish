@@ -8,10 +8,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@creit.tech/stellar-wallets-kit": "^2.6.0",
     "@stellar/stellar-sdk": "^17.0.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.6",
@@ -30,6 +33,7 @@
     "eslint": "^9.39.0",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   }
 }
