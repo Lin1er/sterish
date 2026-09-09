@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorNotice } from "@/components/elements/ErrorNotice";
@@ -41,10 +40,7 @@ export function RegistryContent({
   pageSize: number;
 }) {
   const [start, setStart] = useState(initialStart);
-  const { data, error, isPending, isPlaceholderData } = useSkills(
-    start,
-    pageSize,
-  );
+  const { data, error, isPending } = useSkills(start, pageSize);
 
   // Back and forward have to keep working. Without this the URL would change
   // under the browser's feet and the button would leave the page showing rows
@@ -61,7 +57,7 @@ export function RegistryContent({
     window.scrollTo({ top: 0 });
   }, []);
 
-  if (isPending) return <RegistrySkeleton />;
+  if (isPending) return <RegistrySkeleton rows={pageSize} />;
 
   if (error) {
     // Anything that is not an ApiError is a bug, and the error boundary should
@@ -72,28 +68,7 @@ export function RegistryContent({
 
   return (
     <>
-      {/* While a new page loads, the previous rows stay up rather than being
-          replaced by a ten second blank. Dimming alone was not enough: against
-          an API that takes ten seconds it just looked like the table had
-          broken, so the wait is named as well as shown. */}
-      {isPlaceholderData ? (
-        <p
-          role="status"
-          className="mb-3 flex items-center gap-2 text-sm text-text-secondary"
-        >
-          <Loader2 className="size-4 animate-spin text-keyword" aria-hidden />
-          Loading rows {start + 1} to {start + pageSize}. The rows below are the
-          previous page, kept until the new ones arrive.
-        </p>
-      ) : null}
-      <div
-        className={
-          isPlaceholderData ? "opacity-50 transition-opacity" : undefined
-        }
-        aria-busy={isPlaceholderData}
-      >
-        <RegistryTable skills={data.skills} />
-      </div>
+      <RegistryTable skills={data.skills} />
       <RegistryPagination
         start={data.start}
         limit={data.limit}

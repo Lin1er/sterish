@@ -68,7 +68,7 @@ export function Registry({
         {/* The await lives below this boundary, not in Registry itself, so the
             page shell paints immediately and only the table waits on the ten
             second read. */}
-        <Suspense fallback={<RegistrySkeleton />}>
+        <Suspense fallback={<RegistrySkeleton rows={PAGE_SIZE} />}>
           <PrefetchedRegistry offset={offset} />
         </Suspense>
       </section>

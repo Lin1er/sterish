@@ -14,16 +14,21 @@ export function Footer({ network }: { network: string }) {
   return (
     <footer className="mt-12 border-t border-border px-4 py-4 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 text-xs text-text-tertiary">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p>&copy; {new Date().getFullYear()} Sterish</p>
+        {/* One line, no chip. The network still has to be named, since it is
+            the only thing telling a visitor these numbers are not mainnet, but
+            it does not need a badge to say so. */}
+        <p>
+          &copy; {new Date().getFullYear()} Sterish
+          <span aria-hidden className="mx-2 text-text-tertiary">
+            &bull;
+          </span>
           <span
-            className="inline-flex items-center gap-1.5 rounded-4xl border border-border px-2 py-0.5 text-text-secondary"
+            className="text-text-secondary"
             title="Every contract read on this site comes from this network"
           >
-            <span className="size-1.5 rounded-full bg-keyword" aria-hidden />
             {label}
           </span>
-        </div>
+        </p>
         <nav className="flex items-center gap-5">
           <a
             className="inline-flex items-center gap-1.5 hover:text-keyword"
