@@ -1,9 +1,24 @@
 # pnpm 10+ reads install settings from here, not from package.json.
 #
+# pnpm blocks every dependency build script by default and then exits non-zero
+# with ERR_PNPM_IGNORED_BUILDS unless each one is decided here, so an undecided
+# entry breaks CI rather than merely warning.
+#
 # unrs-resolver is the native resolver behind eslint-import-resolver-typescript,
-# which eslint-config-next pulls in. pnpm blocks every dependency build script by
-# default, so without this allowance `pnpm install` exits non-zero in CI with
-# ERR_PNPM_IGNORED_BUILDS. The postinstall only compiles when no prebuilt binding
-# matches the platform; on CI's linux-x64 it just links the shipped binary.
+# which eslint-config-next pulls in. Its postinstall only compiles when no
+# prebuilt binding matches the platform; on CI's linux-x64 it links the shipped
+# binary.
+#
+# The four denied ones arrive under @creit.tech/stellar-wallets-kit and are all
+# reachable only through its WalletConnect module, which we never import: the
+# kit is initialised with defaultModules(), and WalletConnect is deliberately
+# not in that set because it needs a projectId. @reown/appkit is the
+# WalletConnect UI; secp256k1, bufferutil and utf-8-validate are optional
+# native speedups whose pure-JS fallbacks are what ships anyway. Building none
+# of them keeps the install deterministic across Windows, macOS and CI.
 allowBuilds:
+  '@reown/appkit': false
+  bufferutil: false
+  secp256k1: false
   unrs-resolver: true
+  utf-8-validate: false
