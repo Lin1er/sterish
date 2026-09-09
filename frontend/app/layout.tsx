@@ -30,7 +30,15 @@ const SATOSHI_CSS =
 const STELLAR_NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet";
 
 export const metadata: Metadata = {
-  title: "Sterish: Audited Skill Marketplace for AI Agents",
+  // A template, so each page names itself and the product name is appended
+  // once. The page name leads because browser tabs truncate from the right:
+  // "Registry · Sterish" survives a narrow tab as "Registry", while
+  // "Sterish: Audited Skill..." collapsed to "Sterish" on every page and told
+  // nobody which page they were on.
+  title: {
+    default: "Sterish",
+    template: "%s · Sterish",
+  },
   description:
     "On-chain audited skill registry and trust scoring for AI agents on Stellar.",
 };
