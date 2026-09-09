@@ -1,0 +1,225 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   Sterish design tokens - STE-7 (brand: Nabil)
+   ----------------------------------------------------------------------------
+   Nabil set the brand: #122C4F navy and #FBF9E4 cream, with #5C89B3 / #BF8CE5 /
+   #BDA094 as accents. Everything below is derived from those five values, so
+   changing one of them changes the app rather than one component.
+
+   Two rules for anyone consuming this file:
+     1. Never write a raw hex, font name or pixel value in a component. If the
+        value you need is missing, add a token here.
+     2. Verdict is never communicated by colour alone. Every verdict surface
+        pairs the colour with an icon and the verdict word (STE-20 requires it,
+        and it is the only version that survives colour blindness).
+
+   Ratios in the comments are computed, not eyeballed, against --bg (#122C4F)
+   unless stated. WCAG AA is 4.5:1 for body text, 3:1 for large and non-text.
+   ========================================================================= */
+
+:root {
+  /* --- Surfaces ------------------------------------------------------- */
+  /* The navy is a mid-dark canvas, not a near-black, so the layer a reader
+     looks INTO (code, terminal, diff) sinks below it instead of rising above
+     it. Cards and popovers still lift, by mixing cream into the navy. */
+  --bg-deep: #0c1c32; /* code block, terminal. cream on it: 16.10:1 */
+  --bg: #122c4f; /* page canvas. Nabil primary */
+  --surface: #1f3757; /* card, table row. cream on it: 11.35:1 */
+  --elevated: #29405e; /* popover, nav on scroll */
+  --hairline: #374d67; /* row and section borders */
+  --hairline-strong: #536579; /* focused input, active tab */
+
+  /* --- Text ----------------------------------------------------------- */
+  --text: #fbf9e4; /* 13.19:1 - Nabil primary. Cream, never #ffffff */
+  --text-secondary: #bac0ba; /* 7.56:1 - body copy, descriptions */
+  --text-tertiary: #8b979c; /* 4.67:1 - captions and metadata only */
+
+  /* --- Brand accents -------------------------------------------------- */
+  /* The blue is 3.79:1 on the canvas, so it is a fill and a graphic colour,
+     never text. --accent-lift is the same hue raised until it passes.
+     Note the blue also fails with cream text (3.48:1) AND with navy text
+     (3.79:1) on top of it, so it is never a filled button. The primary button
+     is cream with navy text, which is 13.19:1. */
+  --accent: #5c89b3; /* fill, charts, graphics */
+  --accent-lift: #89a8c1; /* 5.63:1 - the blue as text */
+  --keyword: #bf8ce5; /* 5.40:1 - the ONE leading UI accent: links,
+                         active tab, focus ring, and syntax keywords */
+  --tan: #bda094; /* 5.75:1 - metadata, code comments, quiet marks */
+
+  /* --- Verdict -------------------------------------------------------- */
+  /* Retuned for the navy canvas. Against a near-black these were fine, but
+     navy is roughly 7.5x lighter, which cost danger and unaudited their
+     margin: unaudited fell to 4.16:1 and failed outright. Both are lifted. */
+  --safe: #3ddc84; /* 7.85:1 */
+  --safe-surface: #14352f;
+  --safe-border: #245b45;
+
+  --warning: #f5b301; /* 7.56:1 */
+  --warning-surface: #2e3220;
+  --warning-border: #5c541c;
+
+  --danger: #ff7a6b; /* 5.50:1 (was #ff5c4d at 4.60:1, too tight) */
+  --danger-surface: #33262f;
+  --danger-border: #633c3f;
+
+  --unaudited: #a3adb8; /* 6.16:1 (was #8b8b96 at 4.16:1, which failed) */
+  --unaudited-surface: #232f45;
+  --unaudited-border: #414f61;
+
+  /* --- Radius --------------------------------------------------------- */
+  --radius: 0.625rem;
+
+  /* --- shadcn semantic tokens ----------------------------------------- */
+  /* shadcn components read these names. Mapped onto the palette above so an
+     imported Button inherits Sterish rather than shadcn's default neutral. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--elevated);
+  --popover-foreground: var(--text);
+  --primary: var(--text); /* cream fill, navy label: the only pair that passes */
+  --primary-foreground: var(--bg);
+  --secondary: var(--elevated);
+  --secondary-foreground: var(--text);
+  --muted: var(--elevated);
+  --muted-foreground: var(--text-secondary);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --ring: var(--keyword);
+  --chart-1: var(--accent);
+  --chart-2: var(--keyword);
+  --chart-3: var(--tan);
+  --chart-4: var(--safe);
+  --chart-5: var(--warning);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--text);
+  --sidebar-primary-foreground: var(--bg);
+  --sidebar-accent: var(--elevated);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--keyword);
+}
+
+/* Dark is the only theme in v1, so `.dark` inherits `:root` rather than
+   redefining it. A light theme is a STE-7 decision, not one to make here. */
+
+@theme inline {
+  /* Two families, no more. Satoshi is Nabil's pick and carries every human
+     sentence; JetBrains Mono carries anything the machine produced or the
+     reader could type. Satoshi loads from the Fontshare CDN rather than
+     next/font: the ITF licence is free for commercial use but its terms on
+     self-hosting a webfont are not clear, and the CDN is unambiguous. */
+  --font-sans: "Satoshi", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Sterish-specific, addressable as utilities: text-safe, bg-danger-surface. */
+  --color-bg-deep: var(--bg-deep);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent-lift: var(--accent-lift);
+  --color-keyword: var(--keyword);
+  --color-tan: var(--tan);
+  --color-safe: var(--safe);
+  --color-safe-surface: var(--safe-surface);
+  --color-safe-border: var(--safe-border);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-border: var(--danger-border);
+  --color-unaudited: var(--unaudited);
+  --color-unaudited-surface: var(--unaudited-surface);
+  --color-unaudited-border: var(--unaudited-border);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /* Tailwind v4 resets buttons to `cursor: default`, matching the browser
+     default rather than the web's convention. That leaves every button in the
+     app feeling inert on hover, so the convention is restored here once
+     instead of being remembered on each component.
+
+     Anchors already default to pointer; they are listed so an <a> without an
+     href, which does not, still reads as clickable when it carries a role.
+     Disabled controls are excluded: a pointer on something that cannot be
+     pressed is a promise the UI does not keep. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Digits that must not jitter or be misread: trust scores, content hashes,
+   contract addresses, USDC amounts. Apply with class="numeric". */
+.numeric {
+  font-variant-numeric: tabular-nums slashed-zero;
+}
