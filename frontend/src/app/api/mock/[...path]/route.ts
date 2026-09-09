@@ -20,6 +20,20 @@ import {
   FIXTURE_VERSIONS,
 } from "@/lib/fixtures/registry";
 
+/**
+ * Off in production unless somebody switches it on deliberately.
+ *
+ * STE-20 asks for the mock path to be gone from the production build, and the
+ * reason is not tidiness: a deployed dashboard that can serve fixtures is a
+ * dashboard that can show an invented verdict to a real visitor. The opt-in
+ * exists so a production build can still be exercised locally, which is how
+ * the swap is verified before release. It is a server-side variable, not
+ * NEXT_PUBLIC, so it can never be flipped from the browser.
+ */
+const MOCK_ENABLED =
+  process.env.NODE_ENV !== "production" ||
+  process.env.STERISH_ENABLE_MOCK === "1";
+
 /** Spec section 4: every error response shares this shape. */
 function fail(status: number, error: string, detail: string): Response {
   return Response.json({ error, detail }, { status });
@@ -32,6 +46,14 @@ export async function GET(
   request: Request,
   ctx: RouteContext<"/api/mock/[...path]">,
 ) {
+  if (!MOCK_ENABLED) {
+    return fail(
+      404,
+      "NOT_FOUND",
+      "the mock API is not served by production builds",
+    );
+  }
+
   const { path } = await ctx.params;
   const url = new URL(request.url);
 

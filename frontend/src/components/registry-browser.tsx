@@ -1,4 +1,5 @@
 import { AlertTriangle, PackageSearch } from "lucide-react";
+import Link from "next/link";
 
 import {
   Empty,
@@ -67,7 +68,12 @@ export function RegistryBrowser({ skills }: { skills: SkillListItem[] }) {
             return (
               <TableRow key={skill.skill_id}>
                 <TableCell className="numeric font-mono text-xs">
-                  {skill.skill_id}
+                  <Link
+                    href={`/skills/${encodeURIComponent(skill.skill_id)}`}
+                    className="hover:text-keyword hover:underline"
+                  >
+                    {skill.skill_id}
+                  </Link>
                 </TableCell>
                 <TableCell>
                   {/* A skill with no audited version at all is UNAUDITED, which

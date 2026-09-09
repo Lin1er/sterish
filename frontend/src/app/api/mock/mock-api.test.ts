@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "./[...path]/route";
 import { hasUnauditedLatest, type SkillListItem } from "@/lib/api/types";
@@ -133,6 +133,47 @@ describe("GET /skills/{skill_id}", () => {
 
   it("404s an unknown skill", async () => {
     expect((await call("skills/com.nope")).status).toBe(404);
+  });
+});
+
+describe("the production gate", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  /**
+   * The flag is read once at module load, so the module has to be re-imported
+   * after the environment changes. Importing a fresh copy is also the honest
+   * test: it is exactly what a production server does at boot.
+   */
+  async function loadRoute() {
+    vi.resetModules();
+    return (await import("./[...path]/route")).GET;
+  }
+
+  it("serves nothing in a production build", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const get = await loadRoute();
+    const response = await get(
+      new Request("http://localhost/api/mock/skills"),
+      { params: Promise.resolve({ path: ["skills"] }) } as never,
+    );
+    // A deployed dashboard that can serve fixtures is a dashboard that can
+    // show an invented verdict to a real visitor.
+    expect(response.status).toBe(404);
+    expect((await response.json()).detail).toContain("production");
+  });
+
+  it("can still be switched on deliberately, for verifying a prod build", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("STERISH_ENABLE_MOCK", "1");
+    const get = await loadRoute();
+    const response = await get(
+      new Request("http://localhost/api/mock/skills"),
+      { params: Promise.resolve({ path: ["skills"] }) } as never,
+    );
+    expect(response.status).toBe(200);
   });
 });
 
