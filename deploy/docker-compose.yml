@@ -24,6 +24,9 @@ services:
       STELLAR_NETWORK_PASSPHRASE: ${STELLAR_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
       INDEXER_ENABLED: ${INDEXER_ENABLED:-1}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-100}
+      # Per-row chain reads a single /skills request may have in flight (STE-33).
+      # Lower it if the RPC node starts rate-limiting; the page just gets slower.
+      STERISH_CHAIN_CONCURRENCY: ${STERISH_CHAIN_CONCURRENCY:-20}
       REPORT_BASE_URL: ${REPORT_BASE_URL:-}
       # x402 paid path. Without OZ_API_KEY the reads still work and /health reports
       # facilitator_reachable false; only new purchases are unavailable.
