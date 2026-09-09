@@ -40,14 +40,17 @@ function SkillBody({ skill }: { skill: Skill }) {
         <h2 className="numeric font-mono text-2xl font-bold break-all">
           {skill.skill_id}
         </h2>
-        <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm text-text-secondary">
-          <div className="flex gap-2">
+        {/* items-baseline, not the default stretch. Each row pairs a text-sm
+            label with a font-mono text-xs value, and two different font sizes
+            in a flex row only line up if they are aligned on their baseline. */}
+        <dl className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2 text-sm text-text-secondary">
+          <div className="flex items-baseline gap-2">
             <dt>Owner</dt>
             <dd className="numeric font-mono text-xs break-all text-text">
               {skill.owner}
             </dd>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-baseline gap-2">
             <dt>Registered</dt>
             <dd className="numeric font-mono text-xs text-text">
               {formatLedgerTime(skill.registered_at)}
@@ -80,7 +83,7 @@ function SkillBody({ skill }: { skill: Skill }) {
         </span>
       </h3>
 
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         {rows.map((row) => (
           <VersionCard
             key={row.version}
