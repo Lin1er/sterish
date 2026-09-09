@@ -1,10 +1,10 @@
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
 
-import { ErrorNotice } from "@/components/elements/ErrorNotice";
-import { ApiError, listSkills } from "@/lib/api";
-import { RegistryPagination } from "./component/RegistryPagination";
+import { listSkills } from "@/lib/api";
+import { getQueryClient, queryKeys } from "@/lib/queryClient";
+import { RegistryContent } from "./component/RegistryContent";
 import { RegistrySkeleton } from "./component/RegistrySkeleton";
-import { RegistryTable } from "./component/RegistryTable";
 
 /**
  * 20, not the 50 the spec allows. GET /skills costs about 0.44s per row
@@ -24,41 +24,37 @@ function parseStart(raw: string | string[] | undefined): number {
 }
 
 /**
- * The registry read.
+ * The registry.
  *
- * A server component, so the table is in the first HTML the browser gets and
- * the API never has to be reachable from the visitor's network.
+ * The read happens here, on the server, so the rows are in the first HTML the
+ * browser receives and the API never has to be reachable from the visitor's
+ * network. The result is then dehydrated into React Query, so the client picks
+ * up the same data instead of fetching it a second time, and every later page
+ * is cached.
+ *
+ * prefetchQuery does not throw: a failed read arrives on the client as the
+ * query's error, which is where ErrorNotice renders it.
  */
-async function RegistryContent({ start }: { start: number }) {
-  // The fetch is what can fail, so only the fetch is inside the try. Building
-  // JSX in a catch block would not do what it looks like: rendering happens
-  // after this function returns, so a render error escapes the handler anyway.
-  let result: Awaited<ReturnType<typeof listSkills>> | ApiError;
-  try {
-    result = await listSkills({ start, limit: PAGE_SIZE });
-  } catch (cause) {
-    // A read failure is a state to render, not a crash: the visitor should see
-    // why the registry is unavailable. Anything that is not an ApiError is a
-    // real bug and belongs to the error boundary.
-    if (!(cause instanceof ApiError)) throw cause;
-    result = cause;
-  }
+async function PrefetchedRegistry({ offset }: { offset: number }) {
+  const queryClient = getQueryClient();
 
-  if (result instanceof ApiError) return <ErrorNotice error={result} />;
+  await queryClient.prefetchQuery({
+    queryKey: queryKeys.skills(offset, PAGE_SIZE),
+    queryFn: () => listSkills({ start: offset, limit: PAGE_SIZE }),
+  });
 
   return (
-    <>
-      <RegistryTable skills={result.skills} />
-      <RegistryPagination
-        start={result.start}
-        limit={result.limit}
-        total={result.total}
-      />
-    </>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <RegistryContent initialStart={offset} pageSize={PAGE_SIZE} />
+    </HydrationBoundary>
   );
 }
 
-export function Registry({ start }: { start: string | string[] | undefined }) {
+export function Registry({
+  start,
+}: {
+  start: string | string[] | undefined;
+}) {
   const offset = parseStart(start);
 
   return (
@@ -69,10 +65,11 @@ export function Registry({ start }: { start: string | string[] | undefined }) {
         <h2 className="mb-6 text-lg font-bold tracking-wider">
           Registry Browser
         </h2>
-        {/* Keyed by offset so paging swaps the skeleton back in rather than
-            holding the previous page's rows during a ten second read. */}
-        <Suspense key={offset} fallback={<RegistrySkeleton />}>
-          <RegistryContent start={offset} />
+        {/* The await lives below this boundary, not in Registry itself, so the
+            page shell paints immediately and only the table waits on the ten
+            second read. */}
+        <Suspense fallback={<RegistrySkeleton />}>
+          <PrefetchedRegistry offset={offset} />
         </Suspense>
       </section>
     </div>

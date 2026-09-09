@@ -1,26 +1,37 @@
+"use client";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import type { MouseEvent } from "react";
 
 /**
  * Offset pagination, because that is what the API offers: `start` and `limit`
  * over a registration-order index, with `total` from the contract's skill
  * count.
  *
- * There is deliberately no verdict filter or trust-score sort here, though the
- * ticket suggested both. The API cannot filter or sort, so either would have to
- * happen on the client, over whichever twenty rows this page happens to hold.
- * A control labelled "highest trust first" that only ranks one page out of
- * three is a quiet lie, and this is not a product that can afford quiet lies.
- * When the API grows the parameters, both become real in one change here.
+ * These stay real `<a href>` elements even though paging is handled in
+ * JavaScript. A plain left click is intercepted so the cached page appears
+ * instantly, but middle click, ctrl-click and "open in new tab" still work,
+ * and the href is still what somebody copies to share page three. Replacing
+ * them with buttons would have quietly taken all of that away.
+ *
+ * There is deliberately no verdict filter or trust-score sort, though the
+ * ticket suggested both. The API cannot filter or sort, so either would run on
+ * the client over whichever twenty rows this page holds. A control labelled
+ * "highest trust first" that only ranks one page out of three is a quiet lie,
+ * and this is not a product that can afford quiet lies.
  */
 export function RegistryPagination({
   start,
   limit,
   total,
+  onNavigate,
+  hrefFor,
 }: {
   start: number;
   limit: number;
   total: number;
+  onNavigate: (start: number) => void;
+  hrefFor: (start: number) => string;
 }) {
   if (total <= limit) return null;
 
@@ -32,9 +43,27 @@ export function RegistryPagination({
   const hasNext = next < total;
 
   const linkClass =
-    "inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:border-hairline-strong hover:text-keyword";
+    "inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:border-hairline-strong hover:text-keyword";
   const disabledClass =
     "inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-tertiary opacity-50";
+
+  /** Let the browser handle anything that is not a plain left click. */
+  function handle(target: number) {
+    return (event: MouseEvent<HTMLAnchorElement>) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      onNavigate(target);
+    };
+  }
 
   return (
     <nav
@@ -46,10 +75,15 @@ export function RegistryPagination({
       </p>
       <div className="flex gap-2">
         {hasPrevious ? (
-          <Link href={`/?start=${previous}`} className={linkClass} rel="prev">
+          <a
+            href={hrefFor(previous)}
+            onClick={handle(previous)}
+            className={linkClass}
+            rel="prev"
+          >
             <ChevronLeft className="size-4" aria-hidden />
             Previous
-          </Link>
+          </a>
         ) : (
           <span className={disabledClass} aria-disabled>
             <ChevronLeft className="size-4" aria-hidden />
@@ -57,10 +91,15 @@ export function RegistryPagination({
           </span>
         )}
         {hasNext ? (
-          <Link href={`/?start=${next}`} className={linkClass} rel="next">
+          <a
+            href={hrefFor(next)}
+            onClick={handle(next)}
+            className={linkClass}
+            rel="next"
+          >
             Next
             <ChevronRight className="size-4" aria-hidden />
-          </Link>
+          </a>
         ) : (
           <span className={disabledClass} aria-disabled>
             Next

@@ -198,6 +198,24 @@
   html {
     @apply font-sans;
   }
+
+  /* Tailwind v4 resets buttons to `cursor: default`, matching the browser
+     default rather than the web's convention. That leaves every button in the
+     app feeling inert on hover, so the convention is restored here once
+     instead of being remembered on each component.
+
+     Anchors already default to pointer; they are listed so an <a> without an
+     href, which does not, still reads as clickable when it carries a role.
+     Disabled controls are excluded: a pointer on something that cannot be
+     pressed is a promise the UI does not keep. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* Digits that must not jitter or be misread: trust scores, content hashes,
