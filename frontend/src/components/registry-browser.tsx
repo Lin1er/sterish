@@ -66,11 +66,20 @@ export function RegistryBrowser({ skills }: { skills: SkillListItem[] }) {
           {skills.map((skill) => {
             const stale = hasUnauditedLatest(skill);
             return (
-              <TableRow key={skill.skill_id}>
+              // The whole row is the target, not just the id. The link itself
+              // stays a real anchor on the skill id, so keyboard focus and
+              // screen readers get one sensible link with a readable name, and
+              // its ::after is stretched over the row to catch a click
+              // anywhere. A row-wide onClick would have needed a client
+              // component and would have broken opening in a new tab.
+              <TableRow
+                key={skill.skill_id}
+                className="relative cursor-pointer transition-colors hover:bg-elevated focus-within:bg-elevated"
+              >
                 <TableCell className="numeric font-mono text-xs">
                   <Link
                     href={`/skills/${encodeURIComponent(skill.skill_id)}`}
-                    className="hover:text-keyword hover:underline"
+                    className="after:absolute after:inset-0 after:content-[''] hover:text-keyword"
                   >
                     {skill.skill_id}
                   </Link>
