@@ -8,8 +8,8 @@ export default function Home() {
           Audited Skills for <span className="text-keyword">AI Agents</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-text-secondary">
-          On-chain registry with multi-stage LLM audit, trust scoring, and
-          pay-per-use licensing, built on Stellar.
+          On-chain registry with multi-stage LLM audit, trust scoring, and a
+          USDC licence an agent buys once per skill version, built on Stellar.
         </p>
       </section>
 
