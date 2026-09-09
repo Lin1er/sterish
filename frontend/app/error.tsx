@@ -23,7 +23,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-24 text-center">
+    <div className="mx-auto max-w-6xl px-4 py-24 text-center sm:px-6">
       <h2 className="text-2xl font-bold">Something went wrong</h2>
       <p className="mx-auto mt-3 max-w-md text-sm text-text-secondary">
         This is a fault in the dashboard, not a verdict about any skill. Nothing

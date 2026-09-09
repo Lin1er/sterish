@@ -10,7 +10,7 @@ import Link from "next/link";
  */
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+    <div className="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
       <h2 className="text-2xl font-bold">This skill is not registered</h2>
       <p className="mx-auto mt-3 text-sm text-text-secondary">
         The registry has no entry under that id. That is not a verdict and not a

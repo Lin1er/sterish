@@ -124,7 +124,7 @@ export async function SkillDetail({ skillId }: { skillId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-keyword"

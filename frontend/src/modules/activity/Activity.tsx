@@ -160,7 +160,7 @@ function ActivityBody() {
  */
 export function Activity() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
       <h2 className="mb-6 flex items-center gap-2.5 text-lg font-bold tracking-wider">
         Audit Feed
         {/* A quiet liveness cue instead of a sentence explaining the interval.
