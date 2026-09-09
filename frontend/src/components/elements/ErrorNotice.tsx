@@ -39,7 +39,7 @@ export function ErrorNotice({ error }: { error: ApiError }) {
           {error.code ? ` (${error.code})` : null}
         </EmptyDescription>
       </EmptyHeader>
-      <p className="numeric mt-2 font-mono text-xs text-text-tertiary">
+      <p className="numeric mt-2 font-mono text-xs break-all text-text-tertiary">
         {error.url}
       </p>
       <p className="mt-4 max-w-md text-sm text-text-secondary">

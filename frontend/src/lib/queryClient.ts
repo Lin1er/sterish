@@ -56,4 +56,5 @@ export function getQueryClient(): QueryClient {
 export const queryKeys = {
   skills: (start: number, limit: number) =>
     ["skills", { start, limit }] as const,
+  feed: (limit: number) => ["feed", { limit }] as const,
 };

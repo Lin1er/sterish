@@ -172,6 +172,51 @@ describe("the production gate", () => {
   });
 });
 
+describe("GET /feed", () => {
+  it("serves activity newest first", async () => {
+    const body = await (await call("feed")).json();
+    expect(body.indexer_enabled).toBe(true);
+    expect(body.events.length).toBeGreaterThan(0);
+    const times = body.events.map((e: { occurred_at: number }) => e.occurred_at);
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
+  });
+
+  it("carries verdict_flipped, which live testnet has never produced", async () => {
+    // The whole reason these fixtures exist: a version that was audited once
+    // and re-audited to a different verdict is the story this product tells,
+    // and there is no live example to render it against.
+    const body = await (await call("feed")).json();
+    const flipped = body.events.filter(
+      (e: { event: string }) => e.event === "verdict_flipped",
+    );
+    expect(flipped).toHaveLength(1);
+    expect(flipped[0].verdict).toBe("WARNING");
+  });
+
+  it("gives every event a transaction to check", async () => {
+    // The feed comes from the index, which the spec is explicit is a cache and
+    // never a source of truth. The tx link is what makes a line checkable
+    // rather than a claim the dashboard is making.
+    const body = await (await call("feed")).json();
+    for (const event of body.events) {
+      expect(event.tx_hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(event.tx_url).toContain(event.tx_hash);
+    }
+  });
+
+  it("pages with limit and offset", async () => {
+    const body = await (await call("feed", "?limit=2&offset=1")).json();
+    expect(body.events).toHaveLength(2);
+    expect(body.total).toBeGreaterThan(2);
+  });
+
+  it("rejects a limit above what the API allows", async () => {
+    const response = await call("feed", "?limit=500");
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("INVALID_PARAMETER");
+  });
+});
+
 describe("an unrouted path", () => {
   it("404s rather than answering with something plausible", async () => {
     expect((await call("reports/com.acme.pdf-suite/0.9.0")).status).toBe(404);

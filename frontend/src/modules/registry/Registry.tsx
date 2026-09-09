@@ -58,7 +58,7 @@ export function Registry({
   const offset = parseStart(start);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
       {/* No hero. The pitch belongs on the landing page (STE-23); this route is
           the tool, and a tool should open on its data. */}
       <section>
@@ -68,7 +68,7 @@ export function Registry({
         {/* The await lives below this boundary, not in Registry itself, so the
             page shell paints immediately and only the table waits on the ten
             second read. */}
-        <Suspense fallback={<RegistrySkeleton />}>
+        <Suspense fallback={<RegistrySkeleton rows={PAGE_SIZE} />}>
           <PrefetchedRegistry offset={offset} />
         </Suspense>
       </section>

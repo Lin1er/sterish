@@ -40,10 +40,7 @@ export function RegistryContent({
   pageSize: number;
 }) {
   const [start, setStart] = useState(initialStart);
-  const { data, error, isPending, isPlaceholderData } = useSkills(
-    start,
-    pageSize,
-  );
+  const { data, error, isPending } = useSkills(start, pageSize);
 
   // Back and forward have to keep working. Without this the URL would change
   // under the browser's feet and the button would leave the page showing rows
@@ -60,7 +57,7 @@ export function RegistryContent({
     window.scrollTo({ top: 0 });
   }, []);
 
-  if (isPending) return <RegistrySkeleton />;
+  if (isPending) return <RegistrySkeleton rows={pageSize} />;
 
   if (error) {
     // Anything that is not an ApiError is a bug, and the error boundary should
@@ -71,17 +68,7 @@ export function RegistryContent({
 
   return (
     <>
-      {/* While a new page loads, the previous rows stay up rather than being
-          replaced by a ten second blank. Dimming says they are stale without
-          pretending the table is empty. */}
-      <div
-        className={
-          isPlaceholderData ? "opacity-50 transition-opacity" : undefined
-        }
-        aria-busy={isPlaceholderData}
-      >
-        <RegistryTable skills={data.skills} />
-      </div>
+      <RegistryTable skills={data.skills} />
       <RegistryPagination
         start={data.start}
         limit={data.limit}

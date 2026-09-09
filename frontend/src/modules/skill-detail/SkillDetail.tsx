@@ -6,6 +6,8 @@ import { ErrorNotice } from "@/components/elements/ErrorNotice";
 import { ApiError, getSkill } from "@/lib/api";
 import type { AuditedVersion, SkillDetail as Skill, Verdict } from "@/lib/types";
 import { formatLedgerTime } from "@/utils/format";
+import { AuditTrail } from "./component/AuditTrail";
+import { TrustScorePanel } from "./component/TrustScorePanel";
 import { VerdictBanner } from "./component/VerdictBanner";
 import { VersionCard } from "./component/VersionCard";
 
@@ -38,14 +40,17 @@ function SkillBody({ skill }: { skill: Skill }) {
         <h2 className="numeric font-mono text-2xl font-bold break-all">
           {skill.skill_id}
         </h2>
-        <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm text-text-secondary">
-          <div className="flex gap-2">
+        {/* items-baseline, not the default stretch. Each row pairs a text-sm
+            label with a font-mono text-xs value, and two different font sizes
+            in a flex row only line up if they are aligned on their baseline. */}
+        <dl className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2 text-sm text-text-secondary">
+          <div className="flex items-baseline gap-2">
             <dt>Owner</dt>
             <dd className="numeric font-mono text-xs break-all text-text">
               {skill.owner}
             </dd>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-baseline gap-2">
             <dt>Registered</dt>
             <dd className="numeric font-mono text-xs text-text">
               {formatLedgerTime(skill.registered_at)}
@@ -88,6 +93,18 @@ function SkillBody({ skill }: { skill: Skill }) {
           />
         ))}
       </div>
+
+      {/* Only for a version that actually has a score. An unaudited version has
+          no number to explain, and a zero rendered as a bar would read as a
+          very low score rather than the absence of one. */}
+      {latest?.audited ? (
+        <TrustScorePanel
+          score={latest.audited.trust_score}
+          auditTxUrl={latest.audited.evidence.audit_tx_url}
+        />
+      ) : null}
+
+      <AuditTrail skillId={skill.skill_id} />
     </>
   );
 }
@@ -110,7 +127,7 @@ export async function SkillDetail({ skillId }: { skillId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-keyword"

@@ -1,3 +1,9 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Design tokens",
+};
+
 /**
  * Design token preview. PROPOSAL for STE-7 (owner: Nabil).
  *

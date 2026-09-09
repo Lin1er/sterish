@@ -9,6 +9,7 @@
 import type {
   ApiErrorBody,
   ApiErrorCode,
+  FeedResponse,
   Health,
   SkillDetail,
   SkillList,
@@ -169,6 +170,24 @@ export function checkVersion(
   return apiFetch<VersionCheck>(
     `/check/${encodeURIComponent(skillId)}/${encodeURIComponent(version)}`,
   );
+}
+
+/**
+ * Indexed registry activity, newest first.
+ *
+ * Not in the frozen spec. The API's own docstring calls it "a convenience
+ * feed, not a verdict source", and that is exactly how it is used: the feed
+ * supplies the timeline and the transaction links, while any verdict rendered
+ * as a claim is read from the chain through /check or /skills.
+ */
+export function getFeed(
+  params: { limit?: number; offset?: number } = {},
+): Promise<FeedResponse> {
+  const query = new URLSearchParams({
+    limit: String(params.limit ?? 50),
+    offset: String(params.offset ?? 0),
+  });
+  return apiFetch<FeedResponse>(`/feed?${query}`);
 }
 
 /** Spec §3.5. Answers 503 when the API cannot reach the chain. */
