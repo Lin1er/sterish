@@ -56,7 +56,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <Providers>
           <Header />
-          <main className="min-h-[60vh]">{children}</main>
+          <main className="min-h-[50vh]">{children}</main>
           <Footer network={STELLAR_NETWORK} />
         </Providers>
       </body>

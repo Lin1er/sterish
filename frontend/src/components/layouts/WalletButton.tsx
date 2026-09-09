@@ -72,9 +72,12 @@ export function WalletButton() {
         {status === "connecting" ? (
           "Connecting..."
         ) : (
-          <>
-            Connect<span className="hidden sm:inline">&nbsp;wallet</span>
-          </>
+          // One text node, not two flex children: the button variant already
+          // puts a gap between children, so a nbsp on top of it rendered as a
+          // visible double space.
+          <span>
+            Connect<span className="hidden sm:inline"> wallet</span>
+          </span>
         )}
       </Button>
     </div>

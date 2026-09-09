@@ -12,7 +12,7 @@ export function Footer({ network }: { network: string }) {
   const label = `Stellar ${network.charAt(0).toUpperCase()}${network.slice(1)}`;
 
   return (
-    <footer className="mt-16 border-t border-border px-4 py-6 sm:px-6">
+    <footer className="mt-12 border-t border-border px-4 py-4 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 text-xs text-text-tertiary">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p>&copy; {new Date().getFullYear()} Sterish</p>
