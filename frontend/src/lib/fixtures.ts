@@ -16,6 +16,8 @@
 
 import type {
   Evidence,
+  FeedEvent,
+  FeedResponse,
   Health,
   SkillDetail,
   SkillList,
@@ -278,3 +280,75 @@ export const FIXTURE_HEALTH: Health = {
 export const FIXTURE_BY_HASH: Record<string, VersionCheck> = Object.fromEntries(
   Object.values(FIXTURE_VERSIONS).map((v) => [v.content_hash, v]),
 );
+
+/**
+ * Indexed activity for the mock.
+ *
+ * Carries the one event the live testnet registry has never produced:
+ * `verdict_flipped`. A version that was SAFE and is re-audited DANGEROUS is
+ * the story this product is built to tell, and with no live example the UI
+ * that renders it would otherwise never be exercised at all.
+ */
+export const FIXTURE_FEED: FeedEvent[] = [
+  {
+    event: "verdict_flipped",
+    skill_id: "com.contrib.csv-cleaner",
+    version: "2.1.0",
+    content_hash:
+      FIXTURE_VERSIONS["com.contrib.csv-cleaner@2.1.0"].content_hash,
+    verdict: "WARNING",
+    trust_score: 61,
+    ledger: 4600100,
+    tx_hash: "1".repeat(64),
+    tx_url: `${EXPLORER}/tx/${"1".repeat(64)}`,
+    occurred_at: 1756903600,
+    occurred_at_iso: "2025-09-03T12:06:40Z",
+  },
+  {
+    event: "version_recorded",
+    skill_id: "com.evil.token-drainer",
+    version: "1.0.0",
+    content_hash:
+      FIXTURE_VERSIONS["com.evil.token-drainer@1.0.0"].content_hash,
+    verdict: "DANGEROUS",
+    trust_score: 5,
+    ledger: 4600050,
+    tx_hash: "2".repeat(64),
+    tx_url: `${EXPLORER}/tx/${"2".repeat(64)}`,
+    occurred_at: 1756893600,
+    occurred_at_iso: "2025-09-03T09:20:00Z",
+  },
+  {
+    event: "version_registered",
+    skill_id: "com.acme.pdf-suite",
+    version: "0.9.3",
+    content_hash: FIXTURE_VERSIONS["com.acme.pdf-suite@0.9.3"].content_hash,
+    verdict: null,
+    trust_score: null,
+    ledger: 4600010,
+    tx_hash: "3".repeat(64),
+    tx_url: `${EXPLORER}/tx/${"3".repeat(64)}`,
+    occurred_at: 1756860000,
+    occurred_at_iso: "2025-09-03T00:00:00Z",
+  },
+  {
+    event: "skill_registered",
+    skill_id: "com.acme.pdf-suite",
+    version: null,
+    content_hash: null,
+    verdict: null,
+    trust_score: null,
+    ledger: 4600000,
+    tx_hash: "4".repeat(64),
+    tx_url: `${EXPLORER}/tx/${"4".repeat(64)}`,
+    occurred_at: 1756800000,
+    occurred_at_iso: "2025-09-02T08:00:00Z",
+  },
+];
+
+export const FIXTURE_FEED_RESPONSE: FeedResponse = {
+  events: FIXTURE_FEED,
+  total: FIXTURE_FEED.length,
+  indexer_enabled: true,
+  last_indexed_ledger: 4600100,
+};

@@ -18,6 +18,7 @@
 
 import {
   FIXTURE_BY_HASH,
+  FIXTURE_FEED,
   FIXTURE_HEALTH,
   FIXTURE_SKILL_LIST,
   FIXTURE_SKILLS,
@@ -60,6 +61,34 @@ export function handleMockRequest(request: Request, path: string[]): Response {
   // GET /health
   if (path.length === 1 && path[0] === "health") {
     return Response.json(FIXTURE_HEALTH);
+  }
+
+  // GET /feed
+  if (path.length === 1 && path[0] === "feed") {
+    const rawLimit = url.searchParams.get("limit") ?? "50";
+    const rawOffset = url.searchParams.get("offset") ?? "0";
+    const limit = Number(rawLimit);
+    const offset = Number(rawOffset);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+      return fail(
+        400,
+        "INVALID_PARAMETER",
+        `limit must be an integer between 1 and 200, got '${rawLimit}'`,
+      );
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      return fail(
+        400,
+        "INVALID_PARAMETER",
+        `offset must be an integer >= 0, got '${rawOffset}'`,
+      );
+    }
+    return Response.json({
+      events: FIXTURE_FEED.slice(offset, offset + limit),
+      total: FIXTURE_FEED.length,
+      indexer_enabled: true,
+      last_indexed_ledger: 4600100,
+    });
   }
 
   // GET /skills

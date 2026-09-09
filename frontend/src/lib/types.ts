@@ -139,6 +139,43 @@ export type ApiErrorCode =
   | "INTERNAL";
 
 /**
+ * One indexed registry event. Served by `GET /feed`, newest first.
+ *
+ * `/feed` is implemented but **not** in the frozen spec: api-spec.md stops at
+ * section 3.7 and mentions it only as a row in the implementation-status
+ * table. This shape was read from `api/src/sterish_api/models.py::FeedItem` and
+ * checked against the live response, so it is the one part of this file that
+ * is not backed by a frozen contract. Treat a change here as a real risk.
+ *
+ * Three event types appear on live testnet: `skill_registered`,
+ * `version_registered` and `version_recorded`. A fourth, `verdict_flipped`, is
+ * emitted by the contract and indexed, but has never yet occurred.
+ */
+export interface FeedEvent {
+  event: string;
+  skill_id: string;
+  /** Null on `skill_registered`, which is about the skill, not a version. */
+  version: string | null;
+  content_hash: string | null;
+  /** Only `version_recorded` and `verdict_flipped` carry a verdict. */
+  verdict: Verdict | null;
+  trust_score: number | null;
+  ledger: number;
+  tx_hash: string;
+  tx_url: string;
+  occurred_at: number | null;
+  occurred_at_iso: string | null;
+}
+
+export interface FeedResponse {
+  events: FeedEvent[];
+  total: number;
+  /** False when the API runs with polling off; the feed is then empty by design. */
+  indexer_enabled: boolean;
+  last_indexed_ledger: number | null;
+}
+
+/**
  * A skill row plus the one derived question the table actually asks: is the
  * newest version the audited one? Kept out of the wire types above so it stays
  * obvious which fields came from the API and which the client worked out.
