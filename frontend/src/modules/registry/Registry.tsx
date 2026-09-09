@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { listSkills } from "@/lib/api";
 import { getQueryClient, queryKeys } from "@/lib/queryClient";
+import { LiveFeed } from "./component/LiveFeed";
 import { RegistryContent } from "./component/RegistryContent";
 import { RegistrySkeleton } from "./component/RegistrySkeleton";
 
@@ -72,6 +73,11 @@ export function Registry({
           <PrefetchedRegistry offset={offset} />
         </Suspense>
       </section>
+
+      {/* Below the table, not above it. The registry is what somebody came for;
+          the feed is evidence that it is alive, which is worth showing but not
+          worth pushing the data down the page for. */}
+      <LiveFeed />
     </div>
   );
 }

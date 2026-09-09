@@ -23,3 +23,25 @@ export function shortHash(hash: string, chars = 10): string {
   if (hash.length <= chars * 2) return hash;
   return `${hash.slice(0, chars)}...${hash.slice(-chars)}`;
 }
+
+/**
+ * "4 minutes ago". Falls back to the absolute UTC time past a week, because
+ * "23 days ago" is harder to check against an explorer than a date.
+ */
+export function formatRelativeTime(seconds: number): string {
+  const delta = Math.floor(Date.now() / 1000) - seconds;
+  if (delta < 60) return "just now";
+  if (delta < 3600) {
+    const minutes = Math.floor(delta / 60);
+    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+  if (delta < 86_400) {
+    const hours = Math.floor(delta / 3600);
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+  if (delta < 604_800) {
+    const days = Math.floor(delta / 86_400);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+  return formatLedgerTime(seconds).slice(0, 10);
+}
