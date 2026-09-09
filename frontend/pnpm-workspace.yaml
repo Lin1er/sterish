@@ -1,0 +1,9 @@
+# pnpm 10+ reads install settings from here, not from package.json.
+#
+# unrs-resolver is the native resolver behind eslint-import-resolver-typescript,
+# which eslint-config-next pulls in. pnpm blocks every dependency build script by
+# default, so without this allowance `pnpm install` exits non-zero in CI with
+# ERR_PNPM_IGNORED_BUILDS. The postinstall only compiles when no prebuilt binding
+# matches the platform; on CI's linux-x64 it just links the shipped binary.
+allowBuilds:
+  unrs-resolver: true

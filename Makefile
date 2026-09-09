@@ -6,7 +6,7 @@
         deploy-registry deploy-escrow deploy-tokens deploy-testnet \
         install-pipeline test-pipeline lint-pipeline run-pipeline \
         install-api run-api test-api lint-api \
-        install-fe dev-fe build-fe lint-fe \
+        install-dashboard dev-dashboard build-dashboard lint-dashboard \
         verify-spec verify-content-hash verify-soulbound \
         lint verify
 
@@ -118,30 +118,30 @@ test-api: ## Run API tests
 lint-api: ## Lint the API
 	cd api && uv run --extra dev ruff check src tests
 
-# --- Dashboard ---------------------------------------------------------------
-install-fe: ## Install fe dependencies (locked)
-	npm ci --prefix fe
+# --- Frontend ----------------------------------------------------------------
+install-frontend: ## Install frontend dependencies (locked)
+	pnpm --dir frontend install --frozen-lockfile
 
-dev-fe: ## Dashboard dev server on :3000
-	npm run dev --prefix fe
+dev-frontend: ## Frontend dev server on :3000
+	pnpm --dir frontend dev
 
-build-fe: ## Production build of the fe
-	npm run build --prefix fe
+build-frontend: ## Production build of the frontend
+	pnpm --dir frontend build
 
-lint-fe: ## Lint the fe
-	npm run lint --prefix fe
+lint-frontend: ## Lint the frontend
+	pnpm --dir frontend lint
 
 # --- Rollups -----------------------------------------------------------------
-lint: lint-pipeline lint-api lint-fe ## Lint pipeline + api + fe
+lint: lint-pipeline lint-api lint-frontend ## Lint pipeline + api + frontend
 	@echo "Rust lint runs via: make fmt-contracts lint-contracts"
 
-verify: ## Run the CI sequence for pipeline + api + fe
+verify: ## Run the CI sequence for pipeline + api + frontend
 	$(MAKE) install-pipeline
 	$(MAKE) lint-pipeline
 	$(MAKE) test-pipeline
 	$(MAKE) install-api
 	$(MAKE) lint-api
 	$(MAKE) test-api
-	$(MAKE) install-fe
-	$(MAKE) lint-fe
-	$(MAKE) build-fe
+	$(MAKE) install-frontend
+	$(MAKE) lint-frontend
+	$(MAKE) build-frontend

@@ -15,7 +15,7 @@
 
 # Node
 **/node_modules/
-dashboard/.next/
+frontend/.next/
 
 # Rust build output — by far the largest offender
 contracts/target/
@@ -40,6 +40,6 @@ deploy/artifacts/
 # through that module before serving it, so dropping docs/ would leave the paid
 # path raising SpecsNotFound in production while every test still passed.
 demo/
-dashboard/
+frontend/
 contracts/
 **/tests/
