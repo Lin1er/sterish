@@ -17,6 +17,13 @@ import { queryKeys } from "@/lib/queryClient";
 export const FEED_REFETCH_MS = 15_000;
 
 /**
+ * The API caps /feed at 200 per request, and the whole feed is pulled in one
+ * go so the page can filter over every event rather than a slice of them. It
+ * answers in about 0.2s because it is a plain index read with no chain calls.
+ */
+export const FEED_SCAN_LIMIT = 200;
+
+/**
  * Recent registry activity.
  *
  * Unlike the registry table this really does want to refetch on focus: coming

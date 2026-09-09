@@ -4,12 +4,15 @@ import Link from "next/link";
 import { WalletButton } from "./WalletButton";
 
 /**
- * No nav links. There is exactly one destination right now, the registry, and
- * the logo already goes there: a nav whose only entry duplicates the logo is
- * furniture. /tokens is a design-token preview kept for the polish pass, not a
- * place to send anyone, and GitHub is provenance, so it sits in the footer.
- * When the audit feed lands in STE-21 there will be a second real destination
- * and a nav will have earned its place.
+ * The nav is back, and only now.
+ *
+ * It was removed when the registry was the single destination, because a nav
+ * whose only entry duplicates the logo is furniture. The audit feed is a
+ * second real place to be, so there is something to navigate between.
+ *
+ * Still absent on purpose: /tokens is a design-token preview, an internal aid
+ * rather than a destination, and GitHub is provenance, which is why it sits in
+ * the footer.
  */
 export function Header() {
   return (
@@ -28,7 +31,17 @@ export function Header() {
             priority
           />
         </Link>
-        <WalletButton />
+        <div className="flex items-center gap-6">
+          <nav className="flex gap-4 text-sm text-text-secondary">
+            <Link className="hover:text-keyword" href="/">
+              Registry
+            </Link>
+            <Link className="hover:text-keyword" href="/activity">
+              Audit feed
+            </Link>
+          </nav>
+          <WalletButton />
+        </div>
       </div>
     </header>
   );

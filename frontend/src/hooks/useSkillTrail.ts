@@ -6,16 +6,16 @@ import { getFeed } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import type { FeedEvent } from "@/lib/types";
 
-/**
- * The whole feed is pulled and filtered here because `GET /feed` takes only
- * `limit` and `offset`: there is no `skill_id` parameter. At 142 indexed
- * events that is one request and cheap, but it does not scale, and the fix
- * belongs in the API rather than in a bigger limit here. Raised with James.
- */
-const TRAIL_SCAN_LIMIT = 200;
+import { FEED_SCAN_LIMIT } from "./useFeed";
 
 /**
  * Every indexed event for one skill, newest first.
+ *
+ * The whole feed is pulled and filtered here because `GET /feed` takes only
+ * `limit` and `offset`: there is no `skill_id` parameter. That is affordable
+ * because the feed is an index read costing about 0.2s, and it shares one
+ * cache entry with the audit feed page. It stops being affordable past the
+ * 200-event cap, and the fix then belongs in the API, not in a bigger limit.
  *
  * This is the audit trail: registration, each version published, and each
  * verdict written, with the transaction behind every line. It is deliberately
@@ -24,8 +24,8 @@ const TRAIL_SCAN_LIMIT = 200;
  */
 export function useSkillTrail(skillId: string) {
   return useQuery({
-    queryKey: queryKeys.feed(TRAIL_SCAN_LIMIT),
-    queryFn: () => getFeed({ limit: TRAIL_SCAN_LIMIT }),
+    queryKey: queryKeys.feed(FEED_SCAN_LIMIT),
+    queryFn: () => getFeed({ limit: FEED_SCAN_LIMIT }),
     select: (data): FeedEvent[] =>
       data.events.filter((event) => event.skill_id === skillId),
   });
