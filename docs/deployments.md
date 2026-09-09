@@ -357,6 +357,50 @@ Diperbaiki dengan melepas `async` (FastAPI menjalankan handler sync di threadpoo
 Dibuktikan di deployment: 12 request paralel, terlama 4,07 detik, total wall **4,17
 detik** — kalau masih terblokir, wall time akan sekitar 12×.
 
+### Redeploy 2026-09-09 — STE-33 masuk produksi
+
+Sampai hari ini CT 204 masih menjalankan `84df2d7`, dua puluh commit di belakang
+`main`. Perbaikan STE-33 sudah merge tapi belum jalan di mana pun: Ancung mengukur
+API live setelah PR #21 masuk dan mendapat angka yang praktis sama dengan sebelum
+perbaikan. **Merge bukan deploy** — di stack ini tidak ada yang menarik `main`
+sendiri, `ctredeploy` harus dijalankan.
+
+Setelah `bash /usr/local/bin/ctredeploy`, commit yang jalan `1af75fd`.
+
+| `GET /skills` | sebelum redeploy | sesudah redeploy |
+|---|---|---|
+| `limit=3` | 2,3s | 1,5s |
+| `limit=20` | 10,3s | **2,8s** (median 8 sampel; 2,3–6,9s) |
+| `limit=50` | 31,6s | 4,6s |
+
+Angka lewat URL publik lebih tinggi dan jauh lebih berombak daripada 1,9s yang
+diukur di aplikasi saat mengembangkan STE-33. Selisihnya bukan tunnel — diukur dari
+dalam container, `limit=20` justru sempat 3,7s. Yang tersisa adalah latensi RPC dari
+jaringan CT ke soroban-testnet, yang lebih tinggi dan lebih bervariasi daripada dari
+mesin developer. Requirement "di bawah 2 detik" terpenuhi di aplikasi; lewat internet
+publik angkanya 2–3 detik dan sesekali meleset.
+
+**Diverifikasi setelah redeploy, bukan diasumsikan:**
+
+* `deploy/verify.sh https://api-sterish.jameshub.fun` lolos seluruhnya — `/health`
+  200 dengan `rpc_reachable`, `/skills`, 404/400 jalur error, `/use` 402 dengan
+  challenge, `/use` DANGEROUS 403.
+* **Seluruh 47 baris** `/skills?limit=100` dicocokkan satu per satu dengan
+  `/check/{skill_id}/{version}` — verdict, `trust_score`, dan `is_verified` cocok
+  semua, nol selisih. Ini yang membuktikan fan-out konkuren tidak menggeser verdict
+  ke baris tetangga.
+* Paginasi dua halaman tidak tumpang tindih dan urutannya sama dengan listing penuh.
+* `STERISH_CHAIN_CONCURRENCY=20` benar-benar terbaca di environment container.
+
+**Soal error CORS yang kadang muncul di dashboard** (dilaporkan Ancung): header
+aplikasinya memang benar, dan itu sekarang terkonfirmasi lewat URL publik — preflight
+`OPTIONS`, respons 200, dan respons 404 ketiganya membawa `access-control-allow-origin`.
+Dugaan Ancung bahwa yang terlihat sebagai CORS sebenarnya halaman error Cloudflare
+untuk request yang tersendat konsisten dengan itu: halaman error Cloudflare tidak
+membawa header CORS aplikasi. Request `/skills` yang tadinya menahan koneksi belasan
+detik sekarang selesai dalam 2–3 detik, jadi peluangnya jauh berkurang — tapi ini
+argumen sebab-akibat, bukan pengamatan langsung atas error yang hilang.
+
 ### Operasional
 
 ```bash
