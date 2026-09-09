@@ -115,3 +115,51 @@ def test_health_reports_a_reachable_chain(client):
 def test_rpc_reachable_probe():
     reachable, latest = chain.rpc_reachable()
     assert reachable is True and latest and latest > 0
+
+
+# --- GET /license against the deployed tokens contract (STE-35) ---------------
+
+# The buyer from the STE-19 x402 run. It holds a licence for SAFE_ID@1.0.0, minted
+# on chain, so this is a real held/not-held pair rather than two mocked booleans.
+LICENSED_AGENT = os.getenv("DEVELOPER_ADDRESS", "")
+UNLICENSED_AGENT = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
+
+
+def test_license_status_reads_the_deployed_tokens_contract(client):
+    """The endpoint is only worth anything if it maps to the live view function."""
+    body = client.get(f"/license/{SAFE_ID}/1.0.0?agent={UNLICENSED_AGENT}").json()
+    assert body["held"] is False
+    assert body["agent"] == UNLICENSED_AGENT
+    assert body["tokens_contract_id"].startswith("C")
+    assert body["contract_url"].endswith(body["tokens_contract_id"])
+
+
+def test_license_agrees_with_the_paid_path(client):
+    """/use and /license must never disagree about the same (agent, skill, version).
+
+    They read the same contract function; if they diverge, one of them is lying to a
+    dashboard about whether someone already paid.
+    """
+    if not LICENSED_AGENT:
+        pytest.skip("DEVELOPER_ADDRESS not in the environment")
+
+    held = client.get(f"/license/{SAFE_ID}/1.0.0?agent={LICENSED_AGENT}").json()["held"]
+    use = client.get(f"/use/{SAFE_ID}/1.0.0", headers={"X-AGENT-ADDRESS": LICENSED_AGENT})
+    # /use answers 200 with the artifact when the licence is held, 402 when it is not.
+    assert held is (use.status_code == 200), (
+        f"/license says held={held} but /use returned {use.status_code}"
+    )
+
+
+def test_license_answers_for_a_dangerous_version(client):
+    """The case /use cannot answer at all: it returns 403 before checking the licence."""
+    body = client.get(f"/license/{POISON_ID}/1.0.0?agent={UNLICENSED_AGENT}").json()
+    assert body["held"] is False
+    assert client.get(f"/use/{POISON_ID}/1.0.0").status_code == 403
+
+
+def test_license_answers_for_a_skill_with_no_artifact_on_disk(client):
+    """46 of 47 live skills have no artifact; /use 404s on those even when licensed."""
+    body = client.get(f"/license/com.sterish.e2e-1788541421/1.0.0?agent={UNLICENSED_AGENT}")
+    assert body.status_code == 200
+    assert body.json()["held"] is False

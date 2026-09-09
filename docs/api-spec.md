@@ -29,7 +29,7 @@ not caught up.
 ### Implementation status
 
 **Implemented in STE-17** (2026-09-04) and serving live chain reads against the STE-13
-testnet deployment. Sections 3.1-3.5 and 3.7 are real; only 3.6 remains `PLANNED`.
+testnet deployment. Everything here is real except 3.6, which remains `PLANNED`.
 
 | Section | Status |
 |---|---|
@@ -40,7 +40,8 @@ testnet deployment. Sections 3.1-3.5 and 3.7 are real; only 3.6 remains `PLANNED
 | 3.5 `GET /health` | implemented |
 | 3.6 `GET /reports/{skill_id}/{version}` | **PLANNED** — `report_uri` is advertised only when `REPORT_BASE_URL` is set, so clients are never handed a link that 404s |
 | 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19) |
-| `GET /feed` | **added** — indexed registry activity, newest first (dashboard, STE-21) |
+| 3.8 `GET /license/{skill_id}/{version}` | implemented (STE-35) |
+| 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35 |
 
 What the scaffold had, and what replaced it:
 
@@ -347,6 +348,99 @@ about to be refused.
 **Errors:** `403 NOT_VERIFIED`, `400 INVALID_PAYMENT`, `402 PAYMENT_REJECTED` (carries the
 facilitator's own reason), `503 FACILITATOR_UNAVAILABLE`, `404 ARTIFACT_NOT_FOUND`,
 `500 ARTIFACT_HASH_MISMATCH`.
+
+### 3.8 `GET /license/{skill_id}/{version}` — licence status without the artifact (STE-35)
+
+Read-only mirror of `has_license(agent, skill_id, version)` on the tokens contract. Answers one
+question and nothing else.
+
+**Query parameters**
+
+| Parameter | Type | Notes |
+|---|---|---|
+| `agent` | `G…` account address | Required. May instead be sent as `X-AGENT-ADDRESS`. The query parameter wins if both are present. |
+
+```json
+{
+  "skill_id": "com.acme.pdf-suite",
+  "version": "1.0.0",
+  "agent": "GD73M4F7…",
+  "held": true,
+  "tokens_contract_id": "CCHV…EJX",
+  "contract_url": "https://stellar.expert/explorer/testnet/contract/CCHV…EJX"
+}
+```
+
+Section 3.7 can already answer this — it checks the licence before offering to sell one — but it
+answers by **serving the whole artifact**, so drawing one badge cost a full skill download and a
+detail page with five versions cost five. It also answers wrongly in three ways this endpoint
+does not:
+
+| `GET /use` | `GET /license` |
+|---|---|
+| reads the artifact before replying, so a real licence still returns `404 ARTIFACT_NOT_FOUND` for any skill absent from `STERISH_SKILLS_DIR` | never touches the artifact directory |
+| swallows a failed chain read and falls through to `402`, conflating "no licence" with "could not tell" | a failed read is `502 RPC_UNAVAILABLE`, never `held: false` |
+| returns `403 NOT_VERIFIED` before looking at the licence, hiding existing holders of a version later re-audited to `DANGEROUS` | unconditional on the registry verdict |
+
+That last row is deliberate and worth stating plainly: **this endpoint does not gate on the
+verdict.** Holding a licence is a fact about the tokens contract alone. A caller that wants to
+know whether a version is safe asks 3.1 or 3.2, which is a different read against a different
+contract; conflating the two is what section 1's design rules exist to prevent.
+
+A licence is pinned to one `(skill_id, version)` pair, so an unregistered skill and a
+never-licensed one both answer `held: false` — that is the contract's own answer, not a guess.
+
+**Errors:** `400 MISSING_AGENT`, `400 INVALID_AGENT` (not a `G…` account — contract `C…` and
+muxed `M…` addresses are rejected rather than encoded into a read that would return `false` for
+the wrong reason), `503 NOT_CONFIGURED`, `502 RPC_UNAVAILABLE`.
+
+### 3.9 `GET /feed` — indexed registry activity
+
+Registry events the indexer has tailed, newest first. Backed by SQLite, not by the chain.
+
+**Query parameters**
+
+| Parameter | Type | Default | Notes |
+|---|---|---|---|
+| `limit` | integer 1–200 | `50` | |
+| `offset` | integer ≥ 0 | `0` | |
+
+```json
+{
+  "events": [
+    {
+      "event": "version_recorded",
+      "skill_id": "com.acme.pdf-suite",
+      "version": "1.0.0",
+      "content_hash": "4bf3f90c…",
+      "verdict": "SAFE",
+      "trust_score": 88,
+      "ledger": 4584943,
+      "tx_hash": "499883165894078a…",
+      "tx_url": "https://stellar.expert/explorer/testnet/tx/499883165894078a…",
+      "occurred_at": 1756810000,
+      "occurred_at_iso": "2026-09-03T11:48:57Z"
+    }
+  ],
+  "total": 231,
+  "indexer_enabled": true,
+  "last_indexed_ledger": 4584943
+}
+```
+
+`event` is one of `skill_registered`, `version_registered`, `version_recorded`, `verdict_flipped`.
+`version`, `content_hash`, `verdict`, `trust_score` and the timestamps are null on events that do
+not carry them — `skill_registered` has no version, for instance.
+
+**This is a convenience feed, not a verdict source.** It is served from the index by definition,
+and section 6 makes the index a cache that is never the source of truth. A client that wants a
+verdict it can act on reads 3.1 or 3.2, which go to the chain on every request. The honest use
+for this endpoint is "what happened recently, and where is the transaction" — the `tx_url` is the
+part worth trusting, because it points at something a third party can verify independently.
+
+`indexer_enabled` and `last_indexed_ledger` are returned so a caller can tell a genuinely quiet
+registry from an indexer that is switched off or has fallen behind; with `INDEXER_ENABLED=0` the
+feed is empty and `last_indexed_ledger` is null, which must not read as "nothing has happened".
 
 ---
 

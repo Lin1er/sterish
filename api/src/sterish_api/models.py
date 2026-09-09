@@ -116,6 +116,23 @@ class FeedResponse(BaseModel):
     last_indexed_ledger: int | None = None
 
 
+class LicenseStatusResponse(BaseModel):
+    """`GET /license/{skill_id}/{version}` (STE-35).
+
+    No verdict, no trust score, no evidence: this answers one question — does this
+    agent hold a licence for this exact version — and the tokens contract is the whole
+    answer. A caller that also wants the verdict asks `/check`, which is a different
+    read against a different contract.
+    """
+
+    skill_id: str
+    version: str
+    agent: str
+    held: bool
+    tokens_contract_id: str
+    contract_url: str
+
+
 class HealthResponse(BaseModel):
     status: str
     version: str
