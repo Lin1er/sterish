@@ -25,6 +25,7 @@ from .errors import (
 from .models import HealthResponse
 from .ratelimit import RateLimitMiddleware
 from .routes.check import router as check_router
+from .routes.license import router as license_router
 from .routes.use import router as use_router
 
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,7 @@ app.add_exception_handler(ChainError, chain_error_handler)
 app.add_exception_handler(NotConfiguredError, not_configured_handler)
 
 app.include_router(check_router, prefix="", tags=["verification"])
+app.include_router(license_router, prefix="", tags=["verification"])
 app.include_router(use_router, prefix="", tags=["x402"])
 
 
