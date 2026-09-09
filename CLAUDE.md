@@ -4,18 +4,25 @@ Registry audit "skill" AI + USDC escrow di **Stellar/Soroban**. Basis: pemenang 
 Design lengkap: **`docs/SYSTEM_DESIGN.md`**. WAJIB dibaca sebelum kerja.
 
 ## 🚨 SCOPE (PALING PENTING)
-- **HANYA kerjakan tiket yang assign ke AXEL (axelmatsama@gmail.com).** JANGAN pernah kerjakan tiket teammate (James=m.ulinasidiki, Ancung=ancungaulia, Nabil=sharkzneverending).
-- **SEBELUM menyentuh tiket apa pun, cek assignee-nya via Linear MCP.** Kalau bukan Axel, SKIP.
-- Tiket Axel (Sterish): **STE-5, STE-9, STE-10, STE-11, STE-12, STE-13, STE-14, STE-18, STE-27, STE-30**.
+- **User worktree ini = JAMES (m.ulinasidiki). Kita pegang BACKEND: `api/` + `pipeline/` + `docs/api-spec.md` + `docs/specs/`.**
+- **HANYA kerjakan tiket yang assign ke JAMES.** JANGAN kerjakan tiket teammate (Axel=axelmatsama, Ancung=ancungaulia, Nabil=sharkzneverending).
+- **SEBELUM menyentuh tiket apa pun, cek assignee-nya via `orca-ide linear` DULU.** Bukan James = SKIP + lapor.
+- Tiket James (Sterish): **STE-6, STE-15, STE-16, STE-17, STE-19, STE-25, STE-32** (+ tiket baru yang di-assign ke James).
+- **Titipan dari teammate ke backend = kerjaan kita.** Kalau Ancung/Nabil minta endpoint atau dokumen API,
+  itu masuk scope James — bikinkan tiketnya dulu, assign ke James, baru kerjakan.
 - Kerja HANYA di worktree ini (repo Lin1er/sterish). JANGAN sentuh repo lain (web3-rich, sterun).
+- **Frontend (`frontend/`) punya Ancung — JANGAN diubah** kecuali diminta langsung.
+
+> Catatan historis: CLAUDE.md ini sempat menulis scope-nya sebagai "hanya tiket Axel". Itu salah —
+> worktree ini milik James. Diperbaiki 9 Sep 2026.
 
 ## 🚨 STANDING RULE (paling atas, tidak bisa ditawar)
 1. **HARAM bertanya ke user / pakai AskUserQuestion.** Ada tension, keputusan, atau ambiguity?
    **Ambil opsi rekomendasi sendiri, putuskan, JALAN.** Jangan berhenti nanya.
    Catat keputusan + alasannya di commit message, comment Linear, dan PR body biar transparan.
    **Satu-satunya titik berhenti = MENUNGGU ACC setelah tiket code-complete + test hijau.**
-2. **HARAM mengerjakan tiket yang bukan assign ke Axel** (axelmatsama@gmail.com).
-   Cek assignee via Linear MCP DULU. Bukan Axel = SKIP + lapor, jangan disentuh.
+2. **HARAM mengerjakan tiket yang bukan assign ke James** (m.ulinasidiki).
+   Cek assignee via `orca-ide linear` DULU. Bukan James = SKIP + lapor, jangan disentuh.
 
 ## Model & effort
 - PM + worker = **Opus, effort TINGGI (high/xhigh)**. **JANGAN pakai fable** (boros token).
@@ -33,6 +40,12 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
 ## Tooling WAJIB
 - **MCP Stellar Raven** (`mcp__stellar-raven__search`/`execute` via ToolSearch) — verifikasi tiap keputusan Stellar/Soroban (Registry/Escrow pattern, SEP-41/SAC USDC, x402, state archival/TTL, OZ non-fungible soulbound).
 - **Skill Stellar Soroban** (stellar-dev smart-contracts).
+- **Linear = `orca-ide linear ...`** (skill `orca-linear`). TIDAK ada Linear MCP di worktree ini.
+  - Di Linux pakai `orca-ide`, JANGAN `orca` telanjang (itu screen reader GNOME).
+  - `orca-ide skills get orca-linear` belum ada di build terpasang → pakai `orca-ide linear --help`.
+  - **Team `STE` ada di 3 workspace** → `--team STE` doang = `linear_workspace_ambiguous`.
+    Wajib: `--workspace ce4519a7-2b8f-44fe-a12f-801f5cd366e8` (workspace **Sterish**) di TIAP call.
+  - Contoh: `orca-ide linear list --filter all --team STE --workspace ce4519a7-... --limit 100 --json`
 
 ## Testing (WAJIB, no bug)
 - e2e + edge + positive + negative tiap tiket. Kontrak: `cargo llvm-cov` **>80%**, semua revert/guard path.
