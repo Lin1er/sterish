@@ -18,7 +18,7 @@ with `--frozen-lockfile`.
 ## Checks
 
 ```bash
-pnpm typecheck    # tsc --noEmit
+pnpm typecheck    # next typegen && tsc --noEmit
 pnpm lint         # eslint
 pnpm test         # vitest, the data layer and the mock API
 pnpm build        # next build
@@ -28,9 +28,11 @@ CI runs exactly these four, in that order.
 
 ## Where the data comes from
 
-Every read goes through `src/lib/api/client.ts`. Nothing else in the app calls
-`fetch` against the API, so switching data sources is an environment change and
-never a code change.
+Every read goes through `src/lib/api.ts`. Nothing else in the app calls `fetch`
+against the API, so switching data sources is an environment change and never a
+code change. The layout of the rest is described in
+[`guides/ARCHITECTURE.md`](./guides/ARCHITECTURE.md), which follows the same
+shape as Sterun's `fe/`.
 
 | `NEXT_PUBLIC_API_URL` | What you get |
 |---|---|
@@ -43,8 +45,8 @@ never a code change.
 
 ### The mock
 
-`src/app/api/mock/[...path]/route.ts` answers the read endpoints of the spec
-(sections 3.1 to 3.5) from `src/lib/fixtures/registry.ts`, including the section
+`app/api/mock/[...path]/route.ts` answers the read endpoints of the spec
+(sections 3.1 to 3.5) from `src/lib/fixtures.ts`, including the section
 4 error bodies. It exists for two reasons:
 
 1. The live testnet registry currently holds only `SAFE` and `DANGEROUS` rows.
@@ -72,7 +74,7 @@ never read as endorsed.
 
 ## Wallet
 
-`src/lib/wallet/` wraps Stellar Wallets Kit 2.x. Two things about it that cost
+`src/lib/wallet.ts` and `src/hooks/useWallet.tsx` wrap Stellar Wallets Kit 2.x. Two things about it that cost
 time to work out:
 
 - It is a **static** class with `init()`. Examples showing

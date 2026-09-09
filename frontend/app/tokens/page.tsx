@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { VerdictBadge } from "@/components/verdict-badge";
+import { VerdictBadge } from "@/components/elements/VerdictBadge";
 
 type Swatch = {
   token: string;

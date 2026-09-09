@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { isUserCancelled, loadKit, walletErrorMessage } from "./kit";
+import { isUserCancelled, loadKit, walletErrorMessage } from "@/lib/wallet";
 
 /**
  * `restoring` exists so the header can avoid flashing "Connect wallet" at
@@ -131,7 +131,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 export function useWallet(): WalletState {
   const context = useContext(WalletContext);
   if (!context) {
-    throw new Error("useWallet must be used inside <WalletProvider>");
+    throw new Error("useWallet must be used inside <Providers>");
   }
   return context;
 }

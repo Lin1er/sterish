@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
-import Link from "next/link";
 
-import { ConnectWallet } from "@/components/connect-wallet";
-import { WalletProvider } from "@/lib/wallet/wallet-provider";
+import { Footer } from "@/components/layouts/Footer";
+import { Header } from "@/components/layouts/Header";
+import { Providers } from "./providers";
 import "./globals.css";
 
 // Two families, and only two. JetBrains Mono is OFL, so next/font self-hosts it
@@ -20,6 +20,14 @@ const jetbrainsMono = JetBrains_Mono({
 
 const SATOSHI_CSS =
   "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap";
+
+/**
+ * Named in the footer so nobody has to guess which chain they are looking at.
+ * Read from env rather than from GET /health on purpose: the layout wraps every
+ * page, and making it await the API would put a network call in front of every
+ * render, including the 404 that has to answer with a real status code.
+ */
+const STELLAR_NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet";
 
 export const metadata: Metadata = {
   title: "Sterish: Audited Skill Marketplace for AI Agents",
@@ -46,35 +54,11 @@ export default function RootLayout({
         <link rel="stylesheet" href={SATOSHI_CSS} />
       </head>
       <body className="min-h-screen">
-        <WalletProvider>
-          <header className="border-b border-border px-6 py-4">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-              <Link href="/" className="text-xl font-bold tracking-wider">
-                STERISH
-              </Link>
-              <div className="flex items-center gap-6">
-                <nav className="flex gap-4 text-sm text-text-secondary">
-                  <Link className="hover:text-keyword" href="/">
-                    Registry
-                  </Link>
-                  <Link className="hover:text-keyword" href="/tokens">
-                    Tokens
-                  </Link>
-                  <a
-                    className="hover:text-keyword"
-                    href="https://github.com/Lin1er/sterish"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    GitHub
-                  </a>
-                </nav>
-                <ConnectWallet />
-              </div>
-            </div>
-          </header>
-          <main>{children}</main>
-        </WalletProvider>
+        <Providers>
+          <Header />
+          <main className="min-h-[60vh]">{children}</main>
+          <Footer network={STELLAR_NETWORK} />
+        </Providers>
       </body>
     </html>
   );

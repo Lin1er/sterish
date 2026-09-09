@@ -1,6 +1,6 @@
 import { AlertTriangle, CircleHelp, ShieldCheck, ShieldX } from "lucide-react";
 
-import type { Verdict } from "@/lib/api/types";
+import type { Verdict } from "@/lib/types";
 
 /**
  * What this verdict means for somebody about to install the skill.

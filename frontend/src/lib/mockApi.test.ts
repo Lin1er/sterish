@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "./[...path]/route";
-import { hasUnauditedLatest, type SkillListItem } from "@/lib/api/types";
-import { FIXTURE_SKILL_LIST } from "@/lib/fixtures/registry";
+import { handleMockRequest } from "./mockApi";
+import { hasUnauditedLatest, type SkillListItem } from "@/lib/types";
+import { FIXTURE_SKILL_LIST } from "@/lib/fixtures";
 
 /**
  * The mock is only useful if it behaves like the spec, including when it says
@@ -11,12 +11,9 @@ import { FIXTURE_SKILL_LIST } from "@/lib/fixtures/registry";
  */
 
 function call(path: string, query = "") {
-  const segments = path.split("/");
-  return GET(
+  return handleMockRequest(
     new Request(`http://localhost/api/mock/${path}${query}`),
-    // The generated RouteContext type is not available outside a Next build,
-    // and the handler only ever awaits params.
-    { params: Promise.resolve({ path: segments }) } as never,
+    path.split("/"),
   );
 }
 
@@ -147,18 +144,17 @@ describe("the production gate", () => {
    * after the environment changes. Importing a fresh copy is also the honest
    * test: it is exactly what a production server does at boot.
    */
-  async function loadRoute() {
+  async function loadHandler() {
     vi.resetModules();
-    return (await import("./[...path]/route")).GET;
+    return (await import("./mockApi")).handleMockRequest;
   }
 
   it("serves nothing in a production build", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    const get = await loadRoute();
-    const response = await get(
-      new Request("http://localhost/api/mock/skills"),
-      { params: Promise.resolve({ path: ["skills"] }) } as never,
-    );
+    const handle = await loadHandler();
+    const response = handle(new Request("http://localhost/api/mock/skills"), [
+      "skills",
+    ]);
     // A deployed dashboard that can serve fixtures is a dashboard that can
     // show an invented verdict to a real visitor.
     expect(response.status).toBe(404);
@@ -168,11 +164,10 @@ describe("the production gate", () => {
   it("can still be switched on deliberately, for verifying a prod build", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("STERISH_ENABLE_MOCK", "1");
-    const get = await loadRoute();
-    const response = await get(
-      new Request("http://localhost/api/mock/skills"),
-      { params: Promise.resolve({ path: ["skills"] }) } as never,
-    );
+    const handle = await loadHandler();
+    const response = handle(new Request("http://localhost/api/mock/skills"), [
+      "skills",
+    ]);
     expect(response.status).toBe(200);
   });
 });

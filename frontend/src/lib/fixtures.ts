@@ -20,7 +20,7 @@ import type {
   SkillDetail,
   SkillList,
   VersionCheck,
-} from "@/lib/api/types";
+} from "@/lib/types";
 
 const REGISTRY_CONTRACT_ID =
   "CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND";

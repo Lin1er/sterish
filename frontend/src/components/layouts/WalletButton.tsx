@@ -4,8 +4,8 @@ import { LogOut, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { truncateAddress } from "@/lib/wallet/kit";
-import { useWallet } from "@/lib/wallet/wallet-provider";
+import { useWallet } from "@/hooks/useWallet";
+import { shortAddress } from "@/utils/format";
 
 /**
  * The header's wallet control.
@@ -15,7 +15,7 @@ import { useWallet } from "@/lib/wallet/wallet-provider";
  * truncated form. Somebody checking that they paid from the right account needs
  * to be able to read the whole thing.
  */
-export function ConnectWallet() {
+export function WalletButton() {
   const { status, address, error, connect, disconnect } = useWallet();
 
   // The session lives in localStorage, which the server cannot read, so the
@@ -32,7 +32,7 @@ export function ConnectWallet() {
           className="numeric rounded-lg border border-border bg-surface px-2.5 py-1 font-mono text-xs text-text"
           title={address}
         >
-          {truncateAddress(address)}
+          {shortAddress(address)}
         </span>
         <Button
           variant="ghost"

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, checkByHash, getHealth, listSkills } from "./client";
+import { ApiError, checkByHash, getHealth, listSkills } from "./api";
 
 /**
  * The data layer is the only thing between a wrong answer and a badge that

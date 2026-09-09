@@ -1,5 +1,5 @@
 /**
- * A mock of the verification API, served by the dashboard itself.
+ * A mock of the verification API.
  *
  * Point NEXT_PUBLIC_API_URL at http://localhost:3000/api/mock and the whole UI
  * runs on fixtures; point it back at the real API and not one line of client
@@ -10,6 +10,10 @@
  * It answers the read endpoints of docs/api-spec.md sections 3.1 to 3.5,
  * including the section 4 error bodies. The paid path (3.7) needs a
  * facilitator and belongs to STE-22.
+ *
+ * The logic lives here rather than in the route file because app/ is routing
+ * only: the handler resolves params and delegates. That also lets the tests
+ * call it directly, with no Request context to fake beyond the URL.
  */
 
 import {
@@ -18,7 +22,7 @@ import {
   FIXTURE_SKILL_LIST,
   FIXTURE_SKILLS,
   FIXTURE_VERSIONS,
-} from "@/lib/fixtures/registry";
+} from "@/lib/fixtures";
 
 /**
  * Off in production unless somebody switches it on deliberately.
@@ -42,10 +46,7 @@ function fail(status: number, error: string, detail: string): Response {
 /** Spec section 3.1: 64 lowercase hex, and uppercase is rejected, not fixed. */
 const CONTENT_HASH = /^[0-9a-f]{64}$/;
 
-export async function GET(
-  request: Request,
-  ctx: RouteContext<"/api/mock/[...path]">,
-) {
+export function handleMockRequest(request: Request, path: string[]): Response {
   if (!MOCK_ENABLED) {
     return fail(
       404,
@@ -54,7 +55,6 @@ export async function GET(
     );
   }
 
-  const { path } = await ctx.params;
   const url = new URL(request.url);
 
   // GET /health

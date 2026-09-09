@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 
-import { CopyHash } from "@/components/copy-hash";
-import type { Evidence } from "@/lib/api/types";
+import { CopyHash } from "@/modules/skill-detail/component/CopyHash";
+import type { Evidence } from "@/lib/types";
 
 /**
  * The transactions behind a verdict.

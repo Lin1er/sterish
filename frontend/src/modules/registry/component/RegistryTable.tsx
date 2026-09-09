@@ -16,8 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { VerdictBadge } from "@/components/verdict-badge";
-import { hasUnauditedLatest, type SkillListItem } from "@/lib/api/types";
+import { VerdictBadge } from "@/components/elements/VerdictBadge";
+import { hasUnauditedLatest, type SkillListItem } from "@/lib/types";
 
 /**
  * The registry table.
@@ -31,7 +31,7 @@ import { hasUnauditedLatest, type SkillListItem } from "@/lib/api/types";
  * audited must not read as endorsed. That inheritance was the scaffold bug
  * STE-5 removed from the contract, and it would be just as wrong here.
  */
-export function RegistryBrowser({ skills }: { skills: SkillListItem[] }) {
+export function RegistryTable({ skills }: { skills: SkillListItem[] }) {
   if (skills.length === 0) {
     return (
       <Empty>
@@ -127,4 +127,4 @@ export function RegistryBrowser({ skills }: { skills: SkillListItem[] }) {
   );
 }
 
-export default RegistryBrowser;
+export default RegistryTable;

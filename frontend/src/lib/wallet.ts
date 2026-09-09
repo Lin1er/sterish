@@ -97,9 +97,3 @@ export function walletErrorMessage(cause: unknown): string {
   }
   return cause instanceof Error ? cause.message : String(cause);
 }
-
-/** `GABC…WXYZ`, the form every Stellar explorer and wallet uses. */
-export function truncateAddress(address: string): string {
-  if (address.length <= 12) return address;
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
-}
