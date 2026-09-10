@@ -42,5 +42,18 @@ if [ -n "${POISON_SKILL_ID:-}" ]; then
   check "/use DANGEROUS -> 403"    403 "$(code "$BASE/use/$POISON_SKILL_ID/1.0.0")"
 fi
 
+# STE-32: the report endpoint is the last link of the verification chain, so the check
+# that matters is not "does it 200" but "do the bytes still hash to the ledger".
+check "/reports missing -> 404"    404 "$(code "$BASE/reports/com.does.not.exist/1.0.0")"
+
+if [ -n "${EVIDENCE_SKILL_ID:-}" ] && [ -n "${EVIDENCE_VERSION:-}" ]; then
+  report_url="$BASE/reports/$EVIDENCE_SKILL_ID/$EVIDENCE_VERSION"
+  check "/reports served"          200 "$(code "$report_url")"
+  served=$(curl -sS --max-time 30 "$report_url" | sha256sum | cut -d' ' -f1)
+  onchain=$(curl -sS --max-time 30 "$BASE/check/$EVIDENCE_SKILL_ID/$EVIDENCE_VERSION" \
+            | tr ',' '\n' | grep -o '"evidence_hash":"[0-9a-f]*"' | cut -d'"' -f4)
+  check "  sha256(report) == evidence_hash" "$onchain" "$served"
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then echo "All checks passed."; else echo "FAILED"; exit 1; fi

@@ -26,10 +26,18 @@ class PublishedReport:
     size: int
 
     def uri(self, base_url: str = "") -> str:
-        """Public URL for the report, or a file:// URI when no base is configured."""
+        """Public URL for the report, or a file:// URI when no base is configured.
+
+        Must match the route the API serves (`api-spec` §3.6):
+        `<base>/reports/<skill_id>/<version>`. It used to return `<base>/<version>.json`,
+        which meant the URI recorded next to an on-chain `evidence_hash` and the URI a
+        client could actually fetch were two different strings for the same report.
+        """
         if not base_url:
             return self.path.resolve().as_uri()
-        return f"{base_url.rstrip('/')}/{self.path.name}"
+        skill_id = self.path.parent.name
+        version = self.path.stem
+        return f"{base_url.rstrip('/')}/reports/{skill_id}/{version}"
 
 
 def canonical_bytes(document: dict) -> bytes:
