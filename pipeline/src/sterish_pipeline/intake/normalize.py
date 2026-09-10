@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from sterish_pipeline.models import Capability, SkillManifest, ToolDef
+from sterish_pipeline.models import Capability, Entrypoint, SkillManifest, ToolDef
 
 
 class SourceKind(StrEnum):
@@ -274,6 +274,7 @@ def normalize_mcp_server(
                 ),
                 input_schema={},
                 capabilities=implied,
+                implied=True,
             )
         )
 
@@ -284,6 +285,23 @@ def normalize_mcp_server(
         if key in server:
             extra_text[f"mcp.{key}"] = json.dumps(server[key], ensure_ascii=False)
 
+    # The command was previously kept only as scannable text and then thrown away, so
+    # stage 2 had nothing to execute no matter what the manifest declared (STE-40). It is
+    # now carried as structured data too: text for the scanner, entrypoint for the sandbox.
+    entrypoint = None
+    if isinstance(server.get("command"), str) and server["command"].strip():
+        raw_args = server.get("args") or []
+        raw_env = server.get("env") or {}
+        entrypoint = Entrypoint(
+            command=server["command"].strip(),
+            args=[str(a) for a in raw_args] if isinstance(raw_args, list) else [],
+            # Values are stringified rather than trusted: an MCP env block is attacker
+            # -controlled and has already been seen carrying injection prose.
+            env={str(k): str(v) for k, v in raw_env.items()}
+            if isinstance(raw_env, dict)
+            else {},
+        )
+
     return NormalizedSkill(
         manifest=SkillManifest(
             skill_id=skill_id,
@@ -292,6 +310,7 @@ def normalize_mcp_server(
             version=version,
             permissions=permissions,
             tools=tools,
+            entrypoint=entrypoint,
         ),
         kind=SourceKind.MCP_SERVER,
         files=files,

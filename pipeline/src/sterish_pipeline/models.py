@@ -29,6 +29,22 @@ class ToolDef(BaseModel):
     description: str
     input_schema: dict = Field(default_factory=dict)
     capabilities: list[Capability] = Field(default_factory=list)
+    #: True when the normaliser synthesised this tool rather than the author declaring it.
+    #: See `SkillManifest.declared_capabilities(explicit_only=True)`.
+    implied: bool = False
+
+
+class Entrypoint(BaseModel):
+    """How a skill starts a process — when it starts one at all (STE-40).
+
+    Only MCP servers have one. An Agent Skill published as markdown executes nothing:
+    its risk is what it *instructs the agent* to do, which is stage 1's territory. The
+    field is therefore optional, and `None` means "nothing to run", never "ran clean".
+    """
+
+    command: str
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
 
 
 class SkillManifest(BaseModel):
@@ -38,11 +54,24 @@ class SkillManifest(BaseModel):
     version: str
     permissions: list[str] = Field(default_factory=list)
     tools: list[ToolDef] = Field(default_factory=list)
+    #: Present only when the source declares an executable server. See `Entrypoint`.
+    entrypoint: Entrypoint | None = None
 
-    def declared_capabilities(self) -> set[Capability]:
-        """Union of every capability declared by any tool."""
+    def declared_capabilities(self, explicit_only: bool = False) -> set[Capability]:
+        """Union of every capability declared by any tool.
+
+        `explicit_only` drops tools the normaliser synthesised rather than ones the author
+        wrote. Stage 2 needs that distinction: the MCP normaliser adds a `:server` tool
+        carrying NETWORK_OUTBOUND and ENV_READ to *any* manifest with a command, on the
+        sound stage-1 reasoning that launching a process grants it those regardless. But
+        comparing observed behaviour against that set makes "declared" vacuous — every
+        executable skill would implicitly have declared the network, and a skill that
+        promises "local only" then phones home would come back clean.
+        """
         out: set[Capability] = set()
         for tool in self.tools:
+            if explicit_only and tool.implied:
+                continue
             out.update(tool.capabilities)
         return out
 
@@ -115,9 +144,23 @@ class ObservedCall(BaseModel):
 
 
 class Stage2Result(BaseModel):
+    """What running the skill revealed — or that there was nothing to run.
+
+    `applicable=False` is the important state and the reason this is not just an empty
+    result. A skill with no entrypoint produced no observations, and "no observations"
+    must never be read as "behaved well". Rewarding the absence of code with a clean
+    result is the same category error this project already fixed twice: in the regex
+    scanner (STE-36) and in the model's own reasoning (STE-39).
+    """
+
     behavioral_flags: list[BehavioralFlag] = Field(default_factory=list)
     observed_calls: list[ObservedCall] = Field(default_factory=list)
     escaped_sandbox: bool = False
+    #: False when nothing was executed: no entrypoint, or no sandbox runtime available.
+    applicable: bool = False
+    #: Human-readable reason, always set. Ends up in the report so a reader can tell
+    #: "clean" from "never ran".
+    detail: str = "no entrypoint; nothing to execute"
 
 
 class FinalVerdict(StrEnum):

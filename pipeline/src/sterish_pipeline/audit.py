@@ -6,7 +6,8 @@
 The order is fixed and each step is a pure function of the one before it:
 
     stage 1  run_stage1            declared capabilities + description-injection scan
-    stage 2  run_sandbox_check     declared-vs-actual static analysis (Docker optional)
+    stage 2  run_sandbox_check     runs the entrypoint under strace; not applicable when
+                                   the skill has none (STE-40)
     stage 3  synthesize_verdict    weighted score, then the policy decision table
              synthesize_with_llm   optional advisory second opinion (fail-soft)
              policy.tighten        merge -- the model may only tighten
@@ -29,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from sterish_pipeline import specs
 from sterish_pipeline.config import PipelineConfig
-from sterish_pipeline.content_hash import content_hash
+from sterish_pipeline.content_hash import content_hash, read_skill_files
 from sterish_pipeline.llm import (
     LLMOpinion,
     StructuredClient,
@@ -110,7 +111,11 @@ def audit_normalized(
 
         stage1 = run_stage1(skill.manifest, cfg, root)
 
-    stage2 = Stage2Result() if skip_sandbox else run_sandbox_check(skill.manifest, config=cfg)
+    stage2 = (
+        Stage2Result()
+        if skip_sandbox
+        else run_sandbox_check(skill.manifest, config=cfg, files=skill.files)
+    )
 
     report = AuditReport(skill_id=skill.manifest.skill_id, version=skill.manifest.version)
     report.content_hash = content_hash(skill.files)
@@ -239,7 +244,11 @@ def run_audit(
     content_hash = specs.hash_dir(skill_dir)
 
     stage1 = run_stage1(manifest, cfg, skill_dir)
-    stage2 = Stage2Result() if skip_sandbox else run_sandbox_check(manifest, config=cfg)
+    stage2 = (
+        Stage2Result()
+        if skip_sandbox
+        else run_sandbox_check(manifest, config=cfg, files=read_skill_files(skill_dir))
+    )
 
     report = AuditReport(skill_id=manifest.skill_id, version=manifest.version)
     report = synthesize_verdict(report, stage1, stage2, cfg)

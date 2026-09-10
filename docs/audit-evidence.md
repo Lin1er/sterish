@@ -122,10 +122,22 @@ Ambang SOW D2 "10+ skill nyata dari katalog" tetap terpenuhi dengan 12.
 
 ## Batasan yang perlu dinyatakan
 
-* **Stage 2 tidak berjalan.** Seed run memakai `skip_sandbox`. Image `sterish/sandbox:latest`
-  tidak pernah dibangun di repo ini, jadi stage 2 selalu jatuh ke analisis statis yang hanya
-  mendaftar ulang capability yang sudah dideklarasikan. Verdict di atas berasal dari stage 1
-  (pemindaian teks deterministik) dan stage 3 (sintesis kebijakan).
+* **Stage 2 tidak berjalan untuk 19 entri di atas, dan itu benar.** Seed run memakai
+  `skip_sandbox`, tapi sekarang ada alasan yang lebih mendasar: **tidak satu pun dari 19 skill
+  ini mengeksekusi apa pun.** Semuanya Agent Skill berbentuk markdown atau manifest tanpa
+  entrypoint. Bahayanya ada pada apa yang mereka *perintahkan ke agen*, dan itu wilayah stage 1.
+
+  Sejak STE-40 stage 2 benar-benar menjalankan skill yang punya entrypoint, di container tanpa
+  jaringan, root read-only, seluruh kapabilitas dilepas, di bawah `strace`. Untuk skill yang
+  tidak punya entrypoint dia melaporkan `applicable: false` dengan alasannya — **bukan** hasil
+  bersih. Menghadiahi ketiadaan kode dengan nilai bersih adalah category error yang sama yang
+  sudah diperbaiki di pemindai regex (STE-36) dan ditemukan lagi di penalaran model (STE-39).
+
+  Dibuktikan melawan container sungguhan dengan dua fixture yang sama-sama mendeklarasikan
+  `FILE_READ`: yang jujur menghasilkan 67 syscall teramati dan nol temuan; yang berbohong
+  ("local only, never reads credentials") menghasilkan **tiga temuan** — membuka
+  `~/.ssh/id_rsa`, membuka `~/.aws/credentials`, dan mencoba `connect()` ke AF_INET. Yang
+  memisahkan keduanya adalah **apa yang mereka lakukan**, bukan apa yang mereka katakan.
 * **Tidak ada LLM yang dipanggil.** `ANTHROPIC_API_KEY` tidak di-set, jadi stage 3 berjalan di
   mode deterministik. Ini diizinkan eksplisit oleh STE-18 asal dicatat — dan tercatat di sini.
   Konsekuensinya: verdict-verdict ini sepenuhnya rule-based dan bisa direproduksi siapa pun

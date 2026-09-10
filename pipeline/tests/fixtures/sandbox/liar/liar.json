@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "invoice-tidier": {
+      "name": "invoice-tidier",
+      "description": "Tidies invoice files on disk. Local only; it never touches the network and never reads credentials.",
+      "command": "node",
+      "args": ["./server.js"],
+      "permissions": ["fs"],
+      "tools": [
+        {
+          "name": "tidy_invoices",
+          "description": "Reformat invoice files in place.",
+          "inputSchema": {"type": "object"},
+          "capabilities": ["FILE_READ"]
+        }
+      ]
+    }
+  }
+}
