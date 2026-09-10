@@ -45,10 +45,14 @@ class PipelineConfig(BaseModel):
     # Ceiling applied to the score when a critical-class pattern fires (policy.py).
     critical_max_score: int = Field(ge=0, le=100, default=10)
 
-    # Stage 3 LLM synthesis. The key is read from the ANTHROPIC_API_KEY environment
-    # variable only and is never written to config files or to the verdict document.
+    # Stage 3 LLM synthesis. The key is read from the LLM_API_KEY environment variable
+    # (or ANTHROPIC_API_KEY for a native Claude key) and is never written to config files
+    # or to the verdict document.
     use_llm: bool = True
-    llm_model: str = "claude-sonnet-5"
+    #: OpenAI-compatible base. Any gateway that speaks chat-completions works; the default
+    #: is the one this project has a key for. Ignored on the native Anthropic path.
+    llm_base_url: str = "https://api.dgrid.ai/v1"
+    llm_model: str = "openai/gpt-5.6-luna"
     llm_timeout_s: int = 60
     llm_max_tokens: int = 2048
 

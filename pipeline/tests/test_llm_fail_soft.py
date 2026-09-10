@@ -1,6 +1,6 @@
 """The LLM path, exercised entirely without an API key.
 
-The whole suite must be green on a machine that has never seen ANTHROPIC_API_KEY. Everything
+The whole suite must be green on a machine that has never seen an LLM key. Everything
 below either injects a fake client or asserts on the no-key path; the two tests that need a
 real key are marked ``skipif`` and are the only ones that would ever contact the network.
 """
@@ -40,8 +40,20 @@ FIXTURES = Path(__file__).parent / "fixtures"
 POISONED_PDF = FIXTURES / "poisoned_pdf_skill"
 SAFE_SKILL = FIXTURES / "safe_skill"
 
-HAS_KEY = bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
-requires_key = pytest.mark.skipif(HAS_KEY is False, reason="ANTHROPIC_API_KEY not set")
+KEY_VARS = ("LLM_API_KEY", "ANTHROPIC_API_KEY")
+HAS_KEY = any(os.environ.get(v, "").strip() for v in KEY_VARS)
+requires_key = pytest.mark.skipif(HAS_KEY is False, reason="no LLM key configured")
+
+
+def no_key(monkeypatch) -> None:
+    """Clear *every* key variable.
+
+    Deleting only one used to be enough. With two backends it is not, and a test that
+    clears one while the other is set in the shell passes for the wrong reason — the
+    failure mode conftest.py already warns about elsewhere in this repo.
+    """
+    for name in KEY_VARS:
+        monkeypatch.delenv(name, raising=False)
 
 
 class FakeClient:
@@ -80,7 +92,7 @@ DANGEROUS_ANSWER = {
 # ======================================================================================
 class TestFailSoftWithoutKey:
     def test_fail_soft_without_key(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         run = run_audit(POISONED_PDF)
         run.validate(submittable=True)
         assert run.report.llm_used is False
@@ -90,23 +102,23 @@ class TestFailSoftWithoutKey:
     def test_safe_fixture_stays_safe_without_key(self, monkeypatch):
         """No key must NOT be treated as an inconclusive LLM attempt, or every audit on a
         keyless machine would come out WARNING and the verdict would mean nothing."""
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         run = run_audit(SAFE_SKILL)
         assert run.document.verdict is Verdict.SAFE
         assert run.report.llm_attempted is False
 
     def test_note_explains_why_the_model_was_not_called(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         run = run_audit(SAFE_SKILL)
-        assert any("ANTHROPIC_API_KEY not set" in n for n in run.notes)
+        assert any("LLM_API_KEY not set" in n for n in run.notes)
 
     def test_no_exception_is_raised_anywhere(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         for path in (POISONED_PDF, SAFE_SKILL, Path(__file__).parent / "poisoned_skill"):
             run_audit(path).validate()
 
     def test_api_key_present_reflects_the_environment(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         assert api_key_present() is False
         monkeypatch.setenv("ANTHROPIC_API_KEY", "   ")
         assert api_key_present() is False, "whitespace is not a key"
@@ -114,7 +126,7 @@ class TestFailSoftWithoutKey:
         assert api_key_present() is True
 
     def test_client_construction_refuses_without_a_key(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        no_key(monkeypatch)
         with pytest.raises(LLMUnavailable):
             llm_module.AnthropicClient()
 

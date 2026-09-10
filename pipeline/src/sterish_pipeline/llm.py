@@ -11,8 +11,15 @@ Three properties, in order of importance:
 3. **Advisory.** Nothing here decides anything. ``policy.tighten`` merges the answer into the
    deterministic decision by taking the stricter half of each field.
 
-The key is read from ``ANTHROPIC_API_KEY`` and from nowhere else. It is never written to a
-config file, never logged and never placed in the verdict document.
+The key is read from the environment and from nowhere else. It is never written to a config
+file, never logged and never placed in the verdict document.
+
+Two backends, one contract. ``OpenAICompatibleClient`` speaks the OpenAI chat-completions
+shape over plain ``httpx`` — that covers gateways such as dgrid.ai as well as OpenAI itself,
+and needs no extra dependency because ``httpx`` is already a core one. ``AnthropicClient``
+remains for a native Claude key. Both take the *same* tool dict, defined once below in
+Anthropic's shape, and the OpenAI client translates it; a second copy of these schemas is
+exactly how the two backends would drift apart.
 """
 
 from __future__ import annotations
@@ -37,7 +44,18 @@ from sterish_pipeline.models import (
 
 logger = logging.getLogger(__name__)
 
-API_KEY_ENV = "ANTHROPIC_API_KEY"
+#: Primary key variable. `ANTHROPIC_API_KEY` still works for a native Claude key, but the
+#: generic name comes first: the backend is a deployment choice, not a code change.
+API_KEY_ENV = "LLM_API_KEY"
+ANTHROPIC_KEY_ENV = "ANTHROPIC_API_KEY"
+
+
+def _key_from_env() -> str:
+    """The configured key, whichever variable holds it. Never logged."""
+    return (
+        os.environ.get(API_KEY_ENV, "").strip()
+        or os.environ.get(ANTHROPIC_KEY_ENV, "").strip()
+    )
 
 
 class LLMUnavailable(RuntimeError):
@@ -175,17 +193,132 @@ class StructuredClient(Protocol):
 
 
 def api_key_present() -> bool:
-    """True when ``ANTHROPIC_API_KEY`` is set and non-empty."""
-    return bool(os.environ.get(API_KEY_ENV, "").strip())
+    """True when a key is configured under either variable."""
+    return bool(_key_from_env())
+
+
+def as_openai_tool(tool: dict) -> dict:
+    """Translate one tool from Anthropic's shape into OpenAI's.
+
+    The schemas are authored once, in Anthropic's shape, and translated here. Keeping a
+    second hand-written copy for the other backend is how the two would quietly stop
+    agreeing about what the model is allowed to return.
+    """
+    return {
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool["description"],
+            "strict": bool(tool.get("strict", False)),
+            "parameters": tool["input_schema"],
+        },
+    }
+
+
+class OpenAICompatibleClient:
+    """Chat-completions over httpx, for OpenAI and any gateway that speaks its shape.
+
+    Deliberately not the ``openai`` SDK: ``httpx`` is already a core dependency, and one
+    fewer optional install is one fewer way for the audit path to be unavailable in an
+    environment where it was expected to work.
+    """
+
+    def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
+        self._api_key = api_key or _key_from_env()
+        if not self._api_key:
+            raise LLMUnavailable(f"{API_KEY_ENV} is not set")
+        self._base_url = (base_url or "").rstrip("/")
+
+    def call_tool(
+        self, system: str, payload: dict, tool: dict, config: PipelineConfig
+    ) -> dict:
+        import httpx  # noqa: PLC0415 -- core dependency, imported lazily to match the
+
+        base = self._base_url or config.llm_base_url.rstrip("/")
+        body = {
+            "model": config.llm_model,
+            "max_tokens": config.llm_max_tokens,
+            "messages": [
+                {"role": "system", "content": system},
+                {
+                    "role": "user",
+                    "content": json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                },
+            ],
+            "tools": [as_openai_tool(tool)],
+            # Force the call rather than hoping for it: an unforced model can answer in
+            # prose, and prose is what this module exists to avoid parsing.
+            "tool_choice": {"type": "function", "function": {"name": tool["name"]}},
+        }
+
+        try:
+            response = httpx.post(
+                f"{base}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+                timeout=config.llm_timeout_s,
+            )
+        except Exception as exc:  # network, DNS, TLS, timeout
+            raise LLMUnavailable(f"request to {base} failed: {exc}") from exc
+
+        if response.status_code != 200:
+            # The body may quote the request, so only the status is reported — a key
+            # echoed back in an error message must not reach a log.
+            raise LLMUnavailable(f"{base} returned HTTP {response.status_code}")
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise LLMUnavailable("response was not JSON") from exc
+
+        try:
+            message = data["choices"][0]["message"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMUnavailable("response had no choices[0].message") from exc
+
+        for call in message.get("tool_calls") or []:
+            function = call.get("function") or {}
+            if function.get("name") != tool["name"]:
+                continue
+            try:
+                arguments = json.loads(function.get("arguments") or "")
+            except ValueError as exc:
+                # Unlike Anthropic's parsed tool input, OpenAI returns arguments as a
+                # JSON *string*, so a truncated answer surfaces here rather than upstream.
+                raise LLMUnavailable("tool arguments were not valid JSON") from exc
+            if not isinstance(arguments, dict):
+                raise LLMUnavailable("tool arguments were not an object")
+            return arguments
+
+        raise LLMUnavailable(
+            f"model returned no {tool['name']} tool call "
+            f"(finish_reason={data['choices'][0].get('finish_reason', 'unknown')})"
+        )
+
+
+def default_client() -> StructuredClient:
+    """The client for the configured backend.
+
+    A native Anthropic key selects the Anthropic path; anything else goes through the
+    OpenAI-compatible one, which is what every gateway speaks.
+    """
+    if os.environ.get(ANTHROPIC_KEY_ENV, "").strip() and not os.environ.get(
+        API_KEY_ENV, ""
+    ).strip():
+        return AnthropicClient()
+    return OpenAICompatibleClient()
 
 
 class AnthropicClient:
     """Thin wrapper over ``anthropic.Anthropic`` using tool use for structured output."""
 
     def __init__(self, api_key: str | None = None) -> None:
-        self._api_key = api_key or os.environ.get(API_KEY_ENV, "").strip()
+        self._api_key = api_key or os.environ.get(ANTHROPIC_KEY_ENV, "").strip()
         if not self._api_key:
-            raise LLMUnavailable(f"{API_KEY_ENV} is not set")
+            raise LLMUnavailable(f"{ANTHROPIC_KEY_ENV} is not set")
 
     def call_tool(
         self, system: str, payload: dict, tool: dict, config: PipelineConfig
@@ -369,7 +502,7 @@ def synthesize_with_llm(
             )
             return None, notes
         try:
-            client = AnthropicClient()
+            client = default_client()
         except LLMUnavailable as exc:
             notes.append(f"LLM client unavailable: {exc}")
             return None, notes
