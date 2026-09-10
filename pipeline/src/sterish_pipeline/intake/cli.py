@@ -17,6 +17,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from sterish_pipeline import specs
 from sterish_pipeline.audit import audit_normalized
 from sterish_pipeline.config import PipelineConfig
 from sterish_pipeline.content_hash import content_hash, hash_bytes
@@ -212,6 +213,202 @@ def audit_corpus(
         raise SystemExit(1)
 
 
+@intake.command("seed")
+@click.option("--corpus", "corpus_dir", default=str(DEFAULT_CORPUS), type=click.Path())
+@click.option("--config", "-c", default=None, help="Pipeline config JSON")
+@click.option(
+    "--label",
+    "labels",
+    multiple=True,
+    default=("catalog",),
+    help="Corpus labels to seed. Repeatable. Default: catalog.",
+)
+@click.option(
+    "--exclude",
+    "excluded",
+    multiple=True,
+    help="skill_id to hold back. Repeatable. Use for a known false positive that "
+    "must not be published as a verdict.",
+)
+@click.option("--reports-dir", default="reports", help="Where published reports are written")
+@click.option("--report-base-url", default="", help="Public base URL for report_uri")
+@click.option("--journal", default=".sterish-journal.json", help="Orchestrator journal path")
+@click.option("--json-out", type=click.Path(), default=None, help="Write the run log as JSON")
+@click.option("--dry-run", is_flag=True, help="Audit and validate, but sign nothing")
+@click.option(
+    "--allow-dangerous",
+    is_flag=True,
+    help="Also seed entries that audit DANGEROUS. Off by default: publishing a DANGEROUS "
+    "verdict against a third party's skill is an accusation, and an unreviewed batch is "
+    "not the place to make one.",
+)
+def seed(
+    corpus_dir: str,
+    config: str | None,
+    labels: tuple[str, ...],
+    excluded: tuple[str, ...],
+    reports_dir: str,
+    report_base_url: str,
+    journal: str,
+    json_out: str | None,
+    dry_run: bool,
+    allow_dangerous: bool,
+) -> None:
+    """Audit corpus entries and land each verdict on chain.
+
+    The batch path `submit` never had: `submit` takes one skill directory, so seeding a
+    corpus meant a shell loop that could not see the corpus manifest, could not reuse the
+    frozen `content_hash`, and had nowhere to record what it had already done.
+
+    Every entry is audited, its document validated against the frozen schema, and only
+    then submitted. A failure on one entry is recorded and the run continues, because
+    stopping halfway through a batch of on-chain writes leaves the worst possible state:
+    some skills registered, no record of which.
+    """
+    import os
+    import time
+
+    from sterish_pipeline.audit import to_verdict_json
+    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate
+    from sterish_pipeline.stages.stage3_verdict_synthesis import build_verdict_document
+
+    cfg = PipelineConfig.load(config)
+    for name, value in (
+        ("registry_contract_id", os.getenv("REGISTRY_CA")),
+        ("rpc_url", os.getenv("STELLAR_RPC_URL")),
+        ("network_passphrase", os.getenv("STELLAR_NETWORK_PASSPHRASE")),
+    ):
+        if value:
+            setattr(cfg, name, value)
+
+    if not dry_run:
+        missing = [
+            k for k in ("REGISTRY_CA", "DEVELOPER_SECRET", "AUDITOR_SECRET") if not os.getenv(k)
+        ]
+        if missing:
+            raise click.ClickException(f"missing environment variables: {', '.join(missing)}")
+
+    corpus = Corpus(corpus_dir)
+    wanted = set(labels)
+    held_back = set(excluded)
+    entries = [e for e in sorted(corpus.load(), key=lambda e: e.skill_id) if e.label in wanted]
+    if not entries:
+        console.print(f"[red]no corpus entries with label(s) {sorted(wanted)}[/red]")
+        raise SystemExit(1)
+
+    orch_config = OrchestratorConfig(
+        registry_id=cfg.registry_contract_id,
+        tokens_id=os.getenv("TOKENS_CA", ""),
+        escrow_id=os.getenv("ESCROW_CA", ""),
+        owner_secret=os.getenv("DEVELOPER_SECRET", ""),
+        auditor_secret=os.getenv("AUDITOR_SECRET", ""),
+        admin_secret=os.getenv("DEPLOYER_SECRET", ""),
+        reports_dir=Path(reports_dir),
+        report_base_url=report_base_url,
+        journal_path=Path(journal),
+        run_escrow=False,
+    )
+
+    table = Table("skill_id", "verdict", "score", "seconds", "result")
+    log: list[dict] = []
+    failures: list[str] = []
+
+    for entry in entries:
+        if entry.skill_id in held_back:
+            table.add_row(entry.skill_id, "—", "—", "—", "[yellow]held back[/yellow]")
+            log.append({"skill_id": entry.skill_id, "status": "held_back"})
+            continue
+
+        started = time.monotonic()
+        skill = corpus.normalized(entry)
+        report = audit_normalized(skill, config=cfg, skip_sandbox=True)
+
+        # The frozen content_hash from the index, not a recomputation: the corpus is the
+        # thing being attested to, and hashing it twice invites the two to disagree.
+        document = build_verdict_document(report, skill.manifest, entry.content_hash, cfg)
+        payload = to_verdict_json(document)
+
+        verdict = payload["verdict"]
+        score = payload["score"]
+
+        if verdict == FinalVerdict.DANGEROUS.value and not allow_dangerous:
+            elapsed = time.monotonic() - started
+            table.add_row(
+                entry.skill_id, _verdict_markup(FinalVerdict.DANGEROUS), str(score),
+                f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
+            )
+            log.append(
+                {"skill_id": entry.skill_id, "status": "skipped_dangerous",
+                 "verdict": verdict, "score": score}
+            )
+            continue
+
+        try:
+            specs.validate_verdict_document(payload, submittable=True)
+        except Exception as exc:  # noqa: BLE001 - reported per entry, run continues
+            failures.append(f"{entry.skill_id}: document invalid: {exc}")
+            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]invalid[/red]")
+            log.append({"skill_id": entry.skill_id, "status": "invalid", "error": str(exc)})
+            continue
+
+        if dry_run:
+            elapsed = time.monotonic() - started
+            table.add_row(
+                entry.skill_id, verdict, str(score), f"{elapsed:.1f}", "[cyan]dry-run[/cyan]"
+            )
+            log.append(
+                {"skill_id": entry.skill_id, "status": "dry_run",
+                 "verdict": verdict, "score": score,
+                 "content_hash": payload["content_hash"], "seconds": round(elapsed, 1)}
+            )
+            continue
+
+        try:
+            result = orchestrate(payload, orch_config, cfg)
+        except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
+            failures.append(f"{entry.skill_id}: {exc}")
+            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]error[/red]")
+            log.append({"skill_id": entry.skill_id, "status": "error", "error": str(exc)})
+            continue
+
+        elapsed = time.monotonic() - started
+        row = result.to_dict()
+        row["seconds"] = round(elapsed, 1)
+        row["tx"] = result.tx_hashes()
+        log.append(row)
+
+        if not result.ok:
+            failures.append(f"{entry.skill_id}: orchestration incomplete")
+        table.add_row(
+            entry.skill_id, verdict, str(score), f"{elapsed:.1f}",
+            "[green]on chain[/green]" if result.ok else "[red]incomplete[/red]",
+        )
+
+    console.print(table)
+
+    seeded = [r for r in log if r.get("ok")]
+    console.print(
+        f"\n{len(seeded)} on chain, "
+        f"{sum(1 for r in log if r.get('status') == 'held_back')} held back, "
+        f"{sum(1 for r in log if r.get('status') == 'skipped_dangerous')} skipped DANGEROUS, "
+        f"{len(failures)} failed."
+    )
+    slow = [r for r in log if (r.get("seconds") or 0) > 300]
+    if slow:
+        # delivery-plan criterion: under five minutes per skill.
+        console.print(f"[yellow]{len(slow)} entries took over 5 minutes[/yellow]")
+
+    if json_out:
+        Path(json_out).write_text(json.dumps(log, indent=2), encoding="utf-8")
+        console.print(f"Wrote run log to {json_out}")
+
+    if failures:
+        console.print("[bold red]Failures:[/bold red]")
+        for failure in failures:
+            console.print(f"  [red]x[/red] {failure}")
+        raise SystemExit(1)
+
+
 def _load_existing(corpus: Corpus) -> dict[str, CorpusEntry]:
     if corpus.index_path.exists():
         return {e.skill_id: e for e in corpus.load()}
@@ -227,4 +424,4 @@ def _verdict_markup(verdict: FinalVerdict) -> str:
     return f"[{color}]{verdict.value}[/{color}]"
 
 
-__all__ = ["intake", "audit_corpus"]
+__all__ = ["intake", "audit_corpus", "seed"]

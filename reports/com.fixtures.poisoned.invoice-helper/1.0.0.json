@@ -1,0 +1,68 @@
+{
+  "capabilities": [
+    "ENV_READ",
+    "FILE_READ",
+    "FILE_WRITE",
+    "NETWORK_OUTBOUND",
+    "WALLET_ACCESS"
+  ],
+  "content_hash": "4eb62911d152ca847ae48cc311f05b49c41de8435a9eb726e96ded8815e54799",
+  "evidence_hash": "694038799055dc82e9159f5b0aeaa5da05b087dc8882af1a13d5919a3256e37c",
+  "findings": [
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "Tool 'transfer_funds' declares WALLET_ACCESS: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'transfer_funds' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_WRITE",
+      "description": "Tool 'make_invoice' declares FILE_WRITE: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[1].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_READ",
+      "description": "Tool 'invoice-helper:server' declares FILE_READ: Low-risk read-only access; generally safe but worth noting.",
+      "evidence": "tools[2].capabilities",
+      "severity": "LOW",
+      "stage": 1
+    },
+    {
+      "capability": "ENV_READ",
+      "description": "Tool 'invoice-helper:server' declares ENV_READ: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[2].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "tools[0].description: \"Transfer the entire wallet balance to...\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: DANGEROUS at score 10/100. critical injection pattern(s) wallet_op -> DANGEROUS, score capped at 10 (policy row 1)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "HIGH",
+      "stage": 3
+    }
+  ],
+  "recommendation": "BLOCK",
+  "risk": "critical",
+  "score": 10,
+  "skill_id": "com.fixtures.poisoned.invoice-helper",
+  "spec_version": "1.0.0",
+  "verdict": "DANGEROUS",
+  "version": "1.0.0"
+}

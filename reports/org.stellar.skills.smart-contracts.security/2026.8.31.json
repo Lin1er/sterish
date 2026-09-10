@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "9efb0273924fe35b79f180655508de81653af20afead91dee6848a60aac92e32",
+  "evidence_hash": "b4040f67b75410055e9fbc2107a02a20f7b7ed2bd66d4be25885915c638756e0",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.smart-contracts.security",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}

@@ -146,7 +146,7 @@
     },
     {
       "skill_id": "org.stellar.skills.agentic-payments.mpp",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/agentic-payments.mpp",
       "content_hash": "35b7b57b9230f972f6ae6cfea72dd76855a9e27b356e90091d33b3d974e0c0c6",
@@ -166,7 +166,7 @@
     },
     {
       "skill_id": "org.stellar.skills.agentic-payments.x402",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/agentic-payments.x402",
       "content_hash": "a1728e0400eb3bc979b66d8eef41d55c229662b5a74e25cecf8b9c7db1136e51",
@@ -186,7 +186,7 @@
     },
     {
       "skill_id": "org.stellar.skills.cross-chain.axelar",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/cross-chain.axelar",
       "content_hash": "7d10aa0de318ff6a6126e463f45f4abc0e63dcf053a09c03db76a2a1cda9af08",
@@ -206,7 +206,7 @@
     },
     {
       "skill_id": "org.stellar.skills.cross-chain.cctp",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/cross-chain.cctp",
       "content_hash": "f6fcdb2907ded30e75bcd61ac13263f41ad45f9921923784f77305734e69cf2b",
@@ -226,7 +226,7 @@
     },
     {
       "skill_id": "org.stellar.skills.dapp.data-fetching",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/dapp.data-fetching",
       "content_hash": "5c9d232fba6c6be661f2d09a58062a177ce9cbff1e61b41053f7a2c14649f5fd",
@@ -246,7 +246,7 @@
     },
     {
       "skill_id": "org.stellar.skills.dapp.react",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/dapp.react",
       "content_hash": "528ad44c3b6e9f78a70415e60a41a4e4a4226c488e9833a7ab8790f006a8f22b",
@@ -266,7 +266,7 @@
     },
     {
       "skill_id": "org.stellar.skills.dapp.smart-accounts",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/dapp.smart-accounts",
       "content_hash": "829ecc1308efb93d68c3aedb48d9036d8b850dcb86fad15315925873d34d9c5d",
@@ -286,7 +286,7 @@
     },
     {
       "skill_id": "org.stellar.skills.data.horizon",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/data.horizon",
       "content_hash": "56b6ca1b464d02b6a4a60de6b94f4577ccf20535305cda5afda0b2fb33dd7fb8",
@@ -306,7 +306,7 @@
     },
     {
       "skill_id": "org.stellar.skills.smart-contracts.development",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/smart-contracts.development",
       "content_hash": "2c9804b92d6d23c1588ed0f5c838a804b6cfada210190215b1941b7da0727075",
@@ -326,7 +326,7 @@
     },
     {
       "skill_id": "org.stellar.skills.smart-contracts.security",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/smart-contracts.security",
       "content_hash": "9efb0273924fe35b79f180655508de81653af20afead91dee6848a60aac92e32",
@@ -346,7 +346,7 @@
     },
     {
       "skill_id": "org.stellar.skills.smart-contracts.testing",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/smart-contracts.testing",
       "content_hash": "c51ed00a8801cc2691e5180e6f530171933e06e9ddd9d78b1fb66e96952b522b",
@@ -366,7 +366,7 @@
     },
     {
       "skill_id": "org.stellar.skills.standards.ecosystem",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/standards.ecosystem",
       "content_hash": "b316e820aa088d5f7ff64a3a1bb8752bb2760f015427891cbc28c99538981339",
@@ -386,7 +386,7 @@
     },
     {
       "skill_id": "org.stellar.skills.standards.resources",
-      "version": "2026.08.31",
+      "version": "2026.8.31",
       "kind": "agent-skill",
       "path": "catalog/standards.resources",
       "content_hash": "cfe431919761b98f7849d31c0460d1ed913dcbc361084bc376dbadfe6a859355",

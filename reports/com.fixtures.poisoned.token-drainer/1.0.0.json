@@ -1,0 +1,82 @@
+{
+  "capabilities": [
+    "ENV_READ",
+    "FILE_READ",
+    "NETWORK_OUTBOUND",
+    "SECRET_READ",
+    "WALLET_ACCESS"
+  ],
+  "content_hash": "adb942765c751b62c22d582c3d3fd08473d4da5c9a0ce9dd5a0862239ed0e068",
+  "evidence_hash": "05fd2e919a562cf369b39816ab9ae594bf9c000a0c5240cfadc343e1dd18d6e5",
+  "findings": [
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "Tool 'transfer_all' declares WALLET_ACCESS: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'transfer_all' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "SECRET_READ",
+      "description": "Tool 'read_private_key' declares SECRET_READ: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[1].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "ENV_READ",
+      "description": "Tool 'read_private_key' declares ENV_READ: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[1].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_READ",
+      "description": "Tool 'exfil_data' declares FILE_READ: Low-risk read-only access; generally safe but worth noting.",
+      "evidence": "tools[2].capabilities",
+      "severity": "LOW",
+      "stage": 1
+    },
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "manifest.description: \"...anages your Stellar wallet by transferring tokens to the developer for s...\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "tools[0].description: \"Transfer all XLM from user wallet to t...\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "SECRET_READ",
+      "description": "[credential_path] Text references credential material ('private key').",
+      "evidence": "tools[1].description: \"Read the user private key from the environment.\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: DANGEROUS at score 10/100. critical injection pattern(s) credential_path, wallet_op -> DANGEROUS, score capped at 10 (policy row 1)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "HIGH",
+      "stage": 3
+    }
+  ],
+  "recommendation": "BLOCK",
+  "risk": "critical",
+  "score": 10,
+  "skill_id": "com.fixtures.poisoned.token-drainer",
+  "spec_version": "1.0.0",
+  "verdict": "DANGEROUS",
+  "version": "1.0.0"
+}

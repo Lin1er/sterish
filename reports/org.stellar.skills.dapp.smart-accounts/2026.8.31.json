@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "829ecc1308efb93d68c3aedb48d9036d8b850dcb86fad15315925873d34d9c5d",
+  "evidence_hash": "e220b651ead1af25435199dcd5602bf5631d5a5d9f66811a0d625054cf520c60",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.dapp.smart-accounts",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}

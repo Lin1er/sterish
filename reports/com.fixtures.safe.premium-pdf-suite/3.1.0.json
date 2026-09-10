@@ -1,0 +1,37 @@
+{
+  "capabilities": [
+    "FILE_READ",
+    "FILE_WRITE"
+  ],
+  "content_hash": "e6a7423c88ffe0031fec3af98bc9d3bf5b258b7b9f8849b9a78101c20d049458",
+  "evidence_hash": "c6026abc72037db5535205fe2b95111140e40b3c281fda022396575205966745",
+  "findings": [
+    {
+      "capability": "FILE_READ",
+      "description": "Tool 'Premium PDF Suite' declares FILE_READ: Low-risk read-only access; generally safe but worth noting.",
+      "evidence": "tools[0].capabilities",
+      "severity": "LOW",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_WRITE",
+      "description": "Tool 'Premium PDF Suite' declares FILE_WRITE: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[0].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: SAFE at score 94/100. no injection findings and score 94 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "low",
+  "score": 94,
+  "skill_id": "com.fixtures.safe.premium-pdf-suite",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "3.1.0"
+}

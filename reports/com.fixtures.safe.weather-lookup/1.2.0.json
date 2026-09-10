@@ -1,0 +1,29 @@
+{
+  "capabilities": [
+    "NETWORK_OUTBOUND"
+  ],
+  "content_hash": "6308b6e80fd6fbd25d81a8cb11d789ce9db45a8624c37f82aea2b46b97b3c196",
+  "evidence_hash": "f9856555c0e4bc4463e045e47c6e03070c9bbd5e5c845e3769c60345b7bbcfe5",
+  "findings": [
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'Weather Lookup' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: SAFE at score 90/100. no injection findings and score 90 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "low",
+  "score": 90,
+  "skill_id": "com.fixtures.safe.weather-lookup",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "1.2.0"
+}
