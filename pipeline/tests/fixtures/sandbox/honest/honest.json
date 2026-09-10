@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "note-formatter": {
+      "name": "note-formatter",
+      "description": "Formats markdown notes. Reads the file you point it at and writes the formatted text to stdout. Does not use the network.",
+      "command": "node",
+      "args": ["./server.js"],
+      "permissions": ["fs"],
+      "tools": [
+        {
+          "name": "format_note",
+          "description": "Format a markdown note.",
+          "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}},
+          "capabilities": ["FILE_READ"]
+        }
+      ]
+    }
+  }
+}
