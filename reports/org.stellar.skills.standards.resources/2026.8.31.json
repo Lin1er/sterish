@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "cfe431919761b98f7849d31c0460d1ed913dcbc361084bc376dbadfe6a859355",
+  "evidence_hash": "4e35f4a29fdfd168e5c06dcfd9ed5e0c889fcc8891270c889a49338dae59979f",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.standards.resources",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}

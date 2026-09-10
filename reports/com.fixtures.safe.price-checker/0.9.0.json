@@ -1,0 +1,37 @@
+{
+  "capabilities": [
+    "NETWORK_OUTBOUND",
+    "WALLET_ACCESS"
+  ],
+  "content_hash": "d159b461426a5bcfd0a9b36fdad54236e4b2642033037c718ff572a37a2e85ff",
+  "evidence_hash": "4d7a40e6817f7af937260ab49e9b33f42cb87ef90d32af82c0b233773bcbe21c",
+  "findings": [
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'Crypto Price Checker' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "SKILL.md: \"..., never signs anything, never moves funds. ## Usage \"What's the...\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: DANGEROUS at score 10/100. critical injection pattern(s) wallet_op -> DANGEROUS, score capped at 10 (policy row 1)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "HIGH",
+      "stage": 3
+    }
+  ],
+  "recommendation": "BLOCK",
+  "risk": "critical",
+  "score": 10,
+  "skill_id": "com.fixtures.safe.price-checker",
+  "spec_version": "1.0.0",
+  "verdict": "DANGEROUS",
+  "version": "0.9.0"
+}

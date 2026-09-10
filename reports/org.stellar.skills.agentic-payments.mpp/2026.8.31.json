@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "35b7b57b9230f972f6ae6cfea72dd76855a9e27b356e90091d33b3d974e0c0c6",
+  "evidence_hash": "29b47fcaa4843b2b5a67e76db803a8333fddb9668385e782614c117f264bae86",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.agentic-payments.mpp",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}

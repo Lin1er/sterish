@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "528ad44c3b6e9f78a70415e60a41a4e4a4226c488e9833a7ab8790f006a8f22b",
+  "evidence_hash": "36a023f72f3ff704d54eccb40155f2b5c8dc2f4bc537e7788a580dd18fcd47dc",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.dapp.react",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}

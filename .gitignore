@@ -75,3 +75,7 @@ deploy/secrets/
 .agents/
 .claude/
 skills-lock.json
+
+# Orchestrator run journal. Local bookkeeping for a seed run, not evidence —
+# the evidence is the reports and the ledger. See docs/audit-evidence.md.
+.sterish-journal.json

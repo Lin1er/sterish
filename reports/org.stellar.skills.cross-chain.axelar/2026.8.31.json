@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "7d10aa0de318ff6a6126e463f45f4abc0e63dcf053a09c03db76a2a1cda9af08",
+  "evidence_hash": "75353042ca94f91ba54e7b910f673a505cb884b8a9d182b4c5505c8391d4ecc2",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "org.stellar.skills.cross-chain.axelar",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "2026.8.31"
+}
