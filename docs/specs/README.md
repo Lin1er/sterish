@@ -1,74 +1,74 @@
 # Sterish — Frozen Specs
 
-Kontrak handoff antar-owner. Setelah dokumen di folder ini merged, James dan Ancung bisa
-membangun paralel tanpa menunggu implementasi selesai penuh — selama semua pihak patuh
-pada isi folder ini.
+The handoff contract between owners. Once the documents in this folder are merged, James and
+Ancung can build in parallel without waiting for anyone's implementation to be finished — for
+as long as everyone abides by what is in here.
 
 **Status: FROZEN v1.1.0** (STE-11, 2026-09-03).
 
 ---
 
-## Isi
+## Contents
 
-| Dokumen | Apa yang dibekukan | Dipakai oleh |
+| Document | What it freezes | Used by |
 |---|---|---|
-| [`content-hash.md`](content-hash.md) | Canonical bytes v1 + `content_hash = sha256(...)`, byte-exact | pipeline (intake), kontrak (`lookup_by_hash`), dashboard (check-before-install) |
-| [`interfaces.md`](interfaces.md) | Seluruh function signature publik Registry + Escrow + Tokens | semua |
-| [`events.md`](events.md) | Seluruh layout `#[contractevent]` termasuk field yang jadi topic (10 event) | indexer, API, dashboard |
-| [`verdict-json.md`](verdict-json.md) + [`verdict.schema.json`](verdict.schema.json) | Skema verdict JSON output pipeline | stage 3, on-chain submitter, API, dashboard |
-| [`../api-spec.md`](../api-spec.md) | Bentuk response API termasuk check by `content_hash` + evidence links | dashboard, agen pemanggil |
-| [`vectors/`](vectors/) | Test vectors `content_hash` (+ error cases) | ketiga implementasi |
-| [`reference/`](reference/) | Implementasi referensi `content_hash` (Python + TypeScript) | pipeline, dashboard |
-| [`examples/`](examples/) | Contoh verdict JSON valid + invalid | stage 3, submitter, API |
+| [`content-hash.md`](content-hash.md) | Canonical bytes v1 and `content_hash = sha256(...)`, byte-exact | pipeline (intake), contracts (`lookup_by_hash`), dashboard (check-before-install) |
+| [`interfaces.md`](interfaces.md) | Every public function signature of Registry, Escrow and Tokens | everyone |
+| [`events.md`](events.md) | Every `#[contractevent]` layout including which fields become topics (10 events) | indexer, API, dashboard |
+| [`verdict-json.md`](verdict-json.md) + [`verdict.schema.json`](verdict.schema.json) | The verdict JSON schema the pipeline emits | stage 3, the on-chain submitter, API, dashboard |
+| [`../api-spec.md`](../api-spec.md) | API response shapes, including check-by-`content_hash` and the evidence links | dashboard, calling agents |
+| [`vectors/`](vectors/) | `content_hash` test vectors (plus error cases) | all three implementations |
+| [`reference/`](reference/) | Reference `content_hash` implementations (Python and TypeScript) | pipeline, dashboard |
+| [`examples/`](examples/) | Valid and invalid verdict JSON examples | stage 3, submitter, API |
 
-Sisi Rust hidup sebagai test di `contracts/registry/src/test.rs` dan meng-hash lewat
-`env.crypto().sha256()` — host function yang sama dengan kontrak ter-deploy.
+The Rust side lives as a test in `contracts/registry/src/test.rs` and hashes through
+`env.crypto().sha256()` — the same host function the deployed contract uses.
 
 ---
 
-## Cara memverifikasi (siapa pun, tanpa izin khusus)
+## How to verify it (anyone, no special access)
 
 ```bash
 make verify-spec
-# atau satu per satu:
-bash scripts/verify-content-hash.sh    # hash identik di Python + TypeScript + Rust
-bash scripts/verify-verdict-json.sh    # contoh verdict lolos/ditolak sesuai skema
-bash scripts/verify-soulbound.sh       # contract spec tokens tidak punya transfer/approve/burn
+# or one at a time:
+bash scripts/verify-content-hash.sh    # identical hashes in Python + TypeScript + Rust
+bash scripts/verify-verdict-json.sh    # example verdicts pass/fail against the schema
+bash scripts/verify-soulbound.sh       # the tokens contract spec has no transfer/approve/burn
 ```
 
-Runner menjalankan **tiga** implementasi (Python, TypeScript, Rust), mem-`diff` laporannya
-byte-for-byte, lalu memeriksa relasi antar-vector. Exit code ≠ 0 kalau ada satu saja yang
-menyimpang. Runner ini sudah diuji negatif: mengubah 1 byte di fixture atau mengedit tangan
-`expected_sha256` membuatnya gagal.
+The runner executes **three** implementations (Python, TypeScript, Rust), `diff`s their reports
+byte for byte, then checks the relationships between vectors. A non-zero exit code means at
+least one of them diverged. The runner has been negative-tested: changing one byte in a fixture,
+or hand-editing an `expected_sha256`, makes it fail.
 
-> **Bukti reproduksibilitas pihak ketiga.** Selain tiga implementasi di repo ini, PM menulis
-> implementasi keempat dari nol — hanya bermodal teks `content-hash.md`, tanpa melihat
-> `reference/` — dan mendapat kedelapan hash yang identik. Kalau spec-nya ambigu, itu tidak
-> mungkin terjadi.
+> **Third-party reproducibility evidence.** Beyond the three implementations in this repository,
+> the PM wrote a fourth from scratch — working only from the text of `content-hash.md`, without
+> looking at `reference/` — and got all eight hashes identical. If the spec were ambiguous, that
+> could not have happened.
 
 ---
 
-## Aturan perubahan (WAJIB)
+## Change process (MANDATORY)
 
-Spec di folder ini **frozen**. Perubahan apa pun pada interface, event layout, `content_hash`,
-skema verdict JSON, atau bentuk response API:
+The specs in this folder are **frozen**. Any change to an interface, an event layout,
+`content_hash`, the verdict JSON schema, or an API response shape must:
 
-1. **Lewat PR baru**, tidak boleh langsung ke `main`.
-2. **Di-approve Axel (PM) + fable (AI co-PM)** — dua-duanya, bukan salah satu.
-3. **Tercatat di changelog** di bawah, dengan tanggal, PR, dan alasannya.
-4. **Beri tahu owner yang terdampak** (James: pipeline/API/indexer; Ancung: dashboard)
-   sebelum merge, bukan sesudah.
+1. **Go through a new PR**, never straight to `main`.
+2. **Be approved by Axel (PM) and fable (AI co-PM)** — both, not either.
+3. **Be recorded in the changelog** below, with the date, the PR, and the reason.
+4. **Reach the affected owners** (James: pipeline/API/indexer; Ancung: dashboard) *before* the
+   merge, not after.
 
-### Aturan versi
+### Versioning rules
 
-- `content_hash`: algoritmanya **immutable**. Perubahan aturan canonicalization = algoritma
-  **baru** (`sterish-content-hash/v2\n` sebagai MAGIC), bukan edit terhadap v1. Hash lama harus
-  tetap bisa dihitung ulang selamanya, kalau tidak setiap verdict yang sudah tertulis on-chain
-  jadi tidak terverifikasi.
-- **Kode error kontrak** (`RegistryError` 1–9, `EscrowError` 1–9, `TokenError` 1–6) adalah ABI publik.
-  Boleh **menambah** varian di nomor berikutnya; **tidak boleh** me-renumber atau menghapus.
-- **Event**: menambah event baru = additive, aman. Mengubah field/topic event yang sudah ada =
-  breaking, wajib lewat aturan di atas.
+- `content_hash`: the algorithm is **immutable**. Changing a canonicalization rule produces a
+  **new** algorithm (`sterish-content-hash/v2\n` as the MAGIC), not an edit to v1. Old hashes
+  must remain recomputable forever; otherwise every verdict already written on chain becomes
+  unverifiable.
+- **Contract error codes** (`RegistryError` 1–9, `EscrowError` 1–9, `TokenError` 1–6) are public
+  ABI. Variants may be **added** at the next number; they may **not** be renumbered or removed.
+- **Events**: adding a new event is additive and safe. Changing the fields or topics of an
+  existing one is breaking, and must go through the rules above.
 
 ---
 
@@ -76,68 +76,76 @@ skema verdict JSON, atau bentuk response API:
 
 ### v1.1.0 — 2026-09-03 (STE-11, PR TBD)
 
-Aditif. Tidak ada bentuk v1.0.0 yang berubah.
+Additive. Nothing from v1.0.0 changed shape.
 
-- **§5 `interfaces.md` naik dari `PLANNED` ke FROZEN**: kontrak `sterish_tokens` (badge VERIFIED
-  + license token, keduanya soulbound) sekarang punya ABI hasil generate, tabel fungsi,
-  invariant T1–T7, dan kode error publik `TokenError` 1–6.
-- **`events.md` §3b**: dua event baru `verified_minted` dan `license_minted` + baris emission order.
-- Tiga open question di §5.3 lama sudah dijawab dan dicatat di §5.5: license terikat
-  `(skill_id, version)` (bukan `content_hash`), royalties **di-drop** (tidak ada resale di token
-  soulbound), dan `mint_license` dipanggil `MinterRole` tunggal yang bisa dirotasi admin.
+- **§5 of `interfaces.md` moves from `PLANNED` to FROZEN**: the `sterish_tokens` contract (the
+  VERIFIED badge and the licence token, both soulbound) now has a generated ABI, a function
+  table, invariants T1–T7, and public `TokenError` codes 1–6.
+- **`events.md` §3b**: two new events, `verified_minted` and `license_minted`, plus their
+  emission-order rows.
+- The three open questions in the old §5.3 are answered and recorded in §5.5: a licence is bound
+  to `(skill_id, version)` rather than `content_hash`, royalties are **dropped** (a soulbound
+  token has no resale), and `mint_license` is called by a single `MinterRole` the admin can
+  rotate.
 
-Keputusan yang berbeda dari teks tiket STE-11, beserta alasannya:
+Decisions that differ from the wording of ticket STE-11, and why:
 
-- **Tanpa OpenZeppelin.** `stellar-tokens` 0.7.2 butuh `soroban-sdk ^26.1.0` sementara workspace
-  frozen di `27.0.6` — cargo meresolusi dua salinan SDK yang tidak kompatibel. Terlepas dari itu,
-  modul `non_fungible` OZ 0.7.2 **tidak punya dukungan soulbound**: meng-`contractimpl` trait
-  `NonFungibleToken` justru meng-export `transfer`/`approve` yang dilarang tiket. Kontrak custom
-  adalah satu-satunya cara memenuhi stack frozen DAN done-criteria soulbound sekaligus.
-- **`mint_verified(skill_id, version, owner)`** menerima `owner` sebagai parameter, tidak membacanya
-  dari Registry — membacanya menuntut duplikasi struct `SkillEntry` di crate tokens, yang menciptakan
-  drift terhadap ABI frozen. Verdict `Safe` tetap dicek on-chain, dan itu bagian yang penting.
-- **`mint_license` mengecek Registry live**, bukan cuma badge lokal. Badge adalah snapshot saat mint
-  dan tidak bisa di-burn (soulbound), jadi tanpa cek ini versi yang di-re-audit `Dangerous` masih
-  bisa terus menjual lisensi lewat badge basi. Lisensi yang sudah terjual tetap sah.
-- **`TokenError::NotAuthorized` dibuang** sebelum freeze (varian mati — semua role check gagal lewat
-  `require_auth()` sebagai host error). Setelah freeze ini kode error jadi ABI publik.
+- **No OpenZeppelin.** `stellar-tokens` 0.7.2 requires `soroban-sdk ^26.1.0` while the workspace
+  is frozen at `27.0.6` — cargo resolves two incompatible copies of the SDK. Independently of
+  that, OZ 0.7.2's `non_fungible` module **has no soulbound support**: `contractimpl`-ing the
+  `NonFungibleToken` trait exports exactly the `transfer`/`approve` the ticket forbids. A custom
+  contract is the only way to satisfy the frozen stack *and* the soulbound done-criteria at once.
+- **`mint_verified(skill_id, version, owner)`** takes `owner` as a parameter rather than reading
+  it from the Registry — reading it would require duplicating the `SkillEntry` struct inside the
+  tokens crate, which creates drift against the frozen ABI. The `Safe` verdict is still checked
+  on chain, and that is the part that matters.
+- **`mint_license` checks the Registry live**, not just the local badge. The badge is a snapshot
+  taken at mint time and cannot be burned (soulbound), so without this check a version
+  re-audited as `Dangerous` could keep selling licences through a stale badge. Licences already
+  sold remain valid.
+- **`TokenError::NotAuthorized` was removed** before the freeze (a dead variant — every role
+  check fails through `require_auth()` as a host error). After this freeze the error codes are
+  public ABI.
 
-Batasan yang diketahui dan sengaja dibiarkan:
+Known limits, left deliberately:
 
-- **Badge tidak bisa dicabut** (invariant T7). Tanpa `burn`, `is_verified_token` bisa tetap `true`
-  setelah versi di-re-audit `Dangerous`. Konsumen yang butuh jawaban live WAJIB baca
-  `SkillRegistry::is_verified`. Jalur yang berbahaya — penjualan lisensi baru — sudah ditutup.
+- **A badge cannot be revoked** (invariant T7). Without `burn`, `is_verified_token` can remain
+  `true` after a version is re-audited `Dangerous`. A consumer that needs a live answer MUST
+  read `SkillRegistry::is_verified`. The dangerous path — selling new licences — is closed.
 
 
 ### v1.0.0 — 2026-09-03 (STE-10, PR TBD)
 
-Pembekuan awal. Dibangun di atas kontrak yang sudah merged: STE-5 (Registry) dan STE-9 (Escrow).
+The initial freeze. Built on top of already-merged contracts: STE-5 (Registry) and STE-9
+(Escrow).
 
-Keputusan yang diambil di luar/berbeda dari rekomendasi tiket, beserta alasannya:
+Decisions taken outside of, or differently from, the ticket's recommendations, and why:
 
-- **Tidak ada kanonikalisasi JSON.** Tiket merekomendasikan "manifest JSON ter-normalisasi
-  (sorted keys)". Ditolak: kanonikalisasi JSON lintas Rust/Python/TypeScript (format float,
-  urutan key, escaping, integer besar) justru sumber drift yang lebih besar daripada masalah
-  yang diselesaikannya. `manifest.json` diperlakukan sebagai byte biasa seperti file lain.
-- **Urutan file = bytewise pada path UTF-8**, bukan perbandingan string. Alasannya
-  `Array.prototype.sort()` di JavaScript mengurutkan berdasarkan UTF-16 code unit, yang berbeda
-  untuk karakter non-BMP. Vector `non-bmp-path-order` ada khusus untuk menangkap kesalahan ini.
-- **Length-prefix `u32be` pada path dan konten**, supaya `("ab","c")` dan `("a","bc")` tidak
-  pernah menghasilkan byte stream yang sama. Vector `concat-ambiguity-a/b` membuktikannya.
-- **Normalisasi hanya CRLF→LF + strip trailing newline.** Tidak ada trim per-baris, tidak ada
-  normalisasi Unicode. Setiap normalisasi tambahan memperbesar permukaan tempat perubahan bisa
-  disembunyikan; CRLF dan trailing newline tidak bisa membawa payload berbahaya.
-- **File wajib UTF-8 valid**; file biner ditolak (`NotUtf8`). Batasan v1 yang diketahui —
-  skill dengan aset biner butuh v2.
-- **Backslash ditolak dalam path.** Sebenarnya legal di POSIX, ditolak sengaja supaya
-  `tools\zeta.py` dari packager Windows tidak diam-diam terbaca sebagai satu nama file.
-- **Verdict JSON mendapat 3 field identitas** di luar daftar tiket: `skill_id`, `version`,
-  `content_hash`. Tanpa itu on-chain submitter tidak tahu record mana yang harus ditulis.
-- **8 test vector**, tiket meminta minimal 3.
+- **No JSON canonicalization.** The ticket recommended a "normalised manifest JSON (sorted
+  keys)". Rejected: canonicalizing JSON across Rust, Python and TypeScript — float formatting,
+  key order, escaping, large integers — is a larger source of drift than the problem it solves.
+  `manifest.json` is treated as ordinary bytes, like every other file.
+- **File ordering is bytewise on the UTF-8 path**, not string comparison. The reason is that
+  JavaScript's `Array.prototype.sort()` orders by UTF-16 code unit, which differs for non-BMP
+  characters. The `non-bmp-path-order` vector exists specifically to catch that mistake.
+- **A `u32be` length prefix on both path and content**, so that `("ab","c")` and `("a","bc")`
+  can never produce the same byte stream. The `concat-ambiguity-a/b` vectors prove it.
+- **Normalisation is CRLF→LF plus stripping a trailing newline, and nothing else.** No per-line
+  trimming, no Unicode normalisation. Every additional normalisation enlarges the surface where
+  a change can hide; CRLF and a trailing newline cannot carry a payload.
+- **Files must be valid UTF-8**; binary files are rejected (`NotUtf8`). A known v1 limit — a
+  skill shipping binary assets needs v2.
+- **Backslashes are rejected in paths.** Legal on POSIX, rejected on purpose so that
+  `tools\zeta.py` from a Windows packager is not silently read as a single filename.
+- **Verdict JSON gains 3 identity fields** beyond the ticket's list: `skill_id`, `version`,
+  `content_hash`. Without them the on-chain submitter does not know which record to write.
+- **8 test vectors**, where the ticket asked for at least 3.
 
-Batasan yang diketahui dan sengaja dibiarkan:
+Known limits, left deliberately:
 
-- Daftar exclusion (`.git/**`, `node_modules/**`, dst.) baru hidup di implementasi referensi.
-  Pipeline (STE-13) **wajib memakai `hash_dir()` dari `reference/content_hash.py`**, bukan
-  menulis packager sendiri — kalau tidak, drift-nya kembali lewat pintu belakang.
-- Interface token VERIFIED/license ditandai `STATUS: PLANNED`, belum frozen; menyusul di STE-11.
+- The exclusion list (`.git/**`, `node_modules/**`, and so on) currently lives only in the
+  reference implementations. The pipeline (STE-13) **must use `hash_dir()` from
+  `reference/content_hash.py`** rather than writing its own packager — otherwise the drift comes
+  back through the side door.
+- The VERIFIED/licence token interface is marked `STATUS: PLANNED` and is not yet frozen; it
+  follows in STE-11.

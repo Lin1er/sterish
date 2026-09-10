@@ -1,8 +1,8 @@
 # Sterish — Deployments
 
-Bukti deploy per Working agreement poin 8. Semua alamat di bawah **live di Stellar testnet**
-dan bisa diklik. Tidak ada secret di dokumen ini — hanya alamat publik (`G…`) dan contract
-address (`C…`); key hidup di `.env` yang ter-`gitignore` (lihat `CLAUDE.md`).
+Deployment evidence, per point 8 of the working agreement. Every address below is **live on
+Stellar testnet** and clickable. No secrets in this document — only public addresses (`G…`) and
+contract addresses (`C…`); keys live in a git-ignored `.env` (see `CLAUDE.md`).
 
 ---
 
@@ -12,45 +12,45 @@ address (`C…`); key hidup di `.env` yang ter-`gitignore` (lihat `CLAUDE.md`).
 |---|---|
 | Network | Stellar **testnet** (`Test SDF Network ; September 2015`), protocol 28 |
 | RPC | `https://soroban-testnet.stellar.org` |
-| Deploy script | [`scripts/deploy-testnet.sh`](../scripts/deploy-testnet.sh) — deterministik, bisa diulang |
-| WASM | build final STE-12, hash diverifikasi sebelum deploy ([`contracts/wasm-hashes.txt`](../contracts/wasm-hashes.txt)) |
+| Deploy script | [`scripts/deploy-testnet.sh`](../scripts/deploy-testnet.sh) — deterministic, repeatable |
+| WASM | final STE-12 build, hashes verified before deploying ([`contracts/wasm-hashes.txt`](../contracts/wasm-hashes.txt)) |
 
 ### Contract addresses
 
-| Kontrak | Contract address | WASM sha256 | stellar.expert |
+| Contract | Contract address | WASM sha256 | stellar.expert |
 |---|---|---|---|
-| **Registry** | `CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND` | `8c438004591f65d84f8087738c4ff327bc016b38e443b2661bb36f6cd3852489` | [buka](https://stellar.expert/explorer/testnet/contract/CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND) |
-| **Escrow** | `CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE` | `cb241f74d20146b9d4895160e68d0c337f68317c3b6c1f272b0505cdb84d0ad0` | [buka](https://stellar.expert/explorer/testnet/contract/CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE) |
-| **Tokens** (VERIFIED + license, soulbound) | `CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX` | `318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206` | [buka](https://stellar.expert/explorer/testnet/contract/CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX) |
+| **Registry** | `CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND` | `8c438004591f65d84f8087738c4ff327bc016b38e443b2661bb36f6cd3852489` | [open](https://stellar.expert/explorer/testnet/contract/CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND) |
+| **Escrow** | `CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE` | `cb241f74d20146b9d4895160e68d0c337f68317c3b6c1f272b0505cdb84d0ad0` | [open](https://stellar.expert/explorer/testnet/contract/CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE) |
+| **Tokens** (VERIFIED + license, soulbound) | `CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX` | `318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206` | [open](https://stellar.expert/explorer/testnet/contract/CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX) |
 
-WASM sha256 **adalah** wasm hash Soroban (`stellar contract upload` menyimpan kontrak di bawah
-`sha256(file)`), jadi nilai di atas mem-pin persis byte yang ter-deploy. Verifikasi ulang:
+The WASM sha256 **is** the Soroban wasm hash (`stellar contract upload` stores a contract under
+`sha256(file)`), so the values above pin exactly the bytes that were deployed. Re-verify with
 `bash scripts/build-wasm.sh --check`.
 
-### Aset pembayaran
+### Payment asset
 
 | | |
 |---|---|
-| USDC SAC testnet (dipakai Escrow) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` · [buka](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
-| USDC classic issuer (untuk trustline) | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` (`home_domain: centre.io`) |
+| USDC SAC on testnet (used by Escrow) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` · [open](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
+| USDC classic issuer (for the trustline) | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` (`home_domain: centre.io`) |
 
-Keduanya diverifikasi via MCP Stellar Raven (konstanta `USDC_TESTNET_ADDRESS` dari `@x402/stellar`)
-**dan** dibaca langsung on-chain. Jangan tertukar: SAC = `C…` (yang di-`transfer` kontrak),
-issuer classic = `G…` (yang dipakai saat `changeTrust`).
+Both were verified through MCP Stellar Raven (the `USDC_TESTNET_ADDRESS` constant from
+`@x402/stellar`) **and** read directly from chain. Do not confuse them: the SAC is the `C…` the
+contract invokes `transfer` on; the classic issuer is the `G…` used for `changeTrust`.
 
-### Akun test
+### Test accounts
 
-| Peran | Address | Catatan |
+| Role | Address | Notes |
 |---|---|---|
-| Deployer / admin | `GAGU7Z5RZZJZI2TINQD2E2WAA4JEYB5LRXBBQ23JN6OHV4YUJJCJJ3FB` | admin ketiga kontrak + minter role |
-| Auditor | `GCFCURTZ7XHMTKZR7QN2MXRRAIWKGVOOVQV4KCP5EIQ62HGG4S3Y2XPL` | auditor role Registry + Tokens, poster bond |
-| Developer | `GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU` | skill owner + requestor audit |
-| Reporter | `GADNHGAFXH3BE2PY2QYY5NAH3A6PWKQKK2YMF4HAF5BDOVHKI2GC5JFJ` | penerima bond saat slash |
+| Deployer / admin | `GAGU7Z5RZZJZI2TINQD2E2WAA4JEYB5LRXBBQ23JN6OHV4YUJJCJJ3FB` | admin of all three contracts + minter role |
+| Auditor | `GCFCURTZ7XHMTKZR7QN2MXRRAIWKGVOOVQV4KCP5EIQ62HGG4S3Y2XPL` | auditor role on Registry + Tokens, posts the bond |
+| Developer | `GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU` | skill owner + audit requestor |
+| Reporter | `GADNHGAFXH3BE2PY2QYY5NAH3A6PWKQKK2YMF4HAF5BDOVHKI2GC5JFJ` | receives the bond on slash |
 
-Semua ter-fund XLM via Friendbot. Auditor sengaja **terpisah** dari developer karena Escrow
-menolak `requestor == auditor` (`EscrowError::SelfAudit = 9`).
+All funded with XLM through Friendbot. The auditor is deliberately **separate** from the
+developer because Escrow rejects `requestor == auditor` (`EscrowError::SelfAudit = 9`).
 
-Trustline USDC (`USDC:GBBD47IF…`) sudah dipasang ke keempatnya:
+The USDC trustline (`USDC:GBBD47IF…`) is established on all four:
 
 | Akun | tx |
 |---|---|
@@ -61,30 +61,31 @@ Trustline USDC (`USDC:GBBD47IF…`) sudah dipasang ke keempatnya:
 
 ---
 
-## Bukti on-chain — jalur audit (Registry + Tokens)
+## On-chain evidence — the audit path (Registry + Tokens)
 
-Dua skill dipakai. `content_hash` keduanya dihitung dengan implementasi referensi frozen
-[`docs/specs/reference/content_hash.py`](specs/reference/content_hash.py) (STE-10), bukan angka karangan.
+Two skills were used. Both `content_hash` values were computed with the frozen reference
+implementation [`docs/specs/reference/content_hash.py`](specs/reference/content_hash.py)
+(STE-10), not invented.
 
 | Skill | `content_hash` | Verdict |
 |---|---|---|
 | `com.sterish.weather-lookup` v1.0.0 | `4bf3f90c4047ca2b6c950e127296da95b2ace4f99c8d777eac921358811e42dd` | **Safe**, score 92 |
 | `com.evil.token-drainer` v1.0.0 | `c2bd4a316415b4919e3f1f40d9925f4052d020cf3dc2ecabe0e7c9dd28cc87f0` | **Dangerous**, score 5 |
 
-Hash poisoned identik dengan vector `poisoned-token-drainer` di
-[`docs/specs/vectors/content-hash-vectors.json`](specs/vectors/content-hash-vectors.json) —
-spec, korpus, dan chain terikat pada angka yang sama.
+The poisoned hash is identical to the `poisoned-token-drainer` vector in
+[`docs/specs/vectors/content-hash-vectors.json`](specs/vectors/content-hash-vectors.json) — the
+spec, the corpus and the chain are all bound to the same number.
 
-| Langkah | tx |
+| Step | tx |
 |---|---|
 | `register_skill` (weather-lookup) | [`589a0c31c6d4b14d…`](https://stellar.expert/explorer/testnet/tx/589a0c31c6d4b14d3807e1373f80b99bc2679b749b3b9f0af6b63897cc32b7dc) |
 | `submit_verdict` Safe 92 | [`499883165894078a…`](https://stellar.expert/explorer/testnet/tx/499883165894078ad8b5be199b4dcb079e8980a024fa93d42a62512b4a2da41b) |
 | `mint_verified` → token #1 | [`d554c547f28677e6…`](https://stellar.expert/explorer/testnet/tx/d554c547f28677e60891444a1cc4a77189b9eb3f1cc2f3e4e2b63ed0a92909eb) |
 | `register_skill` (token-drainer) | [`853a3d9b0d6c0971…`](https://stellar.expert/explorer/testnet/tx/853a3d9b0d6c097164ec3bcf56349bdd0083fba70fa65dd39afa5ac022675313) |
 | `submit_verdict` Dangerous 5 | [`563b021bba4b4c44…`](https://stellar.expert/explorer/testnet/tx/563b021bba4b4c44a95d2cbe3b7057b6d71b7cb7fb2920b33fe02cf277c69a87) |
-| `mint_verified` (token-drainer) | **ditolak on-chain** — `Error(Contract, #4)` = `TokenError::NotSafeVerdict`. Tidak ada tx sukses, dan itu memang buktinya. |
+| `mint_verified` (token-drainer) | **refused on chain** — `Error(Contract, #4)` = `TokenError::NotSafeVerdict`. There is no successful tx, and that absence is the evidence. |
 
-### Pembacaan yang bisa direproduksi siapa pun
+### Reads anyone can reproduce
 
 ```bash
 R=CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND
@@ -97,40 +98,41 @@ stellar contract invoke --id $T --network testnet --send=no -- \
   is_verified_token --skill_id com.evil.token-drainer --version 1.0.0
 ```
 
-Hasil yang diverifikasi saat deploy:
+Results verified at deploy time:
 
-| Query | Hasil |
+| Query | Result |
 |---|---|
-| `lookup_by_hash(4bf3f90c…)` | record `com.sterish.weather-lookup` v1.0.0, verdict `Safe`, score 92 |
-| `lookup_by_hash(<hash sama, 1 bit di-flip>)` | **`null`** — skill terbaca *unaudited*. Ini klaim inti proposal, live. |
-| `lookup_by_hash(c2bd4a31…)` | record `com.evil.token-drainer`, verdict `Dangerous`, score 5 |
+| `lookup_by_hash(4bf3f90c…)` | record for `com.sterish.weather-lookup` v1.0.0, verdict `Safe`, score 92 |
+| `lookup_by_hash(<same hash, one bit flipped>)` | **`null`** — the skill reads as *unaudited*. This is the proposal's central claim, live. |
+| `lookup_by_hash(c2bd4a31…)` | record for `com.evil.token-drainer`, verdict `Dangerous`, score 5 |
 | `is_verified` safe / poisoned | `true` / `false` |
 | `is_verified_token` safe / poisoned | `true` / `false` |
 | `get_skill_count` · `total_supply` | `2` · `1` |
 
 ---
 
-## Bukti on-chain — jalur ekonomi (settle & slash)
+## On-chain evidence — the economic path (settle & slash)
 
-⚠️ **Baca ini dulu.** Escrow kanonik di atas di-wire ke **USDC SAC resmi**, dan USDC testnet
-hanya bisa didapat dari [Circle faucet](https://faucet.circle.com/) yang **web-only + Captcha —
-tidak bisa di-script**. Jadi kedua jalur ekonomi dieksekusi on-chain memakai **escrow rehearsal
-kedua** yang di-wire ke SAC aset uji yang kami kontrol, supaya mekanikanya terbukti live dengan
-tx nyata. Kode kontrak, script, dan aktornya **identik**; yang berbeda hanya alamat aset.
+⚠️ **Read this first.** The canonical Escrow above is wired to the **official USDC SAC**, and
+testnet USDC is only obtainable from the [Circle faucet](https://faucet.circle.com/), which is
+**web-only and Captcha-gated — it cannot be scripted**. So both economic paths were executed on
+chain against a **second rehearsal escrow** wired to a test-asset SAC we control, so the
+mechanics are proven live with real transactions. The contract code, the scripts and the actors
+are **identical**; only the asset address differs.
 
 | | |
 |---|---|
-| Escrow rehearsal | `CAZUICCUXUCDN2V6QPWY3TM7KLUE6U7PDAIGQYIH65QIQWJCZYU6WV3G` · [buka](https://stellar.expert/explorer/testnet/contract/CAZUICCUXUCDN2V6QPWY3TM7KLUE6U7PDAIGQYIH65QIQWJCZYU6WV3G) |
-| Aset rehearsal | `TUSDC` SAC `CDAYXDIDIINSVQVQRFCH7JSHTFZN4KIZKMNUZRVACHHFLTYGZEZV4OF2`, issuer `GAYCOQ5AMBT3FCIDU5DVIHEGN2QJND5HJOVXSRNT7OKRYETNU5V6MQGI` |
-| Nominal | fee 5.0000000 · bond 10.0000000 |
+| Rehearsal escrow | `CAZUICCUXUCDN2V6QPWY3TM7KLUE6U7PDAIGQYIH65QIQWJCZYU6WV3G` · [open](https://stellar.expert/explorer/testnet/contract/CAZUICCUXUCDN2V6QPWY3TM7KLUE6U7PDAIGQYIH65QIQWJCZYU6WV3G) |
+| Rehearsal asset | `TUSDC` SAC `CDAYXDIDIINSVQVQRFCH7JSHTFZN4KIZKMNUZRVACHHFLTYGZEZV4OF2`, issuer `GAYCOQ5AMBT3FCIDU5DVIHEGN2QJND5HJOVXSRNT7OKRYETNU5V6MQGI` |
+| Amounts | fee 5.0000000 · bond 10.0000000 |
 
-✅ **Jalur kanonik sudah dijalankan (STE-16, 2026-09-06).** USDC testnet diisi lewat Circle
-faucet, lalu seluruh alur dieksekusi di escrow kanonik dengan **USDC asli** — bukti di bagian
-"orchestrator pipeline (STE-16)" di bawah. Bagian di bawah ini dipertahankan sebagai catatan
-kondisi saat STE-13, dan sebagai prosedur kalau saldo habis lagi.
+✅ **The canonical path has since been run (STE-16, 2026-09-06).** Testnet USDC was topped up
+through the Circle faucet and the whole flow executed against the canonical escrow with **real
+USDC** — evidence in the "orchestrator pipeline (STE-16)" section below. What follows is kept as
+a record of the situation at STE-13, and as the procedure to repeat if balances run out again.
 
-**Kalau perlu diulang:** isi USDC ke `GD73M4F7RN74KBLF…` (developer) dan
-`GCFCURTZ7XHMTKZR…` (auditor) lewat Circle faucet, lalu jalankan satu perintah:
+**To repeat it:** fund `GD73M4F7RN74KBLF…` (developer) and `GCFCURTZ7XHMTKZR…` (auditor) with
+USDC from the Circle faucet, then run one command:
 
 ```bash
 ESCROW=CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE \
@@ -138,59 +140,60 @@ ASSET=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA \
 bash scripts/testnet-economic-flows.sh
 ```
 
-Script yang sama itulah yang menghasilkan tabel di bawah, jadi jalur kanonik tinggal dijalankan.
+That same script produced the table below, so the canonical path is a single command away.
 
-### Jalur SETTLE — auditor jujur dibayar
+### The SETTLE path — an honest auditor is paid
 
-Saldo (stroops): developer `1000000000 → 950000000` (−fee), auditor `1000000000 → 1050000000`
-(+fee, bond kembali), escrow `0 → 0`.
+Balances (stroops): developer `1000000000 → 950000000` (−fee), auditor `1000000000 → 1050000000`
+(+fee, bond returned), escrow `0 → 0`.
 
-| Langkah | tx |
+| Step | tx |
 |---|---|
 | `create_audit_request` #1 | [`67aa12227fe06062…`](https://stellar.expert/explorer/testnet/tx/67aa12227fe060625383b8dd0081aec20062cbfd41008c6f502a3d71e096d3e6) |
 | `post_bond` #1 | [`353125251c2aae32…`](https://stellar.expert/explorer/testnet/tx/353125251c2aae3202868236284247302175e135b6ab9f9150891c1e5ece2d53) |
 | **`settle` #1** | [`eae8eb123e7f5fc5…`](https://stellar.expert/explorer/testnet/tx/eae8eb123e7f5fc57beb0de90ff443c12dc1c09d09276b78c40d8b443816eeac) |
 
-### Jalur SLASH — bond pindah ke reporter
+### The SLASH path — the bond moves to the reporter
 
-Saldo (stroops): reporter `0 → 100000000` (+bond), developer `950000000 → 950000000`
-(fee di-refund penuh), auditor `1050000000 → 950000000` (−bond), escrow `0 → 0`.
+Balances (stroops): reporter `0 → 100000000` (+bond), developer `950000000 → 950000000`
+(fee fully refunded), auditor `1050000000 → 950000000` (−bond), escrow `0 → 0`.
 
-| Langkah | tx |
+| Step | tx |
 |---|---|
 | `create_audit_request` #2 | [`6535bd3debc9b8d0…`](https://stellar.expert/explorer/testnet/tx/6535bd3debc9b8d06d3ea9332374ca4221b9cb93ddc892b798d190f21cae4cbe) |
 | `post_bond` #2 | [`56ab1c9072718d7f…`](https://stellar.expert/explorer/testnet/tx/56ab1c9072718d7f66a1223d458cd6a899c8056484a46127d2b67ff811f83556) |
 | **`slash` #2 → reporter** | [`c8bfb19a248b7287…`](https://stellar.expert/explorer/testnet/tx/c8bfb19a248b728784e5782b24444b2a2a8b14ac59fcbab85b4d5566adba923c) |
 
-Script mem-`assert` tiap delta saldo, bukan sekadar mencetaknya; keempat assertion di tiap jalur
-lolos. Bond benar-benar berpindah ke pihak ketiga yang bukan pembayar dan bukan auditor.
+The script `assert`s every balance delta rather than merely printing it, and all four assertions
+pass on each path. The bond really does move to a third party who is neither the payer nor the
+auditor.
 
 ---
 
 ## Handoff
 
-| Konsumen | Yang dibutuhkan |
+| Consumer | What it needs |
 |---|---|
-| Pipeline / orchestrator (STE-16) | `REGISTRY_CA`, `TOKENS_CA`, secret **auditor** (`AUDITOR_SECRET` di `.env`) |
-| API (STE-17) | `REGISTRY_CA`, `TOKENS_CA` — read-only, tidak butuh key |
-| x402 seller (STE-19) | `TOKENS_CA` + secret **minter** (saat ini = deployer; rotasi lewat `set_minter_role`) |
-| Env deploy (STE-21/22) | seluruh blok CA di atas |
+| Pipeline / orchestrator (STE-16) | `REGISTRY_CA`, `TOKENS_CA`, the **auditor** secret (`AUDITOR_SECRET` in `.env`) |
+| API (STE-17) | `REGISTRY_CA`, `TOKENS_CA` — read-only, no key needed |
+| x402 seller (STE-19) | `TOKENS_CA` plus the **minter** secret (currently the deployer; rotate via `set_minter_role`) |
+| Deploy env (STE-21/22) | the whole contract-address block above |
 
-⚠️ **STE-16 harus memperbaiki `pipeline/src/sterish_pipeline/onchain.py` dulu.** Submitter itu
-memanggil `submit_verdict` dengan 4 argumen tanpa `version` dan meng-encode verdict sebagai `u32`;
-ABI beku butuh 5 argumen dengan verdict sebagai enum. Melawan kontrak yang sekarang live, submitter
-itu **pasti gagal**.
+⚠️ **STE-16 has to fix `pipeline/src/sterish_pipeline/onchain.py` first.** That submitter calls
+`submit_verdict` with 4 arguments, omitting `version`, and encodes the verdict as `u32`; the frozen
+ABI takes 5 arguments with the verdict as an enum. Against the contract that is live now, that
+submitter **cannot succeed**.
 
-## Bukti on-chain — orchestrator pipeline (STE-16)
+## On-chain evidence — the orchestrator pipeline (STE-16)
 
-Alur penuh dijalankan dari `sterish_pipeline.orchestrator` melawan kontrak kanonik di atas,
-dengan **USDC testnet asli** di escrow kanonik. Skill uji dibuat dengan id ber-timestamp
-supaya `register_skill` benar-benar dijalankan, bukan di-skip.
+The full flow, run from `sterish_pipeline.orchestrator` against the canonical contracts above,
+with **real testnet USDC** in the canonical escrow. The test skills use timestamped ids so that
+`register_skill` genuinely executes rather than being skipped.
 
 **Skill SAFE — `com.sterish.canon-safe-1788685783`** (score 90)
 `evidence_hash` `c99ed231df7b42bf…`
 
-| Langkah | tx |
+| Step | tx |
 |---|---|
 | `register_skill` | [`ed6bf00bed0c72fb…`](https://stellar.expert/explorer/testnet/tx/ed6bf00bed0c72fbeee86dd3726b74a467b0f688fcffeb087625f6d5d1abbd96) |
 | `submit_verdict` | [`a04fdefac6b41297…`](https://stellar.expert/explorer/testnet/tx/a04fdefac6b41297f53258c0d9ea06626070cde79db786588f4c93da36603c96) |
@@ -202,228 +205,226 @@ supaya `register_skill` benar-benar dijalankan, bukan di-skip.
 **Skill DANGEROUS — `com.sterish.canon-poisoned-1788685812`** (score 10)
 `evidence_hash` `a818b83de04c1190…`
 
-| Langkah | tx |
+| Step | tx |
 |---|---|
 | `register_skill` | [`b7840228becdecd5…`](https://stellar.expert/explorer/testnet/tx/b7840228becdecd5648f842d59519821aa8aeabb217e7247c3e0764c7d0361a9) |
 | `submit_verdict` | [`58eb78df233aaa94…`](https://stellar.expert/explorer/testnet/tx/58eb78df233aaa947f24aba0632395aa57cd539380516d47da4bc1a7adad9432) |
-| `mint_verified` | **di-skip** — verdict DANGEROUS, tidak ada badge |
+| `mint_verified` | **skipped** — DANGEROUS verdict, no badge |
 | `create_audit_request` | [`b90851bd81a5297e…`](https://stellar.expert/explorer/testnet/tx/b90851bd81a5297e96462ce5c89bcd20cce24de72866ce0a48fa1e73bcf0b209) |
 | `post_bond` | [`5195684ee23236a7…`](https://stellar.expert/explorer/testnet/tx/5195684ee23236a7263cc885cfbd9d42ccb2ef262c0007fe3b22e80f4cf54baf) |
 | **`slash`** | [`4518657fdc161a8c…`](https://stellar.expert/explorer/testnet/tx/4518657fdc161a8cc5b7669e1a6de67cc303f2bcfed1d980375c4c2c2e12abd8) |
 
-Diverifikasi dengan membaca ulang dari chain, bukan dari objek hasil orchestrator:
-`lookup_by_hash` mengembalikan verdict dan score yang sama dengan report, `registry.is_verified`
-dan `tokens.is_verified_token` keduanya `true` untuk yang SAFE dan `false` untuk yang DANGEROUS,
-dan `evidence_hash` on-chain sama persis dengan `sha256` byte report yang dipublish.
+Verified by reading back from chain rather than from the orchestrator's own result object:
+`lookup_by_hash` returns the same verdict and score as the report, `registry.is_verified` and
+`tokens.is_verified_token` are both `true` for the SAFE skill and `false` for the DANGEROUS one,
+and the on-chain `evidence_hash` matches the `sha256` of the published report bytes exactly.
 
-Nominal di suite live sengaja kecil (fee 0.1 · bond 0.2 USDC), bukan 5/10. Uangnya mengalir satu
-arah — developer membayar tiap fee, auditor dan admin menerima tiap settle dan slash — jadi suite
-seukuran 5 USDC per request menguras pembayar dalam tiga run, lalu gagal karena saldo kosong
-alih-alih karena hal yang sebenarnya diuji. Mengisi ulang butuh Circle faucet yang ber-Captcha.
+The amounts in the live suite are deliberately small (fee 0.1 · bond 0.2 USDC) rather than 5/10.
+Money only flows one way — the developer pays every fee, the auditor and admin receive every
+settle and slash — so a suite sized at 5 USDC per request drains the payer in three runs and then
+fails for lack of balance instead of for the thing under test. Refilling needs the Captcha-gated
+Circle faucet.
 
-### Empat perilaku yang ditemukan lewat pengujian, bukan dari dokumen
+### Four behaviours found by running it, not by reading documentation
 
-1. **Transaction meta sekarang `v4`, bukan `v3`.** Membaca `meta.v3.soroban_meta.return_value`
-   diam-diam menghasilkan `None`. `request_id` dari `create_audit_request` datang lewat jalur itu,
-   dan fallback tebakan (`get_request_count() - 1`) sempat menunjuk request **milik STE-13**,
-   sehingga `post_bond` nyaris mengunci bond di job orang lain. Orchestrator sekarang **menolak
-   menebak** kalau id-nya tidak ada.
-2. **`prepare_transaction` melempar pesan generik** ("Simulation transaction failed…") dan
-   menyimpan detailnya di response yang menempel. Tanpa menggali detail itu, penolakan kontrak
-   terlihat seperti gangguan jaringan dan di-retry tiga kali percuma.
-3. **Enum unit variant di-encode sebagai `vec[symbol]`.** Dibuktikan lewat simulasi: `vec[symbol]`
-   -> `Error(Contract, #3)` (diterima, ditolak logika bisnis); `u32` dan symbol telanjang ->
-   `Error(WasmVm, InvalidAction)`; 4 argumen -> `UnexpectedSize`.
-4. **Nomor error bertabrakan antar kontrak.** Escrow `#3` = `NotOpen`, registry `#3` =
-   `SkillNotFound`, dan `#10` datang dari **USDC SAC** (kontrak pihak lain) menembus lewat escrow
-   saat pembayar tidak sanggup menutup transfer. Satu tabel error milik registry membuat kegagalan
-   escrow yang nyata terbaca `Unknown (#10)`.
+1. **Transaction meta is `v4` now, not `v3`.** Reading `meta.v3.soroban_meta.return_value`
+   silently yields `None`. The `request_id` from `create_audit_request` arrives that way, and the
+   guessing fallback (`get_request_count() - 1`) once pointed at a request **belonging to STE-13**,
+   so `post_bond` came close to locking a bond into someone else's job. The orchestrator now
+   **refuses to guess** when the id is missing.
+2. **`prepare_transaction` raises a generic message** ("Simulation transaction failed…") and keeps
+   the detail on the response attached to it. Without digging that out, a contract rejection looks
+   like a network glitch and gets retried three times for nothing.
+3. **Enum unit variants encode as `vec[symbol]`.** Established by simulation: `vec[symbol]` ->
+   `Error(Contract, #3)` (accepted, rejected by business logic); `u32` and a bare symbol ->
+   `Error(WasmVm, InvalidAction)`; 4 arguments -> `UnexpectedSize`.
+4. **Error numbers collide across contracts.** Escrow `#3` is `NotOpen`, registry `#3` is
+   `SkillNotFound`, and `#10` comes from the **USDC SAC** — a third party's contract — surfacing
+   through escrow when the payer cannot cover the transfer. A single registry-owned error table
+   makes a real escrow failure read as `Unknown (#10)`.
 
-## Bukti on-chain — pembayaran x402 (STE-19)
+## On-chain evidence — the x402 payment (STE-19)
 
-Loop berbayar penuh dijalankan di testnet dengan **agen baru** yang tidak punya riwayat apa pun:
-402 → bayar USDC → license ter-mint → 200, lalu panggilan kedua **200 tanpa bayar lagi**.
+The full paid loop, run on testnet with a **fresh agent** carrying no history at all:
+402 → pay USDC → licence minted → 200, and a second call returns **200 without paying again**.
 
 | | |
 |---|---|
-| Agen | `GBFXMHA77OLBYF3JJB43O6CKZ4QR35AAQALJK72MUIHTZNBVAQGTTZWY` |
+| Agent | `GBFXMHA77OLBYF3JJB43O6CKZ4QR35AAQALJK72MUIHTZNBVAQGTTZWY` |
 | Facilitator | OZ Channels `https://channels.openzeppelin.com/x402/testnet` |
-| Aset | USDC SAC `CBIELTK6…` · `payTo` akun klasik `GD73M4F7…` |
-| Harga | `1000000` base unit = **0.10 USDC** |
-| Mint license | [`5768516f156b74e7…`](https://stellar.expert/explorer/testnet/tx/5768516f156b74e7e97ac733c45261f59ec38d550a990159743d5fb6720a9ef9) |
+| Asset | USDC SAC `CBIELTK6…` · `payTo` classic account `GD73M4F7…` |
+| Price | `1000000` base units = **0.10 USDC** |
+| Licence mint | [`5768516f156b74e7…`](https://stellar.expert/explorer/testnet/tx/5768516f156b74e7e97ac733c45261f59ec38d550a990159743d5fb6720a9ef9) |
 
-Diverifikasi dengan membaca ulang dari chain, bukan dari respons API:
+Verified by reading back from chain rather than from the API response:
 
-- saldo USDC agen **2.0000000 → 1.9000000** — terbayar tepat 0.10, tidak lebih
-- `tokens.has_license(agen, skill, versi)` → **true**
-- `total_supply` token bertambah
+- the agent's USDC balance went **2.0000000 → 1.9000000** — exactly 0.10 paid, no more
+- `tokens.has_license(agent, skill, version)` → **true**
+- the token `total_supply` increased
 
-Skill DANGEROUS **tidak pernah ditawarkan**: `/use` mengembalikan `403 NOT_VERIFIED` tanpa
-challenge pembayaran sama sekali, dan kontrak token menolaknya secara independen lewat gerbang
-badge VERIFIED.
+A DANGEROUS skill is **never offered for sale**: `/use` returns `403 NOT_VERIFIED` with no payment
+challenge at all, and the token contract refuses it independently through the VERIFIED badge
+gate.
 
-### Catatan yang menghemat waktu berikutnya
+### Notes that will save time next round
 
-- **Key facilitator testnet tidak butuh autentikasi.** `curl https://channels.openzeppelin.com/testnet/gen`
-  langsung mengembalikan `{"apiKey": "..."}` — tidak ada Captcha, tidak ada OAuth (itu hanya untuk
-  mainnet). Jadi jalur berbayar tidak terblokir langkah manual seperti Circle faucet.
-- **Bentuk 402 ditangkap dari server referensi**, bukan ditebak: requirements ada di header
-  `PAYMENT-REQUIRED` sebagai base64 JSON dengan body kosong. `amount` 7 desimal.
-- **`/supported` melaporkan `areFeesSponsored: true`**, yang membuat agen pembeli tidak perlu XLM
-  sama sekali — dia hanya menandatangani auth entry, facilitator yang merakit dan membayar fee.
+- **The testnet facilitator key needs no authentication.** `curl https://channels.openzeppelin.com/testnet/gen`
+  returns `{"apiKey": "..."}` directly — no Captcha, no OAuth (those are mainnet only). So the paid
+  path is not blocked behind a manual step the way the Circle faucet is.
+- **The 402 shape was captured from the reference server**, not guessed: the requirements travel in
+  the `PAYMENT-REQUIRED` header as base64 JSON with an empty body. `amount` is 7-decimal.
+- **`/supported` reports `areFeesSponsored: true`**, which means the buying agent needs no XLM at
+  all — it signs an auth entry and the facilitator assembles and pays for the transaction.
 
-## Deployment backend (STE-25)
+## Backend deployment (STE-25)
 
-Stack Docker Compose di `deploy/`: API (indexer jalan di dalam prosesnya) + Caddy
-sebagai reverse proxy dengan TLS otomatis. Prosedur lengkap di `deploy/README.md`.
+A Docker Compose stack in `deploy/`: the API (with the indexer running inside its process) plus
+Caddy as a reverse proxy with automatic TLS. Full procedure in `deploy/README.md`.
 
-**Diverifikasi lokal end-to-end**, bukan sekadar ditulis: image dibangun, stack
-dijalankan, dan seluruh permukaan diuji **lewat reverse proxy** — `/health`,
-`/check`, `/skills`, `/use` (402 dengan challenge), dan `/use` untuk skill
-DANGEROUS (403, tidak pernah ditawarkan). Lalu **agen baru benar-benar membeli
-license lewat stack ter-container**: mint tx
+**Verified end to end locally**, not merely written down: the image was built, the stack brought
+up, and the whole surface exercised **through the reverse proxy** — `/health`, `/check`,
+`/skills`, `/use` (402 with a challenge), and `/use` on a DANGEROUS skill (403, never offered).
+Then a **fresh agent actually bought a licence through the containerised stack**: mint tx
 [`739428bf85f92386…`](https://stellar.expert/explorer/testnet/tx/739428bf85f92386981a5858273b013956456238b8c7ee1c639e680b0939275f).
 
-`deploy/verify.sh <base-url>` menjalankan pemeriksaan yang sama terhadap host mana
-pun, termasuk jalur errornya — justru itu yang membusuk diam-diam.
+`deploy/verify.sh <base-url>` runs the same checks against any host, error paths included —
+those are the ones that rot silently.
 
-### Tiga hal yang ketahuan karena benar-benar dijalankan
+### Three things that only surfaced by actually running it
 
-1. **Build context 3,8 GB.** Context-nya adalah root repo, jadi tanpa
-   `.dockerignore` setiap build mengirim `contracts/target` (3,3 GB) plus dua
-   virtualenv dan `node_modules`. Setelah ditambahkan: **340 kB**.
-2. **`docs/` itu dependensi runtime, bukan dokumentasi.** `sterish_pipeline.specs`
-   menemukan repo lewat `docs/specs/verdict.schema.json` dan memuat implementasi
-   referensi `content_hash` dari `docs/specs/reference/`; `/use` meng-hash artefak
-   lewat modul itu sebelum menyajikannya. Mengecualikan `docs/` membuat jalur
-   berbayar melempar `SpecsNotFound` **di produksi** sementara semua test offline
-   tetap hijau.
-3. **Volume dan direktif Caddy yang kosong.** Container jalan sebagai uid 10001
-   tapi named volume datang milik root (`unable to open database file`), dan
-   `STERISH_ACME_EMAIL` kosong menghasilkan direktif `email` tanpa argumen yang
-   membuat Caddy **menolak start sama sekali** — `{$VAR:default}` hanya berlaku
-   kalau variabelnya tidak di-set, bukan kalau kosong.
+1. **A 3.8 GB build context.** The context is the repository root, so without a
+   `.dockerignore` every build shipped `contracts/target` (3.3 GB) plus two
+   virtualenvs and `node_modules`. After adding one: **340 kB**.
+2. **`docs/` is a runtime dependency, not documentation.** `sterish_pipeline.specs`
+   locates the repository through `docs/specs/verdict.schema.json` and loads the
+   reference `content_hash` implementation from `docs/specs/reference/`; `/use`
+   hashes artifacts through that module before serving them. Excluding `docs/`
+   makes the paid path raise `SpecsNotFound` **in production** while every offline
+   test stays green.
+3. **An empty volume and an empty Caddy directive.** The container runs as uid
+   10001 but a named volume arrives owned by root (`unable to open database
+   file`), and an empty `STERISH_ACME_EMAIL` produces an `email` directive with no
+   argument, which makes Caddy **refuse to start at all** — `{$VAR:default}` only
+   applies when the variable is unset, not when it is empty.
 
-### Live — sudah ter-deploy
+### Live — deployed
 
 | | |
 |---|---|
-| **URL publik** | **https://api-sterish.jameshub.fun** (Cloudflare Tunnel) |
-| URL alternatif | https://pve02.tail4d50d6.ts.net (Tailscale) |
+| **Public URL** | **https://api-sterish.jameshub.fun** (Cloudflare Tunnel) |
+| Alternate URL | https://pve02.tail4d50d6.ts.net (Tailscale) |
 | Host | Proxmox `pve02`, LXC **204 `ct-sterish`**, `192.168.18.43/24` |
-| Spesifikasi | 2 core · 2 GB RAM · 20 GB `local-lvm` · unprivileged · `nesting=1,keyctl=1` · `onboot=1` |
-| TLS | Let's Encrypt asli lewat Tailscale (`ssl_verify_result: 0`), berlaku s/d 5 Des 2026 |
-| Akses publik | Tailscale Funnel di pve02 |
+| Spec | 2 cores · 2 GB RAM · 20 GB `local-lvm` · unprivileged · `nesting=1,keyctl=1` · `onboot=1` |
+| TLS | Genuine Let's Encrypt via Tailscale (`ssl_verify_result: 0`), valid until 5 Dec 2026 |
+| Public exposure | Tailscale Funnel on pve02 |
 
-Diverifikasi **lewat URL publik**, bukan dari dalam host: seluruh `deploy/verify.sh`
-lolos (`/health`, `/skills`, 404/400 pada jalur error, `/use` 402 dengan challenge,
-`/use` DANGEROUS 403), dan **agen baru benar-benar membeli license lewat HTTPS
-publik** — mint tx
+Verified **through the public URL**, not from inside the host: all of `deploy/verify.sh`
+passes (`/health`, `/skills`, 404/400 on the error paths, `/use` 402 with a challenge,
+`/use` on a DANGEROUS skill 403), and a **fresh agent really did buy a licence over
+public HTTPS** — mint tx
 [`9e59297638174ee3…`](https://stellar.expert/explorer/testnet/tx/9e59297638174ee3a063877e815cb78362ad46dbf276e6454dbee0232b0ad4df).
 
-**Lewat Cloudflare** (`server: cloudflare`, `via: 1.1 Caddy`): seluruh `verify.sh`
-lolos dan **agen baru membeli license lewat domain itu** — mint tx
+**Through Cloudflare** (`server: cloudflare`, `via: 1.1 Caddy`): all of `verify.sh`
+passes and **a fresh agent bought a licence over that domain** — mint tx
 [`7d01568dd1ccebf4…`](https://stellar.expert/explorer/testnet/tx/7d01568dd1ccebf4c9bc5fc10aa9f91e92bcf3faae5b4ae33705f14e8a9af9ad).
-Tunnel-nya *locally managed*: routing ditentukan `deploy/cloudflared-config.yml`,
-bukan dashboard. Satu tingkat subdomain karena Universal SSL hanya mencakup
-`*.jameshub.fun` — pelajaran yang sudah dicatat Sterun lebih dulu.
+The tunnel is *locally managed*: routing comes from `deploy/cloudflared-config.yml`, not the
+dashboard. One subdomain level only, because Universal SSL covers `*.jameshub.fun` and no
+deeper — a lesson Sterun had already recorded.
 
-**Jebakan yang memakan waktu:** file credentials tunnel harus dimiliki **uid
-65532**, bukan root. Image cloudflared resmi jalan sebagai nonroot, jadi file
-0600 milik root menghasilkan `permission denied` dan container yang restart terus
-sementara semua service lain terlihat sehat. Jawabannya sebenarnya sudah terlihat
-di deployment Sterun sejak awal (`-rw------- 1 65532 65532`).
+**The trap that cost real time:** the tunnel credentials file must be owned by **uid 65532**, not
+root. The official cloudflared image runs as nonroot, so a root-owned 0600 file gives
+`permission denied` and a container that restarts forever while every other service looks
+healthy. The answer had been visible in Sterun's deployment all along (`-rw------- 1 65532
+65532`).
 
-**Restart otomatis terbukti:** CT di-reboot, layanan pulih sendiri dalam ~20 detik
-tanpa campur tangan (`onboot=1` + `restart: unless-stopped`).
+**Automatic restart is proven:** the CT was rebooted and the services came back on their own in
+about 20 seconds with no intervention (`onboot=1` plus `restart: unless-stopped`).
 
-Dipilih pve02 karena **Funnel pve01 sudah dipakai `ct-sterun`** (proxy ke
-`192.168.18.42:3001`); mengambil root path di sana akan mematikan layanan itu.
-Konvensi CT (pola nama, nameserver, bridge, unprivileged, onboot) disalin dari
-`ct-sterun` alih-alih dikarang sendiri.
+pve02 was chosen because **pve01's Funnel is already taken by `ct-sterun`** (proxying to
+`192.168.18.42:3001`); claiming the root path there would have killed that service. The CT
+conventions — naming pattern, nameserver, bridge, unprivileged, onboot — were copied from
+`ct-sterun` rather than invented.
 
-### Bug produksi yang hanya muncul setelah ter-deploy
+### A production bug that only appeared once deployed
 
-Dua request balik **503 tanpa pernah sampai ke aplikasi**, salah satunya tepat
-setelah `mint_license`. Mudah dikira gangguan jaringan karena lolos saat diulang.
+Two requests came back **503 without ever reaching the application**, one of them right after
+`mint_license`. Easy to mistake for a network glitch, because retrying worked.
 
-Penyebabnya: setiap handler `async def` sementara **semua panggilan di dalamnya
-blocking** — simulasi Soroban, round trip facilitator, dan mint. Semuanya berjalan
-di atas event loop, jadi satu mint yang polling ledger beberapa detik membekukan
-seluruh API. Dengan satu klien ini tidak pernah terlihat; dengan URL publik, akan
-terlihat seperti layanan yang rewel.
+The cause: every handler was `async def` while **every call inside them was blocking** — the
+Soroban simulations, the facilitator round trips, and the mint. All of it ran on the event loop,
+so a single mint polling the ledger for a few seconds froze the entire API. With one client this
+is invisible; behind a public URL it looks like a service that is merely temperamental.
 
-Diperbaiki dengan melepas `async` (FastAPI menjalankan handler sync di threadpool).
-Dibuktikan di deployment: 12 request paralel, terlama 4,07 detik, total wall **4,17
-detik** — kalau masih terblokir, wall time akan sekitar 12×.
+Fixed by dropping `async` (FastAPI runs sync handlers in a threadpool). Demonstrated on the
+deployment: 12 parallel requests, slowest 4.07 seconds, total wall time **4.17 seconds** — still
+blocked, the wall time would have been roughly 12×.
 
-### Redeploy 2026-09-09 — STE-33 masuk produksi
+### Redeploy 2026-09-09 — STE-33 reaches production
 
-Sampai hari ini CT 204 masih menjalankan `84df2d7`, dua puluh commit di belakang
-`main`. Perbaikan STE-33 sudah merge tapi belum jalan di mana pun: Ancung mengukur
-API live setelah PR #21 masuk dan mendapat angka yang praktis sama dengan sebelum
-perbaikan. **Merge bukan deploy** — di stack ini tidak ada yang menarik `main`
-sendiri, `ctredeploy` harus dijalankan.
+Until today CT 204 was still running `84df2d7`, twenty commits behind `main`. The STE-33 fix had
+merged but was running nowhere: Ancung measured the live API after PR #21 landed and got numbers
+practically identical to the pre-fix ones. **Merging is not deploying** — nothing on this stack
+pulls `main` on its own, `ctredeploy` has to be run.
 
-Setelah `bash /usr/local/bin/ctredeploy`, commit yang jalan `1af75fd`.
+After `bash /usr/local/bin/ctredeploy`, the commit running is `1af75fd`.
 
 | `GET /skills` | sebelum redeploy | sesudah redeploy |
 |---|---|---|
-| `limit=3` | 2,3s | 1,5s |
-| `limit=20` | 10,3s | **2,8s** (median 8 sampel; 2,3–6,9s) |
-| `limit=50` | 31,6s | 4,6s |
+| `limit=3` | 2.3s | 1.5s |
+| `limit=20` | 10.3s | **2.8s** (median of 8 samples; 2.3–6.9s) |
+| `limit=50` | 31.6s | 4.6s |
 
-Angka lewat URL publik lebih tinggi dan jauh lebih berombak daripada 1,9s yang
-diukur di aplikasi saat mengembangkan STE-33. Selisihnya bukan tunnel — diukur dari
-dalam container, `limit=20` justru sempat 3,7s. Yang tersisa adalah latensi RPC dari
-jaringan CT ke soroban-testnet, yang lebih tinggi dan lebih bervariasi daripada dari
-mesin developer. Requirement "di bawah 2 detik" terpenuhi di aplikasi; lewat internet
-publik angkanya 2–3 detik dan sesekali meleset.
+The public numbers are higher and much noisier than the 1.9s measured at the application while
+developing STE-33. The difference is not the tunnel — measured from inside the container,
+`limit=20` came back at 3.7s. What remains is RPC latency from the CT's network to
+soroban-testnet, which is higher and more variable than from a developer machine. The "under two
+seconds" requirement is met at the application; over the public internet it is 2–3 seconds and
+occasionally misses.
 
-**Diverifikasi setelah redeploy, bukan diasumsikan:**
+**Verified after redeploying, not assumed:**
 
-* `deploy/verify.sh https://api-sterish.jameshub.fun` lolos seluruhnya — `/health`
-  200 dengan `rpc_reachable`, `/skills`, 404/400 jalur error, `/use` 402 dengan
-  challenge, `/use` DANGEROUS 403.
-* **Seluruh 47 baris** `/skills?limit=100` dicocokkan satu per satu dengan
-  `/check/{skill_id}/{version}` — verdict, `trust_score`, dan `is_verified` cocok
-  semua, nol selisih. Ini yang membuktikan fan-out konkuren tidak menggeser verdict
-  ke baris tetangga.
-* Paginasi dua halaman tidak tumpang tindih dan urutannya sama dengan listing penuh.
-* `STERISH_CHAIN_CONCURRENCY=20` benar-benar terbaca di environment container.
+* `deploy/verify.sh https://api-sterish.jameshub.fun` passes in full — `/health` 200 with
+  `rpc_reachable`, `/skills`, 404/400 on the error paths, `/use` 402 with a challenge, `/use` on
+  a DANGEROUS skill 403.
+* **All 47 rows** of `/skills?limit=100` were cross-checked one by one against
+  `/check/{skill_id}/{version}` — verdict, `trust_score` and `is_verified` all match, zero
+  discrepancies. That is what proves the concurrent fan-out does not shift a verdict onto a
+  neighbouring row.
+* Two pages of pagination do not overlap and their order matches the full listing.
+* `STERISH_CHAIN_CONCURRENCY=20` really is present in the container's environment.
 
-**Soal error CORS yang kadang muncul di dashboard** (dilaporkan Ancung): header
-aplikasinya memang benar, dan itu sekarang terkonfirmasi lewat URL publik — preflight
-`OPTIONS`, respons 200, dan respons 404 ketiganya membawa `access-control-allow-origin`.
-Dugaan Ancung bahwa yang terlihat sebagai CORS sebenarnya halaman error Cloudflare
-untuk request yang tersendat konsisten dengan itu: halaman error Cloudflare tidak
-membawa header CORS aplikasi. Request `/skills` yang tadinya menahan koneksi belasan
-detik sekarang selesai dalam 2–3 detik, jadi peluangnya jauh berkurang — tapi ini
-argumen sebab-akibat, bukan pengamatan langsung atas error yang hilang.
+**On the CORS errors that occasionally appeared in the dashboard** (reported by Ancung): the
+application's headers are correct, and that is now confirmed through the public URL — the
+`OPTIONS` preflight, a 200 response and a 404 response all carry `access-control-allow-origin`.
+Ancung's hypothesis that what looked like CORS was really a Cloudflare error page for a stalled
+request is consistent with that: a Cloudflare error page does not carry the application's CORS
+headers. A `/skills` request that used to hold the connection for a dozen seconds now finishes in
+2–3, so the opportunity is much reduced — but this is a causal argument, not a direct observation
+of the error disappearing.
 
-### Redeploy 2026-09-10 (kedua) — seed katalog + report live (STE-18, STE-32)
+### Redeploy 2026-09-10 (second) — catalogue seeded, reports live (STE-18, STE-32)
 
-Registry berubah dari 47 skill uji sintetis menjadi **66**, di antaranya 12 skill katalog
-skills.stellar.org yang sebenarnya. Rantai verifikasi yang selama ini putus di mata rantai
-terakhirnya sekarang tersambung.
+The registry went from 47 synthetic test entries to **66**, twelve of them real
+skills.stellar.org catalogue skills. The verification chain, which had been broken at its last
+link, is now closed.
 
 | | |
 |---|---|
-| Commit yang jalan | `af03eba` |
-| Registry | 47 → **66** entri |
-| Skill katalog nyata on-chain | **12**, semuanya `SAFE` + VERIFIED |
-| Poisoned fixture on-chain | **4**, semuanya `DANGEROUS`, nol VERIFIED |
-| `report_uri` terisi dan byte-nya cocok `evidence_hash` | **19 / 19** |
-| Mismatch | **0** |
+| Commit running | `af03eba` |
+| Registry | 47 → **66** entries |
+| Real catalogue skills on chain | **12**, all `SAFE` + VERIFIED |
+| Poisoned fixtures on chain | **4**, all `DANGEROUS`, none VERIFIED |
+| `report_uri` populated and bytes matching `evidence_hash` | **19 / 19** |
+| Mismatches | **0** |
 
-47 versi lama tetap `report_uri: null` dan itu benar — mereka mendahului adanya report, dan
-endpoint sengaja hanya mengiklankan link untuk report yang benar-benar ada.
+The 47 older versions still report `report_uri: null`, and that is correct — they predate report
+publishing, and the endpoint deliberately advertises a link only for a report that exists.
 
-Env baru di `/opt/sterish/deploy/.env`: `REPORT_BASE_URL` (root API, bukan prefix `/reports`;
-route yang menyediakan itu), `STERISH_REPORTS_DIR` lewat compose, plus `EVIDENCE_SKILL_ID` dan
-`EVIDENCE_VERSION` supaya `verify.sh` bisa memeriksa rantai hash-nya sendiri.
+New environment in `/opt/sterish/deploy/.env`: `REPORT_BASE_URL` (the API root, not a `/reports`
+prefix — the route supplies that), `STERISH_REPORTS_DIR` through compose, plus
+`EVIDENCE_SKILL_ID` and `EVIDENCE_VERSION` so `verify.sh` can check the hash chain itself.
 
-`verify.sh` sekarang tidak cuma bertanya "apakah 200":
+`verify.sh` no longer merely asks "did it return 200":
 
 ```
 /reports missing -> 404                        OK (404)
@@ -431,27 +432,26 @@ route yang menyediakan itu), `STERISH_REPORTS_DIR` lewat compose, plus `EVIDENCE
   sha256(report) == evidence_hash              OK (2620c159de75f4dc…)
 ```
 
-Bukti audit lengkap dengan tabel tx: [`audit-evidence.md`](audit-evidence.md).
+Full audit evidence with the transaction tables: [`audit-evidence.md`](audit-evidence.md).
 
-### Operasional
+### Operations
 
 ```bash
-# di dalam CT 204
+# inside CT 204
 bash /usr/local/bin/ctredeploy          # fetch origin/main, rebuild, restart
 cd /opt/sterish/deploy && docker compose logs -f api
 ```
 
-`deploy/.env` di CT ber-mode 600 dan dikirim lewat stdin, jadi `MINTER_SECRET` dan
-`OZ_API_KEY` tidak pernah masuk process list host maupun log SSH.
+The CT's `deploy/.env` is mode 600 and was delivered over stdin, so `MINTER_SECRET` and
+`OZ_API_KEY` never entered the host's process list or an SSH log.
 
-**Funnel = terekspos ke internet publik**, sesuai syarat tiket ("URL publik
-ber-TLS"). Untuk membatasi ke tailnet saja: `tailscale funnel --https=443 off` di
-pve02.
+**Funnel means exposed to the public internet**, which is what the ticket asked for ("a public
+URL with TLS"). To restrict it to the tailnet: `tailscale funnel --https=443 off` on pve02.
 
-## Catatan operasional
+## Operational notes
 
-- **v1 non-upgradeable.** Kalau interface berubah, redeploy dan perbarui dokumen ini.
-- **Testnet di-reset berkala** oleh SDF — semua contract address di atas akan hilang saat itu terjadi.
-  `scripts/deploy-testnet.sh` sengaja dibuat supaya redeploy jadi satu perintah.
-- Alamat USDC SAC di Escrow **immutable** (dikunci di `__constructor`, tanpa setter). Salah alamat
-  saat deploy = redeploy.
+- **v1 is non-upgradeable.** If an interface changes, redeploy and update this document.
+- **Testnet is reset periodically** by SDF — every contract address above disappears when that
+  happens. `scripts/deploy-testnet.sh` exists so that redeploying is a single command.
+- The USDC SAC address in Escrow is **immutable** (locked in `__constructor`, no setter). Getting
+  it wrong at deploy time means redeploying.
