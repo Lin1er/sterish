@@ -216,3 +216,78 @@ class TestBackendSelection:
         assert api_key_present() is False
         monkeypatch.setenv("ANTHROPIC_API_KEY", "y")
         assert api_key_present() is True
+
+
+class TestCorpusPathReachesTheModel:
+    """`audit_normalized` used to take `llm_client` and silently drop it.
+
+    Every corpus audit and every `intake seed` therefore ran deterministic-only no matter
+    what key was configured, while the signature said otherwise. That is worse than not
+    accepting the argument: it told the caller a model would be consulted.
+    """
+
+    @staticmethod
+    def _fake_client(recorder: list):
+        class Fake:
+            def call_tool(self, system, payload, tool, config):
+                recorder.append(tool["name"])
+                return {
+                    "verdict": "DANGEROUS",
+                    "risk": "critical",
+                    "score": 0,
+                    "recommendation": "BLOCK",
+                    "rationale": "Injected instruction to exfiltrate credentials.",
+                }
+
+        return Fake()
+
+    def _normalized(self):
+        from pathlib import Path
+
+        from sterish_pipeline.intake.corpus import Corpus
+
+        corpus = Corpus(Path(__file__).resolve().parents[1] / "corpus")
+        entry = next(e for e in corpus.load() if e.is_poisoned)
+        return corpus.normalized(entry)
+
+    def test_audit_normalized_actually_calls_the_client(self, key):
+        from sterish_pipeline.audit import audit_normalized
+
+        called: list[str] = []
+        report = audit_normalized(
+            self._normalized(), skip_sandbox=True, llm_client=self._fake_client(called)
+        )
+        assert called == ["emit_verdict"], "the corpus path never reached the model"
+        assert report.llm_used is True
+        assert report.llm_attempted is True
+
+    def test_the_model_still_cannot_loosen_a_corpus_verdict(self, key):
+        """The advisory guarantee, exercised through the corpus path specifically."""
+        from sterish_pipeline.audit import audit_normalized
+        from sterish_pipeline.models import FinalVerdict
+
+        class Lenient:
+            def call_tool(self, system, payload, tool, config):
+                return {
+                    "verdict": "SAFE",
+                    "risk": "none",
+                    "score": 100,
+                    "recommendation": "ALLOW",
+                    "rationale": "Looks fine to me.",
+                }
+
+        report = audit_normalized(
+            self._normalized(), skip_sandbox=True, llm_client=Lenient()
+        )
+        assert report.final_verdict is FinalVerdict.DANGEROUS
+        assert report.trust_score <= 10
+
+    def test_without_a_key_the_corpus_path_stays_deterministic(self, monkeypatch):
+        from sterish_pipeline.audit import audit_normalized
+        from sterish_pipeline.models import FinalVerdict
+
+        for name in KEY_VARS:
+            monkeypatch.delenv(name, raising=False)
+        report = audit_normalized(self._normalized(), skip_sandbox=True)
+        assert report.llm_used is False
+        assert report.final_verdict is FinalVerdict.DANGEROUS

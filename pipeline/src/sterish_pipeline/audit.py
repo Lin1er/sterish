@@ -39,6 +39,7 @@ from sterish_pipeline.llm import (
 from sterish_pipeline.models import (
     AuditReport,
     SkillManifest,
+    Stage1Result,
     Stage2Result,
     VerdictDocument,
     to_verdict_json,
@@ -113,7 +114,9 @@ def audit_normalized(
 
     report = AuditReport(skill_id=skill.manifest.skill_id, version=skill.manifest.version)
     report.content_hash = content_hash(skill.files)
-    return synthesize_verdict(report, stage1, stage2, cfg)
+    report = synthesize_verdict(report, stage1, stage2, cfg)
+    report, _ = apply_llm(report, skill.manifest, stage1, stage2, cfg, llm_client)
+    return report
 
 
 def load_skill(path: Path | str) -> tuple[SkillManifest, Path]:
@@ -143,6 +146,85 @@ def _llm_will_be_attempted(config: PipelineConfig, client: StructuredClient | No
     if not config.use_llm:
         return False
     return client is not None or api_key_present()
+
+
+def apply_llm(
+    report: AuditReport,
+    manifest: SkillManifest,
+    stage1: Stage1Result,
+    stage2: Stage2Result,
+    cfg: PipelineConfig,
+    llm_client: StructuredClient | None,
+) -> tuple[AuditReport, LLMOpinion | None]:
+    """Ask the model for a second opinion and merge it, one way only.
+
+    Shared by `run_audit` and `audit_normalized` rather than written twice. It was written
+    once, in `run_audit`, and `audit_normalized` took an `llm_client` argument it silently
+    dropped — so every corpus audit and every `intake seed` ran deterministic-only no matter
+    what key was configured, while the signature said otherwise.
+
+    The merge is `policy.tighten` followed by `policy.enforce_critical`: the model may raise
+    the verdict, raise the risk, harden the recommendation and lower the score, and can do
+    none of the reverse. Asked-but-inconclusive is not the same as not-asked — the first
+    biases to WARNING (policy row 5), the second leaves the baseline alone.
+    """
+    attempted = _llm_will_be_attempted(cfg, llm_client)
+    opinion: LLMOpinion | None = None
+    notes: list[str] = []
+
+    if cfg.use_llm:
+        opinion, notes = synthesize_with_llm(
+            manifest,
+            stage1,
+            stage2,
+            baseline_verdict=report.final_verdict.value,
+            baseline_risk=report.risk.value,
+            baseline_score=report.trust_score,
+            baseline_recommendation=report.recommendation_code.value,
+            config=cfg,
+            client=llm_client,
+        )
+
+    if attempted and opinion is None:
+        # Row 5: asked, no usable answer -> ambiguity biases to WARNING, never to SAFE.
+        report = synthesize_verdict(report, stage1, stage2, cfg, llm_inconclusive=True)
+    elif opinion is not None:
+        baseline = policy.PolicyDecision(
+            verdict=report.final_verdict,
+            risk=report.risk,
+            recommendation=report.recommendation_code,
+            score=report.trust_score,
+            reasons=list(report.policy_reasons),
+            critical_patterns=sorted(
+                {f.pattern_id for f in policy.critical_findings(stage1.injection_findings)}
+            ),
+        )
+        advisory = policy.PolicyDecision(
+            verdict=opinion.verdict,
+            risk=opinion.risk,
+            recommendation=opinion.recommendation,
+            score=opinion.score,
+            reasons=[
+                f"{policy.LLM_REASON_PREFIX}{opinion.model}): {opinion.rationale}"
+            ],
+        )
+        merged = policy.enforce_critical(policy.tighten(baseline, advisory), stage1, cfg)
+        report.final_verdict = merged.verdict
+        report.risk = merged.risk
+        report.recommendation_code = merged.recommendation
+        report.trust_score = merged.score
+        report.policy_reasons = merged.reasons
+
+    report.llm_attempted = attempted
+    report.llm_used = opinion is not None
+    report.llm_model = cfg.llm_model if opinion is not None else ""
+    report.llm_notes = notes
+
+    report.llm_attempted = attempted
+    report.llm_used = opinion is not None
+    report.llm_model = cfg.llm_model if opinion is not None else ""
+    report.llm_notes = notes
+    return report, opinion
 
 
 def run_audit(
