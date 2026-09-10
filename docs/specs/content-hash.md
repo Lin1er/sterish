@@ -1,108 +1,107 @@
 # Sterish `content_hash` — canonical bytes v1
 
 **Status:** FROZEN (STE-10). **Spec id:** `sterish-content-hash/v1`.
-**Perubahan apa pun pada dokumen ini = versi baru (`/v2`), bukan edit di tempat.**
+**Any change to this document is a new version (`/v2`), not an edit in place.**
 
-`content_hash` adalah identitas byte sebuah skill. Ia dihitung di **tiga tempat**:
+`content_hash` is a skill's byte identity. It is computed in **three places**:
 
-| Tempat | Kapan | Implementasi |
+| Place | When | Implementation |
 |---|---|---|
-| Pipeline audit (Python) | saat intake, sebelum Stage 1 | `docs/specs/reference/content_hash.py` |
-| Kontrak Registry (Rust/Soroban) | saat `register_skill` / `check_skill` lookup | `env.crypto().sha256()` |
-| Dashboard / klien (TypeScript) | saat check-before-install | `docs/specs/reference/contentHash.ts` |
+| Audit pipeline (Python) | at intake, before Stage 1 | `docs/specs/reference/content_hash.py` |
+| Registry contract (Rust/Soroban) | on `register_skill` / `check_skill` lookup | `env.crypto().sha256()` |
+| Dashboard / client (TypeScript) | at check-before-install | `docs/specs/reference/contentHash.ts` |
 
-Kalau ketiganya tidak sepakat, `check(skill)` **berbohong**: user meng-install byte
-yang berbeda dari byte yang diaudit, sambil melihat badge VERIFIED. Itulah kenapa
-tiket ini membekukan algoritmanya sampai level byte dan membuktikannya dengan runner
-lintas bahasa, bukan sekadar mendeskripsikannya.
+If those three ever disagree, `check(skill)` **lies**: a user installs bytes different from the
+bytes that were audited, while looking at a VERIFIED badge. That is why this ticket freezes the
+algorithm down to the byte and proves it with a cross-language runner rather than merely
+describing it.
 
 ---
 
-## 1. Algoritma
+## 1. The algorithm
 
 ```
 CANON = MAGIC
      || u32be(file_count)
-     || untuk tiap file, diurut ASC bytewise berdasarkan path_bytes:
+     || for each file, sorted ASC bytewise by path_bytes:
             u32be(len(path_bytes))    || path_bytes
             u32be(len(norm_content))  || norm_content
 
-MAGIC        = b"sterish-content-hash/v1\n"      (24 byte, termasuk \n)
-content_hash = sha256(CANON)                     (32 byte, 64 hex huruf kecil)
+MAGIC        = b"sterish-content-hash/v1\n"      (24 bytes, including the \n)
+content_hash = sha256(CANON)                     (32 bytes, 64 lowercase hex)
 ```
 
 `MAGIC` hex: `737465726973682d636f6e74656e742d686173682f76310a`.
 
-`content_hash` selalu direpresentasikan sebagai **64 karakter hex huruf kecil**
-di JSON, API, dan dokumen. Di kontrak ia adalah `BytesN<32>` mentah.
+`content_hash` is always represented as **64 lowercase hex characters** in JSON, in the API and
+in documents. Inside the contract it is a raw `BytesN<32>`.
 
-### 1.1 Aturan normalisasi (normatif)
+### 1.1 Normalisation rules (normative)
 
-1. **`path_bytes`** = UTF-8 dari path file **relatif terhadap root skill**.
-   Separator POSIX `/`. Tanpa prefix `./` atau `/`. Tanpa komponen `..`.
-2. **Urutan** = ASC **bytewise pada `path_bytes` mentah** — bukan perbandingan
-   per-codepoint, bukan locale-aware, bukan urutan UTF-16 code unit.
-   - Python: `sorted(files, key=lambda f: f.path_bytes)` (`Ord` untuk `bytes` = bytewise).
-   - TypeScript: bandingkan `Uint8Array` byte per byte (`compareBytes`).
-     **JANGAN** pakai `Array.prototype.sort()` default pada string — itu urutan
-     UTF-16 code unit dan **berbeda** untuk code point non-BMP.
-   - Rust: `Ord` bawaan `[u8]` / `Vec<u8>`.
-3. **`norm_content`** = byte isi file, dinormalisasi dalam urutan ini:
-   a. semua `\r\n` → `\n` (leftmost, non-overlapping);
-   b. lalu semua `\r` yang tersisa → `\n`;
-   c. lalu **semua** `\n` di akhir file dibuang.
-   Tidak ada normalisasi whitespace lain. Tidak ada trim per-baris.
-   Tidak ada perubahan encoding.
-4. **File harus UTF-8 valid.** Kalau tidak → error eksplisit `NotUtf8`.
-   v1 hanya mendukung skill berbasis teks; lihat §5 (batasan yang diketahui).
-5. **`u32be`** = unsigned 32-bit big-endian. Length-prefix **wajib** supaya
-   `("ab","c")` dan `("a","bc")` tidak pernah menghasilkan byte stream yang sama.
-6. **Path duplikat → error `DuplicatePath`. Set file kosong → error `EmptyFileSet`.**
-7. `file_count` dan setiap panjang harus muat di u32. Skill dengan >4 GiB satu file,
-   atau >2^32-1 file, ditolak.
+1. **`path_bytes`** = the UTF-8 of the file path **relative to the skill root**.
+   POSIX `/` separators. No `./` or `/` prefix. No `..` components.
+2. **Ordering** = ASC **bytewise on the raw `path_bytes`** — not per-codepoint comparison, not
+   locale-aware, not UTF-16 code unit order.
+   - Python: `sorted(files, key=lambda f: f.path_bytes)` (`Ord` on `bytes` is bytewise).
+   - TypeScript: compare `Uint8Array` byte by byte (`compareBytes`).
+     **Do NOT** use the default `Array.prototype.sort()` on strings — that is UTF-16 code unit
+     order and it **differs** for non-BMP code points.
+   - Rust: the built-in `Ord` on `[u8]` / `Vec<u8>`.
+3. **`norm_content`** = the file's content bytes, normalised in this order:
+   a. every `\r\n` → `\n` (leftmost, non-overlapping);
+   b. then every remaining `\r` → `\n`;
+   c. then **all** trailing `\n` at end of file are stripped.
+   No other whitespace normalisation. No per-line trimming. No encoding change.
+4. **Files must be valid UTF-8.** Otherwise → an explicit `NotUtf8` error.
+   v1 supports text-based skills only; see §5 (known limits).
+5. **`u32be`** = unsigned 32-bit big-endian. The length prefix is **mandatory** so that
+   `("ab","c")` and `("a","bc")` can never produce the same byte stream.
+6. **A duplicate path → `DuplicatePath`. An empty file set → `EmptyFileSet`.**
+7. `file_count` and every length must fit in a u32. A skill with a single file over 4 GiB, or
+   more than 2^32-1 files, is rejected.
 
-### 1.2 Validasi path (normatif)
+### 1.2 Path validation (normative)
 
-Path ditolak dengan `InvalidPath` jika salah satu berlaku:
+A path is rejected with `InvalidPath` if any of the following holds:
 
-| Kondisi | Contoh |
+| Condition | Example |
 |---|---|
-| path kosong | `""` |
-| bukan UTF-8 valid | — |
-| mengandung `\` | `tools\zeta.py` |
-| mengandung byte NUL | — |
-| ada komponen kosong (leading/trailing/double slash) | `/SKILL.md`, `a//b`, `a/` |
-| ada komponen `.` | `./SKILL.md`, `a/./b` |
-| ada komponen `..` | `../SKILL.md` |
+| empty path | `""` |
+| not valid UTF-8 | — |
+| contains `\` | `tools\zeta.py` |
+| contains a NUL byte | — |
+| has an empty component (leading, trailing or double slash) | `/SKILL.md`, `a//b`, `a/` |
+| has a `.` component | `./SKILL.md`, `a/./b` |
+| has a `..` component | `../SKILL.md` |
 
-> **Catatan penyimpangan dari teks tiket.** Spec PM menyebut "tanpa prefix `./` atau `/`,
-> tanpa komponen `..`". Implementasi memperluas ini menjadi larangan **komponen** `.`
-> dan `..` di posisi mana pun, larangan komponen kosong, dan larangan backslash.
-> Backslash secara teknis legal di nama file POSIX; ia ditolak dengan sengaja supaya
-> path gaya Windows (`tools\zeta.py`) tidak diam-diam menjadi *satu* nama file dan
-> menghasilkan `content_hash` yang berbeda dari packager di OS lain.
-> Ini pengetatan, bukan pelonggaran: tidak ada input yang sebelumnya valid menjadi hash berbeda.
+> **Note on the deviation from the ticket text.** The PM's spec said "no `./` or `/` prefix, no
+> `..` components". The implementation widens that to forbidding `.` and `..` **components** in
+> any position, forbidding empty components, and forbidding backslashes. A backslash is
+> technically legal in a POSIX filename; it is rejected deliberately so that a Windows-style
+> path (`tools\zeta.py`) does not silently become *one* filename and produce a `content_hash`
+> different from a packager on another OS. This is a tightening, not a loosening: no input that
+> was previously valid now hashes differently.
 
-### 1.3 File yang dikecualikan
+### 1.3 Excluded files
 
-Dikecualikan oleh **packager sebelum hashing** — bukan bagian dari algoritma hash:
+Excluded by the **packager, before hashing** — they are not part of the hash algorithm:
 
 ```
 .git/**   node_modules/**   __pycache__/**   .venv/**   target/**   .DS_Store   *.pyc
 ```
 
-Nama direktori dicocokkan di kedalaman mana pun. `*.pyc` dicocokkan pada nama file.
-**Set file final yang ikut di-hash dicatat eksplisit di tiap test vector**
-(field `files_note` di `content-hash-vectors.json`).
+Directory names match at any depth. `*.pyc` matches on the filename. **The final set of files
+that go into the hash is recorded explicitly in every test vector** (the `files_note` field in
+`content-hash-vectors.json`).
 
 ---
 
 ## 2. Worked example — vector `single-file`
 
-Input: satu file, path `SKILL.md`, isi mentah
-`"# Example Skill\n\nDoes nothing harmful.\nEnd.\n"` (43 byte).
+Input: one file, path `SKILL.md`, raw content
+`"# Example Skill\n\nDoes nothing harmful.\nEnd.\n"` (43 bytes).
 
-Normalisasi membuang `\n` terakhir → `norm_content` 43 − 1 = **42** byte (`0x2b`).
+Normalisation strips the trailing `\n` → `norm_content` is 43 − 1 = **42** bytes (`0x2b`).
 
 ```
 00000000  73 74 65 72 69 73 68 2d 63 6f 6e 74 65 6e 74 2d  |sterish-content-|
@@ -113,151 +112,148 @@ Normalisasi membuang `\n` terakhir → `norm_content` 43 − 1 = **42** byte (`0
 00000050  6c 2e 0a 45 6e 64 2e                             |l..End.|
 ```
 
-| Offset | Byte | Arti |
+| Offset | Bytes | Meaning |
 |---|---|---|
-| `0x00..0x18` | `sterish-content-hash/v1\n` | MAGIC (24 byte) |
+| `0x00..0x18` | `sterish-content-hash/v1\n` | MAGIC (24 bytes) |
 | `0x18` | `00 00 00 01` | `u32be(file_count) = 1` |
 | `0x1c` | `00 00 00 08` | `u32be(len("SKILL.md")) = 8` |
 | `0x20` | `SKILL.md` | `path_bytes` |
 | `0x28` | `00 00 00 2b` | `u32be(len(norm_content)) = 42` |
 | `0x2c..0x57` | `# Example Skill\n\n…End.` | `norm_content` |
 
-CANON = 87 byte →
+CANON is 87 bytes →
 `sha256` = **`eaaad94080f641183a4caa2c03e9ccea36c2d466d446909b5b55e0824d3d9edd`**
 
-### Kenapa length-prefix wajib
+### Why the length prefix is mandatory
 
-Tanpa length-prefix, `[("a", "bc")]` dan `[("ab", "c")]` sama-sama menjadi `abc`.
-Dengan length-prefix (bagian setelah MAGIC):
+Without a length prefix, `[("a", "bc")]` and `[("ab", "c")]` both become `abc`.
+With it (the portion after MAGIC):
 
 ```
 ("a","bc")   00000001 00000001 61 00000002 6263
 ("ab","c")   00000001 00000002 6162 00000001 63
 ```
 
-→ vector `concat-ambiguity-a` ≠ `concat-ambiguity-b`, diuji di ketiga bahasa.
+→ vector `concat-ambiguity-a` ≠ `concat-ambiguity-b`, tested in all three languages.
 
 ---
 
 ## 3. Error model
 
-Nama error stabil lintas bahasa (Python `.kind`, TS `ErrorKind`, Rust `HashError::kind()`):
+Error names are stable across languages (Python `.kind`, TS `ErrorKind`, Rust `HashError::kind()`):
 
-| Error | Kapan |
+| Error | When |
 |---|---|
-| `EmptyFileSet` | set file kosong |
-| `DuplicatePath` | `path_bytes` yang sama muncul lebih dari sekali |
-| `InvalidPath` | lihat §1.2 |
-| `NotUtf8` | isi file bukan UTF-8 valid |
+| `EmptyFileSet` | the file set is empty |
+| `DuplicatePath` | the same `path_bytes` appears more than once |
+| `InvalidPath` | see §1.2 |
+| `NotUtf8` | file content is not valid UTF-8 |
 
-Urutan pemeriksaan: `EmptyFileSet` → (per file, urutan input) `InvalidPath` →
-`DuplicatePath` → `NotUtf8`. Sebuah input yang melanggar lebih dari satu aturan
-melaporkan error pertama menurut urutan itu. Ketiga implementasi wajib sepakat
-pada error mana yang keluar — ini diuji, bukan diasumsikan.
+Check order: `EmptyFileSet` → (per file, in input order) `InvalidPath` → `DuplicatePath` →
+`NotUtf8`. An input violating more than one rule reports the first error in that order. All
+three implementations must agree on which error comes out — that is tested, not assumed.
 
-Error **tidak pernah** berarti "hash apa adanya". Tidak ada fallback diam-diam.
-
----
-
-## 4. Yang SENGAJA TIDAK dilakukan
-
-- **TIDAK ada kanonikalisasi JSON.** `manifest.json` di-hash sebagai byte biasa
-  seperti file lain. Alasan: kanonikalisasi JSON lintas bahasa (format float,
-  urutan key, escaping, integer besar) justru sumber drift yang **lebih besar**
-  daripada masalah yang diselesaikannya — persis kelas bug yang ingin dihindari
-  `content_hash`. Tiket memberi kebebasan ini di "Left to the owner"; pilihannya
-  eksplisit di sini.
-- **TIDAK ada normalisasi Unicode (NFC/NFD).** Byte apa adanya. Alasan: dukungan
-  NFC tidak seragam di ketiga bahasa tanpa dependensi tambahan (Rust `std` tidak
-  punya normalisasi Unicode sama sekali). Konsekuensi: `café` NFC dan `café` NFD
-  adalah dua skill berbeda. Itu diterima — keduanya memang byte yang berbeda.
-- **TIDAK ada trimming whitespace selain trailing newline.** Setiap normalisasi
-  tambahan memperbesar permukaan tempat perubahan bisa disembunyikan dari audit.
-- **TIDAK ada mode/permission file, timestamp, symlink, atau file kosong-vs-hilang
-  yang dibedakan lewat metadata.** Hanya path + isi. Skill yang bergantung pada
-  bit executable berada di luar jangkauan v1.
+An error **never** means "hash it anyway". There is no silent fallback.
 
 ---
 
-## 5. Batasan yang diketahui (v1)
+## 4. What is deliberately NOT done
 
-1. **Hanya skill berbasis teks.** File biner apa pun (gambar, wasm, `.zip`) ditolak
-   dengan `NotUtf8`. Skill dengan aset biner butuh `/v2`.
-2. **Normalisasi newline menyembunyikan perubahan line-ending.** Itu disengaja
-   (checkout Windows tidak boleh mengubah verdict), tapi berarti `content_hash`
-   tidak bisa dipakai untuk membuktikan line-ending.
-3. **Trailing-newline stripping menyembunyikan perbedaan newline di akhir file.**
-   Sama alasannya (editor otomatis menambah/menghapus).
-4. **Daftar pengecualian bersifat statis.** Skill yang benar-benar butuh file bernama
-   `target/` atau `.DS_Store` tidak bisa menyertakannya.
-5. **Tidak ada normalisasi Unicode** (§4). Dua path yang tampil identik di layar bisa
-   menghasilkan dua hash berbeda.
+- **NO JSON canonicalization.** `manifest.json` is hashed as ordinary bytes like any other
+  file. Reason: canonicalizing JSON across languages — float formatting, key order, escaping,
+  large integers — is a **larger** source of drift than the problem it solves, exactly the class
+  of bug `content_hash` exists to avoid. The ticket left this to the owner under "Left to the
+  owner"; the choice is made explicitly here.
+- **NO Unicode normalisation (NFC/NFD).** Bytes as they are. Reason: NFC support is not uniform
+  across the three languages without extra dependencies (Rust `std` has no Unicode
+  normalisation at all). Consequence: `café` in NFC and `café` in NFD are two different skills.
+  That is accepted — they genuinely are different bytes.
+- **NO whitespace trimming beyond the trailing newline.** Every additional normalisation
+  enlarges the surface where a change can be hidden from the audit.
+- **NO file mode or permission, timestamp, symlink, or empty-vs-missing distinction carried
+  through metadata.** Path and content only. A skill that depends on the executable bit is out
+  of scope for v1.
+
+---
+
+## 5. Known limits (v1)
+
+1. **Text-based skills only.** Any binary file (an image, a wasm blob, a `.zip`) is rejected
+   with `NotUtf8`. A skill with binary assets needs `/v2`.
+2. **Newline normalisation hides line-ending changes.** That is deliberate — a Windows checkout
+   must not change a verdict — but it means `content_hash` cannot be used to prove a line
+   ending.
+3. **Trailing-newline stripping hides differences in the final newline.** Same reason: editors
+   add and remove it automatically.
+4. **The exclusion list is static.** A skill that genuinely needs a file called `target/` or
+   `.DS_Store` cannot include it.
+5. **No Unicode normalisation** (§4). Two paths that look identical on screen can produce two
+   different hashes.
 
 ---
 
 ## 6. Test vectors
 
 File: [`vectors/content-hash-vectors.json`](vectors/content-hash-vectors.json).
-Fixture nyata: [`vectors/fixtures/poisoned_skill/`](vectors/fixtures/poisoned_skill/)
+Real fixture: [`vectors/fixtures/poisoned_skill/`](vectors/fixtures/poisoned_skill/)
 (salinan `pipeline/tests/poisoned_skill/`, supaya vector self-contained).
 
-Bentuk tiap entry:
+Shape of each entry:
 `{id, description, files_note, files: [{path, content_b64}], expected_sha256,
 expect_equal_to?, expect_differs_from?}`.
-`content_b64` = base64 dari byte **mentah** (sebelum normalisasi) — supaya CRLF dan
-byte apa pun selamat melewati JSON.
+`content_b64` is base64 of the **raw** bytes, before normalisation — so CRLF and any other byte
+survive the trip through JSON.
 
-| id | isi | membuktikan | `expected_sha256` |
+| id | contents | what it proves | `expected_sha256` |
 |---|---|---|---|
-| `single-file` | 1 file `SKILL.md`, ASCII | jalur paling dasar | `eaaad940…4d3d9edd` |
-| `poisoned-token-drainer` | `manifest.json` asli dari fixture poisoned | spec terikat ke korpus nyata | `c2bd4a31…28cc87f0` |
-| `multi-file-ordering` | 3 file, urutan sisip ≠ urutan terurut, path bersarang, isi non-ASCII | urutan & length-prefix benar | `e650ee53…b6c2ade6` |
-| `non-bmp-path-order` | path `Ａ.md` (U+FF21) vs `😀.md` (U+1F600) | urutan **bytewise UTF-8**, bukan UTF-16 | `3b0f76b5…6cf78248` |
-| `crlf-equals-lf` | isi logis sama dengan `single-file`, pakai CRLF + CR telanjang + 3 newline akhir | hash **SAMA** — normalisasi jalan | `eaaad940…4d3d9edd` |
-| `one-byte-flip` | `single-file` dengan 1 byte berubah (`l` → `L`) | hash **BEDA** — klaim keamanan jalan | `dcf8d82b…4f89732b` |
-| `concat-ambiguity-a` | `[("a","bc")]` | length-prefix mencegah tabrakan | `9e858aa5…0dec5ae3` |
-| `concat-ambiguity-b` | `[("ab","c")]` | ↑ pasangannya | `666e8c6e…0875de8e` |
+| `single-file` | one `SKILL.md`, ASCII | the most basic path | `eaaad940…4d3d9edd` |
+| `poisoned-token-drainer` | the real `manifest.json` from the poisoned fixture | the spec is bound to the real corpus | `c2bd4a31…28cc87f0` |
+| `multi-file-ordering` | 3 files, insertion order != sorted order, nested paths, non-ASCII content | ordering and length prefixes are right | `e650ee53…b6c2ade6` |
+| `non-bmp-path-order` | paths `Ａ.md` (U+FF21) vs `😀.md` (U+1F600) | ordering is **bytewise UTF-8**, not UTF-16 | `3b0f76b5…6cf78248` |
+| `crlf-equals-lf` | logically the same content as `single-file`, using CRLF, a bare CR, and 3 trailing newlines | the hash is the **SAME** — normalisation works | `eaaad940…4d3d9edd` |
+| `one-byte-flip` | `single-file` with one byte changed (`l` -> `L`) | the hash **DIFFERS** — the security claim holds | `dcf8d82b…4f89732b` |
+| `concat-ambiguity-a` | `[("a","bc")]` | the length prefix prevents a collision | `9e858aa5…0dec5ae3` |
+| `concat-ambiguity-b` | `[("ab","c")]` | its counterpart | `666e8c6e…0875de8e` |
 
-Hash lengkap ada di file vector dan di output runner.
+The full hashes are in the vector file and in the runner's output.
 
-`non-bmp-path-order` adalah vector yang paling gampang gagal kalau seseorang menulis
-ulang sisi TypeScript dengan `paths.sort()` biasa: UTF-16 menaruh emoji (high surrogate
-`0xD83D`) sebelum `U+FF21`, sedangkan UTF-8 bytewise menaruh `Ａ.md` (`EF BC A1`)
-sebelum `😀.md` (`F0 9F 98 80`).
+`non-bmp-path-order` is the vector most likely to fail if someone rewrites the TypeScript side
+with a plain `paths.sort()`: UTF-16 puts the emoji (high surrogate `0xD83D`) before `U+FF21`,
+whereas bytewise UTF-8 puts `Ａ.md` (`EF BC A1`) before `😀.md` (`F0 9F 98 80`).
 
 ### Error cases
 
-9 kasus (`err-empty-set`, `err-duplicate-path`, `err-not-utf8`, `err-absolute-path`,
+Nine cases (`err-empty-set`, `err-duplicate-path`, `err-not-utf8`, `err-absolute-path`,
 `err-dot-prefix`, `err-dotdot`, `err-empty-path`, `err-backslash-separator`,
-`err-double-slash`) di `error_cases[]`. Ketiga implementasi wajib menolak dengan
-**nama error yang sama persis**.
+`err-double-slash`) in `error_cases[]`. All three implementations must reject with **exactly
+the same error name**.
 
 ---
 
-## 7. Cara membuktikan (runner)
+## 7. How to prove it (the runner)
 
 ```bash
-bash scripts/verify-content-hash.sh      # atau: make verify-spec
+bash scripts/verify-content-hash.sh      # or: make verify-spec
 ```
 
-Runner:
+The runner:
 
-1. menjalankan Python, TypeScript, dan Rust atas **file vector yang sama**;
-2. membandingkan ketiga laporan **byte-for-byte** (`diff -u`) — bukan sekadar mencetak;
-3. mengecek ulang invarian yang disebut tiket: `crlf-equals-lf == single-file`,
-   `one-byte-flip != single-file`, `concat-ambiguity-a != concat-ambiguity-b`,
-   semua `RELATION` `OK`, semua `ERROR` bukan `NO_ERROR`, semua hash 64 hex lowercase,
-   jumlah vector ≥ 5;
-4. mengecek `expected_sha256` di file vector sama dengan yang baru dihitung
-   (JSON yang diedit tangan tidak bisa lolos);
-5. mengecek packager direktori: hash `vectors/fixtures/poisoned_skill/` dari disk
-   harus sama dengan vector `poisoned-token-drainer`.
+1. runs Python, TypeScript and Rust over **the same vector file**;
+2. compares all three reports **byte for byte** (`diff -u`) rather than merely printing them;
+3. re-checks the invariants the ticket named: `crlf-equals-lf == single-file`,
+   `one-byte-flip != single-file`, `concat-ambiguity-a != concat-ambiguity-b`, every `RELATION`
+   `OK`, every `ERROR` not `NO_ERROR`, every hash 64 lowercase hex, and at least 5 vectors;
+4. checks that `expected_sha256` in the vector file matches what was just computed (a
+   hand-edited JSON cannot pass);
+5. checks the directory packager: hashing `vectors/fixtures/poisoned_skill/` from disk must
+   equal the `poisoned-token-drainer` vector.
 
-**Exit 0 hanya kalau semuanya benar; selain itu exit 1** (exit 2 = harness gagal jalan,
-misalnya `cargo` tidak ada). Perilaku gagalnya sudah diuji dengan sabotase sengaja
-(mengubah 1 byte di fixture, dan mengedit tangan `expected_sha256`) — keduanya exit 1.
+**Exit 0 only when everything holds; otherwise exit 1** (exit 2 means the harness itself could
+not run, for instance `cargo` is missing). The failure behaviour has been tested by deliberate
+sabotage — changing one byte in the fixture, and hand-editing an `expected_sha256` — and both
+exit 1.
 
-Format laporan bersama (identik di ketiga bahasa):
+The shared report format, identical in all three languages:
 
 ```
 VECTOR   <id> <64-hex>
@@ -265,41 +261,39 @@ RELATION <id> equals|differs <other-id> OK|FAIL
 ERROR    <id> <ErrorKind>|NO_ERROR
 ```
 
-Sisi Rust mencetak baris yang sama dengan prefix `STERISH_HASH ` dari
-`contracts/registry/src/test.rs`; runner-lah yang melepas prefix itu.
+The Rust side prints the same lines with a `STERISH_HASH ` prefix from
+`contracts/registry/src/test.rs`; the runner strips that prefix.
 
-### Kenapa Rust dihitung sebagai saksi independen
+### Why Rust counts as an independent witness
 
-Test Rust **tidak membaca** `content-hash-vectors.json`. Ia meng-hardcode vector dan
-hash yang diharapkan, dan mengambil manifest poisoned lewat `include_bytes!` langsung
-dari fixture. Ia meng-hash dengan `env.crypto().sha256()` — host function yang sama
-yang dipakai kontrak yang sudah ter-deploy, bukan crate sha256 dari userspace.
-Jadi kesepakatan ketiganya berarti sesuatu.
+The Rust test **does not read** `content-hash-vectors.json`. It hardcodes the vectors and the
+expected hashes, and pulls the poisoned manifest through `include_bytes!` straight from the
+fixture. It hashes with `env.crypto().sha256()` — the same host function the deployed contract
+uses, not a userspace sha256 crate. So agreement between the three means something.
 
 ---
 
-## 8. Menggunakan implementasi referensi
+## 8. Using the reference implementations
 
 ```bash
-# Hash sebuah direktori skill (packager + hash), cetak 64 hex
+# Hash a skill directory (packager + hash), print 64 hex
 python3 docs/specs/reference/content_hash.py path/to/skill
 npx tsx docs/specs/reference/contentHash.ts path/to/skill
 
-# Jalankan vector bersama, cetak laporan
+# Run the shared vectors, print the report
 python3 docs/specs/reference/content_hash.py --vectors
 npx tsx docs/specs/reference/contentHash.ts --vectors
 
-# Hitung ulang expected_sha256 setelah SENGAJA mengubah vector (jarang!)
+# Recompute expected_sha256 after DELIBERATELY changing a vector (rare!)
 python3 docs/specs/reference/content_hash.py --regen
 ```
 
-> `--regen` menulis ulang `expected_sha256`. Jangan pakai untuk "memperbaiki" runner
-> yang merah — runner merah berarti sebuah implementasi menyimpang, dan me-regen
-> hanya memindahkan kebohongan ke file vector.
+> `--regen` rewrites `expected_sha256`. Do not use it to "fix" a red runner — a red runner means
+> an implementation has diverged, and regenerating only moves the lie into the vector file.
 
-API yang dipakai integrator:
+The API integrators use:
 
-| Bahasa | Fungsi |
+| Language | Function |
 |---|---|
 | Python | `content_hash(files) -> str`, `hash_dir(root) -> str`, `canonical_bytes(files) -> bytes` |
 | TypeScript | `contentHash(files): string`, `hashDir(root): string`, `canonicalBytes(files): Uint8Array` |
@@ -307,18 +301,18 @@ API yang dipakai integrator:
 
 ---
 
-## 9. Aturan perubahan
+## 9. Change process
 
-`content_hash` sudah dipakai sebagai kunci `DataKey::HashIndex` di Registry.
-Mengubah algoritma **membatalkan setiap verdict yang sudah ada di chain**.
+`content_hash` is already used as the `DataKey::HashIndex` key in the Registry. Changing the
+algorithm **invalidates every verdict already on chain**.
 
-Karena itu:
+Therefore:
 
-1. Dokumen ini **frozen**. Perbaikan typo boleh; perubahan perilaku tidak.
-2. Perubahan perilaku apa pun = spec id baru `sterish-content-hash/v2`, MAGIC baru
-   (`b"sterish-content-hash/v2\n"`), file vector baru, dan rencana migrasi eksplisit
-   untuk record yang sudah ada.
-3. MAGIC yang membawa nomor versi berarti CANON v1 dan v2 tidak akan pernah bertabrakan.
-4. Setiap PR yang menyentuh `docs/specs/reference/**`, `docs/specs/vectors/**`, atau
-   modul `content_hash_v1` di `contracts/registry/src/test.rs` **wajib** menjalankan
-   `make verify-spec` dan menempelkan outputnya.
+1. This document is **frozen**. Typo fixes are fine; behavioural changes are not.
+2. Any behavioural change means a new spec id `sterish-content-hash/v2`, a new MAGIC
+   (`b"sterish-content-hash/v2\n"`), a new vector file, and an explicit migration plan for
+   existing records.
+3. Because MAGIC carries the version number, CANON v1 and v2 can never collide.
+4. Every PR touching `docs/specs/reference/**`, `docs/specs/vectors/**`, or the
+   `content_hash_v1` module in `contracts/registry/src/test.rs` **must** run `make verify-spec`
+   and paste the output.
