@@ -401,6 +401,38 @@ membawa header CORS aplikasi. Request `/skills` yang tadinya menahan koneksi bel
 detik sekarang selesai dalam 2–3 detik, jadi peluangnya jauh berkurang — tapi ini
 argumen sebab-akibat, bukan pengamatan langsung atas error yang hilang.
 
+### Redeploy 2026-09-10 (kedua) — seed katalog + report live (STE-18, STE-32)
+
+Registry berubah dari 47 skill uji sintetis menjadi **66**, di antaranya 12 skill katalog
+skills.stellar.org yang sebenarnya. Rantai verifikasi yang selama ini putus di mata rantai
+terakhirnya sekarang tersambung.
+
+| | |
+|---|---|
+| Commit yang jalan | `af03eba` |
+| Registry | 47 → **66** entri |
+| Skill katalog nyata on-chain | **12**, semuanya `SAFE` + VERIFIED |
+| Poisoned fixture on-chain | **4**, semuanya `DANGEROUS`, nol VERIFIED |
+| `report_uri` terisi dan byte-nya cocok `evidence_hash` | **19 / 19** |
+| Mismatch | **0** |
+
+47 versi lama tetap `report_uri: null` dan itu benar — mereka mendahului adanya report, dan
+endpoint sengaja hanya mengiklankan link untuk report yang benar-benar ada.
+
+Env baru di `/opt/sterish/deploy/.env`: `REPORT_BASE_URL` (root API, bukan prefix `/reports`;
+route yang menyediakan itu), `STERISH_REPORTS_DIR` lewat compose, plus `EVIDENCE_SKILL_ID` dan
+`EVIDENCE_VERSION` supaya `verify.sh` bisa memeriksa rantai hash-nya sendiri.
+
+`verify.sh` sekarang tidak cuma bertanya "apakah 200":
+
+```
+/reports missing -> 404                        OK (404)
+/reports served                                OK (200)
+  sha256(report) == evidence_hash              OK (2620c159de75f4dc…)
+```
+
+Bukti audit lengkap dengan tabel tx: [`audit-evidence.md`](audit-evidence.md).
+
 ### Operasional
 
 ```bash
