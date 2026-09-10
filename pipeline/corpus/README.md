@@ -25,12 +25,32 @@ cd pipeline
 uv run python -m sterish_pipeline.cli intake verify --corpus corpus
 
 # Audit the whole corpus in one deterministic, offline run (no API key).
-uv run python -m sterish_pipeline.cli audit-corpus --corpus corpus --strict
+uv run python -m sterish_pipeline.cli intake audit-corpus --corpus corpus --strict
 ```
 
 `--strict` fails if any fixture misses its `expected_verdict`. Independently of
 `--strict`, a **poisoned fixture that audits as SAFE is always a hard failure** —
 that is the guarantee the corpus exists to defend.
+
+### `--strict` currently exits non-zero, on purpose
+
+You will see exactly one mismatch:
+
+```
+! com.fixtures.safe.price-checker: expected SAFE, got DANGEROUS
+```
+
+That is a real false positive and it is left visible rather than hidden. The
+`wallet_op` detector is deliberately negation-blind (documented in
+`stages/injection_rules.py`), so the sentence *"it never touches a wallet, never
+signs anything, never moves funds"* grades the skill DANGEROUS. Editing the
+fixture or relaxing its expected verdict would make the run green and the
+scanner no better, so neither was done. `tests/test_corpus.py` asserts this set
+**exactly**, which means fixing the scanner breaks that test and forces the entry
+to be removed.
+
+`org.stellar.skills.cross-chain.cctp` fails for the same reason but does not show
+up here, because catalog entries carry no `expected_verdict` to miss. See below.
 
 ## Rebuild it
 
@@ -54,27 +74,40 @@ their contents into a real skill.
 
 ## Reading the catalog verdicts (important)
 
-The 13 `org.stellar.skills.*` entries are **documentation pages** fetched from
-skills.stellar.org, normalised into a manifest shape so the pipeline can hash and
-scan them. All 13 carry no `permissions` and no `tools`, because the upstream
-pages do not declare any — they are prose, not installable manifests.
+The 13 `org.stellar.skills.*` entries carry no `permissions` and no `tools`. That
+is not a defect in the snapshot: an Agent Skill published as markdown *is* the
+skill. An agent loads `axelar.md` into its context and follows it, and the format
+has nowhere to declare a permission. Calling them "documentation, not real skills"
+is the wrong read — and this file used to make it.
 
-Two consequences, both visible in `intake audit-corpus`:
+The risk surface of a prose skill is therefore prompt injection in the prose, and
+that is exactly what the directive detectors look for.
 
-* `exfiltration` fires on any URL, because a host can only be "declared" via
-  `manifest.permissions`, and there are none to declare it in.
-* `undeclared_capability` fires whenever the prose describes what the skill does,
-  for the same reason.
+**Fixed in STE-36.** `exfiltration` and `undeclared_capability` work by comparing
+prose against `manifest.permissions` / `manifest.tools`. With nothing declared they
+compared against an empty set and fired on every URL and every descriptive
+sentence, so `axelar` and `cctp` came back DANGEROUS for, among other things,
+citing `docs.axelar.dev` in a markdown link. Both detectors are now gated on the
+manifest having a declaration surface at all; the directive detectors are
+untouched, which is why all four poisoned fixtures are still caught.
 
-So `org.stellar.skills.cross-chain.axelar` and `...cctp` come back DANGEROUS.
-**That is an artefact of auditing documentation as though it were a manifest, and
-is not a safety claim about the upstream skill.** This is why every catalog entry
-has `expected_verdict: null` in `index.json`: the corpus makes no assertion about
-them, and no test does either.
+After the fix, 12 of 13 catalog entries audit `SAFE`. The exception:
 
-The fixtures under `corpus/fixtures/` are the entries that carry real
-expectations, because they are complete skills with declared permissions.
+* **`org.stellar.skills.cross-chain.cctp` is still `DANGEROUS`, and it is still
+  wrong.** Its prose explains that CCTP burns USDC on one chain and mints it on
+  another; `wallet_op` reads that as an instruction to move assets. Same family as
+  the `com.fixtures.safe.price-checker` false positive below. `wallet_op` is a
+  critical-class detector protecting `token-drainer` and `invoice-helper`, so
+  relaxing it to turn one entry green is the papering-over this file warns about
+  further down. Tracked separately; **`cctp` is held out of the on-chain seed run
+  rather than published as a false accusation.**
 
-Closing this properly means either fetching real manifests where upstream
-publishes them, or teaching the normaliser to mark doc-derived entries so the
-"undeclared" detectors do not apply to them. Neither is in STE-15's scope.
+`expected_verdict` stays `null` for catalog entries in `index.json`, because the
+corpus should not hard-code a claim about bytes it does not own. The assertions
+that do exist live in `tests/test_declaration_surface.py`, which pins that the
+poisoned fixtures stay `DANGEROUS`, that no catalog entry is flagged by a gated
+detector any more, and that `cctp` is still flagged — so fixing `wallet_op`
+properly makes that last test fail and forces this note to be revisited.
+
+The fixtures under `corpus/fixtures/` carry real `expected_verdict` values,
+because they are authored here and their bytes are ours.

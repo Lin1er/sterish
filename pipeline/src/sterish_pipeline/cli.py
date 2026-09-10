@@ -234,6 +234,15 @@ def submit(skill, config, skip_sandbox, no_llm, reports_dir, report_base_url,
         raise click.ClickException("orchestration did not complete cleanly")
 
 
+# The intake surface lives in its own module but has to hang off this group, or the
+# commands `corpus/README.md` tells a third party to run do not exist. They were
+# reachable only by importing `sterish_pipeline.intake.cli` directly, which is not a
+# reproduction instruction anyone can follow.
+from sterish_pipeline.intake.cli import intake as _intake_group  # noqa: E402
+
+cli.add_command(_intake_group)
+
+
 def main() -> None:
     cli()
 
