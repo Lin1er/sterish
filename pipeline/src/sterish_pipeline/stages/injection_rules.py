@@ -53,6 +53,41 @@ Deliberate tightenings vs the ticket table, to keep false positives at zero on b
 * ``undeclared_capability`` only, and never a critical-class detector, honours negation
   ("no credentials are read"). A benign skill has no reason to write ``~/.ssh/id_rsa`` in its
   description at all, negated or not, so the critical detectors stay literal.
+
+Two classes of detector (STE-36)
+--------------------------------
+
+The detectors above are not all asking the same kind of question, and conflating them
+produced a false accusation against Stellar's own catalog.
+
+**Directive detectors** — ``ignore_instructions``, ``html_comment_directive``,
+``credential_path``, ``wallet_op``, ``hidden_block``, ``zero_width`` — ask *does this text
+try to make the agent do something*. That question is answerable for any text from any
+source, so these always run.
+
+**Declaration-consistency detectors** — ``exfiltration`` and ``undeclared_capability`` —
+ask *does this prose promise something the manifest did not declare*. That question needs a
+declaration surface to be answerable at all. An Agent Skill published as plain markdown has
+none: no ``permissions``, no ``tools``. Run against it, both detectors compare every URL and
+every descriptive sentence against an empty set and fire on all of them — detecting the
+absence of a manifest, not a risk. ``docs.axelar.dev`` cited in a markdown link is not an
+exfiltration channel.
+
+So they are gated on ``has_declaration_surface``. This is not a loosening: a manifest that
+does declare permissions or tools is judged exactly as before, and the poisoned fixtures
+that ship as bare markdown are still caught, because poisoning *is* a directive and the
+directive detectors are untouched. Measured on the corpus:
+
+===================================== =========================================
+fixture                               rules still firing without the two gated
+===================================== =========================================
+``poisoned.markdown-linter``          ``html_comment_directive``, ``ignore_instructions``
+``poisoned.pdf-summarizer``           ``credential_path``, ``ignore_instructions``
+``poisoned.invoice-helper``           ``wallet_op``
+``poisoned.token-drainer``            ``credential_path``, ``wallet_op``
+===================================== =========================================
+
+All four stay DANGEROUS. ``tests/test_declaration_surface.py`` pins that.
 """
 
 from __future__ import annotations
@@ -649,19 +684,51 @@ def _detect_undeclared_capability(source: TextSource) -> list[InjectionFinding]:
 # --------------------------------------------------------------------------------------
 
 
-def scan_text(source: TextSource, allowed_hosts: set[str] | None = None) -> list[InjectionFinding]:
-    """Run every detector over one text source."""
+def has_declaration_surface(manifest: SkillManifest) -> bool:
+    """Can this manifest declare a capability or a host at all?
+
+    True when it declares any permission or any tool. False for an Agent Skill published
+    as plain markdown, where there is nowhere to put a declaration — and therefore nothing
+    for `exfiltration` or `undeclared_capability` to find a contradiction against.
+
+    Declaring *nothing* while shipping *tools* is still an omission worth flagging, so a
+    manifest with tools and no permissions counts as having a surface.
+    """
+    return bool(manifest.permissions or manifest.tools)
+
+
+def scan_text(
+    source: TextSource,
+    allowed_hosts: set[str] | None = None,
+    *,
+    declaration_surface: bool = True,
+) -> list[InjectionFinding]:
+    """Run every applicable detector over one text source.
+
+    `declaration_surface=False` skips the two detectors that can only be answered against a
+    manifest (see the module docstring). It defaults to True so that every existing caller
+    and every direct unit test keeps the behaviour it was written for; only `scan_injection`
+    derives it from the manifest.
+    """
     hosts = allowed_hosts or set()
     findings: list[InjectionFinding] = []
+
+    # Directive detectors: "does this text try to make the agent do something?"
+    # Answerable for any text, so they always run.
     findings += _detect_hidden_block(source)
     findings += _detect_html_comment_directive(source)
     findings += _detect_ignore_instructions(source)
     findings += _detect_credential_path(source)
     findings += _detect_wallet_op(source)
-    findings += _detect_exfiltration(source, hosts)
     findings += _detect_zero_width(source)
     findings += _detect_name_behaviour_mismatch(source)
-    findings += _detect_undeclared_capability(source)
+
+    # Declaration-consistency detectors: "does this prose contradict the manifest?"
+    # Unanswerable without a manifest to contradict.
+    if declaration_surface:
+        findings += _detect_exfiltration(source, hosts)
+        findings += _detect_undeclared_capability(source)
+
     return findings
 
 
@@ -693,9 +760,10 @@ def scan_injection(
     """
     sources = collect_texts(manifest, skill_dir)
     hosts = declared_hosts(manifest)
+    surface = has_declaration_surface(manifest)
     findings: list[InjectionFinding] = []
     for source in sources:
-        findings.extend(scan_text(source, hosts))
+        findings.extend(scan_text(source, hosts, declaration_surface=surface))
     findings = _dedupe(findings)
     findings.sort(key=lambda f: (f.field_path, f.pattern_id, f.snippet))
     return InjectionScanResult(findings=findings, text_scanned=len(sources), sources=sources)
