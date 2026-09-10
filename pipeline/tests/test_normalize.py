@@ -128,3 +128,54 @@ class TestNormalizeDispatch:
     def test_dispatches_by_detected_kind(self) -> None:
         skill = normalize("com.x", "1.0.0", {"SKILL.md": b"# T\n\ntext"})
         assert skill.kind is SourceKind.AGENT_SKILL
+
+
+class TestCatalogVersionIsSemver:
+    """Catalog versions have to satisfy the frozen verdict schema (STE-18).
+
+    `2026.08.31` looks like a date and is not valid semver: semver forbids leading zeros
+    in a numeric identifier, so `VerdictDocument` rejected it and no catalog entry could
+    ever be submitted. Nothing caught it because nothing had tried to put one on chain.
+    """
+
+    @staticmethod
+    def _doc(source_kwargs: dict) -> str:
+        from sterish_pipeline.intake.sources import FetchedDocument
+
+        return FetchedDocument(**source_kwargs).version
+
+    def test_last_modified_becomes_semver(self):
+        version = self._doc({
+            "url": "https://skills.stellar.org/skills/cross-chain/axelar.md",
+            "category": "cross-chain",
+            "filename": "axelar.md",
+            "body": b"# x",
+            "last_modified": "Mon, 31 Aug 2026 15:14:33 GMT",
+            "fetched_at": "2026-09-03T10:19:54+00:00",
+            "etag": "",
+        })
+        assert version == "2026.8.31"
+
+    def test_fetch_date_fallback_becomes_semver(self):
+        version = self._doc({
+            "url": "https://skills.stellar.org/skills/dapp/react.md",
+            "category": "dapp",
+            "filename": "react.md",
+            "body": b"# x",
+            "last_modified": "",
+            "fetched_at": "2026-09-03T10:19:54+00:00",
+            "etag": "",
+        })
+        assert version == "2026.9.3"
+
+    def test_every_committed_catalog_version_is_submittable(self):
+        """The regression that matters: the shipped corpus must be seedable."""
+        import re
+        from pathlib import Path
+
+        from sterish_pipeline.intake.corpus import Corpus
+
+        semver = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+        corpus = Corpus(Path(__file__).resolve().parents[1] / "corpus")
+        for entry in corpus.load():
+            assert semver.match(entry.version), f"{entry.skill_id} has version {entry.version!r}"

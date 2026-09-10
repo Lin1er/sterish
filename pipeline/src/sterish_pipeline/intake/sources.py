@@ -47,17 +47,25 @@ class FetchedDocument:
 
     @property
     def version(self) -> str:
-        """`YYYY.MM.DD` from the upstream Last-Modified, else the fetch date.
+        """`YYYY.M.D` from the upstream Last-Modified, else the fetch date.
 
         A date version is derivable by anyone re-fetching the same document, so
         two people snapshotting the catalog independently agree.
+
+        The month and day are **not** zero-padded, and that is not cosmetic. The frozen
+        verdict schema (`docs/specs/verdict-json.md`) requires semver, and semver forbids
+        leading zeros in a numeric identifier: `2026.08.31` is rejected, `2026.8.31` is
+        valid. This produced versions no catalog entry could ever be submitted with, and
+        nothing caught it because nothing had tried to put a catalog entry on chain yet.
         """
         if self.last_modified:
             try:
-                return parsedate_to_datetime(self.last_modified).strftime("%Y.%m.%d")
+                stamp = parsedate_to_datetime(self.last_modified)
+                return f"{stamp.year}.{stamp.month}.{stamp.day}"
             except (TypeError, ValueError):
                 pass
-        return self.fetched_at[:10].replace("-", ".")
+        year, month, day = self.fetched_at[:10].split("-")
+        return f"{int(year)}.{int(month)}.{int(day)}"
 
 
 def discover_catalog_urls(client: httpx.Client) -> list[tuple[str, str, str]]:
