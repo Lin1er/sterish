@@ -48,6 +48,10 @@ class Settings:
     price_base_units: int
     minter_secret: str
     skills_dir: str
+    # Where `pipeline/reports.publish` wrote the verdict documents that evidence_hash
+    # anchors (STE-32). Separate from skills_dir: artifacts are what a licensee buys,
+    # reports are public evidence anyone may read.
+    reports_dir: str
     # Ceiling on the per-row chain reads a single /skills request may have in flight
     # (STE-33). Not a thread pool size for the app — FastAPI already has one; this
     # bounds the fan-out *inside* one handler. See fanout.py.
@@ -108,6 +112,7 @@ def load_settings() -> Settings:
         price_base_units=_env_int("X402_PRICE_BASE_UNITS", 1_000_000),
         minter_secret=os.getenv("MINTER_SECRET", os.getenv("DEPLOYER_SECRET", "")).strip(),
         skills_dir=os.getenv("STERISH_SKILLS_DIR", "").strip(),
+        reports_dir=os.getenv("STERISH_REPORTS_DIR", "").strip(),
         chain_concurrency=_env_int("STERISH_CHAIN_CONCURRENCY", fanout.DEFAULT_CONCURRENCY),
         rpc_url=os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org").strip(),
         network_passphrase=os.getenv("STELLAR_NETWORK_PASSPHRASE", TESTNET_PASSPHRASE),

@@ -29,7 +29,7 @@ not caught up.
 ### Implementation status
 
 **Implemented in STE-17** (2026-09-04) and serving live chain reads against the STE-13
-testnet deployment. Everything here is real except 3.6, which remains `PLANNED`.
+testnet deployment. Every section here is implemented.
 
 | Section | Status |
 |---|---|
@@ -38,7 +38,7 @@ testnet deployment. Everything here is real except 3.6, which remains `PLANNED`.
 | 3.3 `GET /skills/{skill_id}` | implemented |
 | 3.4 `GET /skills` | implemented |
 | 3.5 `GET /health` | implemented |
-| 3.6 `GET /reports/{skill_id}/{version}` | **PLANNED** — `report_uri` is advertised only when `REPORT_BASE_URL` is set, so clients are never handed a link that 404s |
+| 3.6 `GET /reports/{skill_id}/{version}` | implemented (STE-32) — `report_uri` is advertised only when a base URL is set **and** the report exists |
 | 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19) |
 | 3.8 `GET /license/{skill_id}/{version}` | implemented (STE-35) |
 | 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35 |
@@ -289,11 +289,45 @@ Returns `200` when the process is up and `503` when `rpc_reachable` is `false` �
 that reports `ok` while the API cannot read the chain is worse than no health check.
 `indexer_lag_ledgers` is `null` until STE-13 lands.
 
-### 3.6 `GET /reports/{skill_id}/{version}` — **PLANNED**
+### 3.6 `GET /reports/{skill_id}/{version}` — the report `evidence_hash` commits to (STE-32)
 
-Serves the full verdict JSON (`specs/verdict-json.md`). Bytes MUST hash to the `evidence_hash`
-published on-chain for that version; clients are expected to check. Depends on the pipeline
-emitting a conforming document (see `verdict-json.md` §7, gaps P1–P8).
+Serves the full verdict JSON (`specs/verdict-json.md`). This is the last link of the
+verification chain: `evidence_hash` on chain is the sha256 of exactly these bytes, so a caller
+can recompute it and check a verdict without trusting us.
+
+```json
+{ "spec_version": "1.0.0", "skill_id": "…", "version": "…", "content_hash": "…",
+  "verdict": "DANGEROUS", "risk": "critical", "score": 10,
+  "capabilities": ["SECRET_READ"],
+  "findings": [{"stage": 1, "severity": "HIGH",
+                "description": "[credential_path] Text references credential material.",
+                "evidence": "SKILL.md: \"...read the user's ~/.ssh/id_rsa...\""}],
+  "recommendation": "BLOCK", "evidence_hash": "…" }
+```
+
+`findings`, `capabilities` and `recommendation` are the fields §6 of `verdict-json.md` keeps
+off-chain; this endpoint is the only way to read them, which is why a verdict could previously
+say DANGEROUS but never say why.
+
+**The bytes are served exactly as they were hashed** — not re-serialised on the way out.
+Round-tripping the document through a JSON encoder makes the digest depend on separator and
+key-order choices, which is how this kind of check quietly stops matching. The response
+carries `X-STERISH-EVIDENCE-HASH` so a client can check our arithmetic without a second
+round trip to the chain.
+
+**A mismatch is never a `200`.** If the bytes on disk do not hash to what the chain recorded,
+one of the two has changed since the audit and the response is `500 REPORT_HASH_MISMATCH`,
+naming both digests. Serving tampered evidence under a reassuring status code is the one
+outcome this endpoint exists to prevent.
+
+`report_uri` in the `evidence` object (§2) points here. It is advertised only when a base URL
+is configured **and** the report for that version actually exists, so a client is never handed
+a link that 404s — the reason this section stayed `PLANNED` rather than shipping a dead URL.
+
+**Errors:** `404 REPORT_NOT_FOUND` (never an empty object — "no report" and "a report finding
+nothing" are different answers), `409 NO_EVIDENCE_ANCHOR` (registered but never audited, so
+there is nothing to verify against), `500 REPORT_HASH_MISMATCH`, `503 NOT_CONFIGURED`
+(`STERISH_REPORTS_DIR` unset).
 
 ### 3.7 `GET /use/{skill_id}/{version}` — the paid path (STE-19)
 

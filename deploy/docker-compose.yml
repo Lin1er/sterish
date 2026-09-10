@@ -27,7 +27,10 @@ services:
       # Per-row chain reads a single /skills request may have in flight (STE-33).
       # Lower it if the RPC node starts rate-limiting; the page just gets slower.
       STERISH_CHAIN_CONCURRENCY: ${STERISH_CHAIN_CONCURRENCY:-20}
+      # Public base URL for report_uri (STE-32). The API root, not a /reports prefix —
+      # the route supplies that. Left empty, report_uri stays null and /reports still works.
       REPORT_BASE_URL: ${REPORT_BASE_URL:-}
+      STERISH_REPORTS_DIR: /reports
       # x402 paid path. Without OZ_API_KEY the reads still work and /health reports
       # facilitator_reachable false; only new purchases are unavailable.
       X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://channels.openzeppelin.com/x402/testnet}
@@ -42,6 +45,9 @@ services:
       # Pinned artifacts served by /use. Read-only: this service publishes them,
       # it never writes them.
       - ${STERISH_ARTIFACTS_DIR:-./artifacts}:/artifacts:ro
+      # Published verdict documents that evidence_hash anchors. Read-only and
+      # world-readable by design: this is public evidence, not a licensed artifact.
+      - ${STERISH_REPORTS_DIR_HOST:-../reports}:/reports:ro
     expose:
       - "8000"
 

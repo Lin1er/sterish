@@ -220,7 +220,17 @@ document yet. Recorded here so the gap is a tracked task and not a surprise:
 | P7 | `trust_score` vs `score` | Rename at the boundary. |
 | P8 | `evidence_hash` is computed over a summary string | `sha256(f"{skill_id}|{verdict}|{trust}|{s1}|{s2}")`, not over the full report. That is weak — it anchors five numbers, not the findings. Should become the hash of the serialized report. |
 
-Closing P1–P8 belongs to the pipeline/indexer ticket (STE-13), not to this freeze.
+**All of P1–P8 are closed** (verified 2026-09-10). `stage3_verdict_synthesis.build_verdict_document`
+emits `version`, `content_hash`, `risk`, a flat `capabilities` union, `findings[]` with a
+`stage` and an `evidence` pointer, and a `recommendation` enum; `trust_score` is renamed to
+`score` at the boundary; and `evidence_hash` is the sha256 of the serialized report rather
+than of a five-field summary string.
+
+The table above is kept as a record of what the freeze had to specify ahead of the code, and
+of the order the gaps were closed in. It is no longer a list of outstanding work.
+
+The documents are now served at `GET /reports/{skill_id}/{version}` (`api-spec` §3.6), and
+`docs/audit-evidence.md` shows 19 of them hashing to the `evidence_hash` recorded on chain.
 
 ---
 

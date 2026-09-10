@@ -22,6 +22,7 @@ from ..models import (
     VersionCheckResponse,
     iso_or_none,
 )
+from . import reports
 
 router = APIRouter()
 
@@ -53,11 +54,23 @@ def _version_record_or_none(skill_id: str, version: str) -> dict | None:
 
 
 def _report_uri(skill_id: str, version: str) -> str | None:
-    """PLANNED endpoint (api-spec 3.6). Advertised only once a base URL is configured,
-    so we never hand a client a link that 404s."""
+    """Link to the report at api-spec 3.6, or null when there is nothing to link to.
+
+    Two conditions, not one. A base URL says where reports are served from; the file
+    on disk says whether this particular version has one. Advertising on config alone
+    handed clients a link that 404s for every version audited before reports existed,
+    which is the failure the old `PLANNED` gate was avoiding by never advertising at all.
+
+    The path is `/reports/{skill_id}/{version}` — no `.json` suffix. It used to carry
+    one, which meant the URI this API advertised and the URI the pipeline generated for
+    the same report were two different strings, and neither was the route that now
+    serves it.
+    """
     if not settings.report_base_url:
         return None
-    return f"{settings.report_base_url}/reports/{skill_id}/{version}.json"
+    if reports.report_path(skill_id, version) is None:
+        return None
+    return f"{settings.report_base_url}/reports/{skill_id}/{version}"
 
 
 def _evidence(record: dict) -> Evidence:
