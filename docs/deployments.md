@@ -6,7 +6,27 @@ contract addresses (`C…`); keys live in a git-ignored `.env` (see `CLAUDE.md`)
 
 ---
 
+## Current addresses (start here)
+
+| Contract | Address | Upgradeable | Since |
+|---|---|---|---|
+| **Registry** | [`CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`](https://stellar.expert/explorer/testnet/contract/CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2) | yes, 300s timelock | 2026-09-15 (STE-44) |
+| **Tokens** | [`CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T`](https://stellar.expert/explorer/testnet/contract/CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T) | yes, 300s timelock | 2026-09-15 (STE-44) |
+| **Escrow** | [`CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE`](https://stellar.expert/explorer/testnet/contract/CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE) | **no, by design** | 2026-09-03 (STE-13), **never replaced** |
+
+The Registry and Tokens addresses from STE-13 are **superseded, not deleted**: they are still on
+chain, still readable, and every transaction recorded against them below remains valid history.
+They are simply not what the API, the pipeline or the dashboard point at any more. The Escrow
+address has not changed and is the same contract it always was — see
+[STE-44](#redeploy-2026-09-15--ste-44-upgradeable-v2) for why it was deliberately left alone.
+
+---
+
 ## Testnet — 2026-09-03 (STE-13)
+
+> **Superseded for Registry and Tokens** by the STE-44 redeploy below. Escrow is unchanged.
+> Everything in this section is still true of the addresses it names; they are just no longer
+> the ones in use.
 
 | | |
 |---|---|
@@ -531,9 +551,157 @@ The CT's `deploy/.env` is mode 600 and was delivered over stdin, so `MINTER_SECR
 **Funnel means exposed to the public internet**, which is what the ticket asked for ("a public
 URL with TLS"). To restrict it to the tailnet: `tailscale funnel --https=443 off` on pve02.
 
+### Redeploy 2026-09-15 — STE-44, upgradeable v2
+
+No Sterish contract was upgradeable: there was no `update_current_contract_wasm` anywhere in
+`contracts/`. And upgradeability **cannot be added to a live contract** — in Soroban a contract
+replaces its own wasm, so the capability has to be in the bytes that were already deployed.
+Making the Registry upgradeable therefore always meant a fresh address. Since the redeploy was
+unavoidable, it was done properly once.
+
+**Two contracts, not three.**
+
+| Contract | Action | Why |
+|---|---|---|
+| Registry | redeployed, upgradeable | the one that will actually grow features |
+| Tokens | redeployed, upgradeable | its `__constructor` stores `registry` with **no setter, on purpose**, so it cannot be repointed at a new Registry — it had to move alongside |
+| Escrow | **untouched** | its constructor takes only `usdc_token` + `admin`; it holds no Registry reference (verdicts are read off-chain by the operator). It keeps `CCVCNFXK…` |
+
+Escrow stays immutable **and** stays deployed. It is the only contract holding real USDC, and an
+admin who can swap the logic of a fund-holding contract can drain it.
+
+#### Addresses
+
+| Contract | Address | WASM sha256 (`aarch64-apple-darwin`) | Entrypoints |
+|---|---|---|---|
+| **Registry v2** | [`CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`](https://stellar.expert/explorer/testnet/contract/CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2) | `ba740db865b23834b795a8a985cc22ae996605c06e776f46780575e52f56839f` | 22 (was 15) |
+| **Tokens v2** | [`CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T`](https://stellar.expert/explorer/testnet/contract/CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T) | `719f93beab52ace8d1cecf9b5ef1a1c987798fd2c6230f83a0e3d258490d5825` | 21 (was 14) |
+| Escrow (unchanged) | [`CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE`](https://stellar.expert/explorer/testnet/contract/CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE) | `cb241f74d20146b9d4895160e68d0c337f68317c3b6c1f272b0505cdb84d0ad0` | 10 |
+
+Superseded, still on chain, still readable:
+[Registry v1 `CAPDQW2X…`](https://stellar.expert/explorer/testnet/contract/CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND),
+[Tokens v1 `CCHVZRLO…`](https://stellar.expert/explorer/testnet/contract/CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX).
+Every transaction recorded against them earlier in this document is unaffected.
+
+The escrow row is the strongest single piece of evidence that it was left alone: its sha256 is
+**byte for byte the one recorded on 2026-09-03**, a full ticket and several contract changes
+later. `git diff origin/main -- contracts/escrow/` is likewise empty.
+
+Deploy transactions (all four from `sterish-deployer`, 2026-09-15 15:50–15:51 UTC):
+
+| Step | Transaction |
+|---|---|
+| upload Registry v2 wasm | [`80616f163aa41f436fe3193482a0201445990e5a2a845c6ec693d42e08673c12`](https://stellar.expert/explorer/testnet/tx/80616f163aa41f436fe3193482a0201445990e5a2a845c6ec693d42e08673c12) |
+| deploy Registry v2 | [`0d95dd3d52352a656cf05244c5e82fc3514248a5e004ef8a61f78a05b8c64195`](https://stellar.expert/explorer/testnet/tx/0d95dd3d52352a656cf05244c5e82fc3514248a5e004ef8a61f78a05b8c64195) |
+| upload Tokens v2 wasm | [`0859b7bd0777b7a9c012d23bdf837e4f6cd73feb19c2ce53fb10791d143e7c0b`](https://stellar.expert/explorer/testnet/tx/0859b7bd0777b7a9c012d23bdf837e4f6cd73feb19c2ce53fb10791d143e7c0b) |
+| deploy Tokens v2 | [`e02f67449ae5d713d689539d389e3a78c86bee5c33c795f3bcfe10c47dced7da`](https://stellar.expert/explorer/testnet/tx/e02f67449ae5d713d689539d389e3a78c86bee5c33c795f3bcfe10c47dced7da) |
+
+#### Verify the deployed bytes without a toolchain
+
+```bash
+stellar contract fetch --id CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2 \
+  --network testnet --out-file registry.wasm
+sha256sum registry.wasm   # ba740db865b23834b795a8a985cc22ae996605c06e776f46780575e52f56839f
+```
+
+Done for all three contracts at deploy time; all three matched the manifest rows exactly.
+
+#### The upgrade mechanism, as deployed
+
+```
+propose_upgrade(wasm_hash) -> ready_at   admin only; emits UpgradeProposed
+execute_upgrade()                        admin only; rejected before ready_at; emits UpgradeExecuted
+cancel_upgrade()                         admin only; emits UpgradeCancelled
+renounce_upgradeability()                admin only; PERMANENT; emits UpgradeabilityRenounced
+get_pending_upgrade() / get_upgrade_delay() / is_upgradeable()   reads, never panic
+```
+
+Read back from chain immediately after deploy:
+
+```
+registry.upgradeable = true    registry.delay_secs = 300    registry.pending = null
+tokens.upgradeable   = true    tokens.delay_secs   = 300    tokens.pending   = null
+```
+
+**300 seconds** is the testnet delay: long enough that the timelock is real and demonstrable in a
+demo, short enough not to block the team. It is a **constructor parameter stored in state**, not
+a constant, so mainnet would differ by configuration rather than by code — and it has no setter,
+because an admin who can shorten the delay does not have a timelock. A delay of `0` is rejected
+by the constructor outright.
+
+The admin is a **single Stellar account** (`GAGU7Z5R…`) for now. Going 2-of-3 later costs nothing
+and needs **no contract change**: multisig on Stellar is a property of the *account*, so the
+contract keeps storing one `Address` and calling `require_auth()`, and the change is a
+`Set Options` transaction on that account.
+
+#### The trap nothing on chain can close
+
+`update_current_contract_wasm` takes a hash, and there is no host function that can read a wasm's
+exports. So a contract **cannot** refuse to upgrade into a replacement that has no upgrade
+function — and the moment it does, it is frozen at that code forever.
+`contracts/tests/tests/upgrade.rs` demonstrates exactly that on real artifacts.
+
+The guard that *can* exist runs before the bytes are ever published:
+[`scripts/verify-upgrade-target.sh`](../scripts/verify-upgrade-target.sh), in the `Contracts`
+workflow on every change, fails if `sterish_registry.wasm` or `sterish_tokens.wasm` has lost any
+of the seven upgrade entrypoints — and fails equally if `sterish_escrow.wasm` ever gains one.
+That is a narrower promise than an on-chain guard and is stated as such: it protects the
+artifacts this repository builds, not an operator who uploads a wasm from somewhere else. What
+bounds *that* is the timelock, which makes the proposed hash public for its whole duration, and
+`renounce_upgradeability()`, which ends the question permanently.
+
+#### Migration
+
+`scripts/migrate-registry.py` replayed the meaningful entries onto the v2 pair, reading them off
+the **old contract** rather than from a list in the script, so nothing could be silently left out
+by a stale constant:
+
+| | |
+|---|---|
+| Skills migrated | **24** |
+| Versions migrated | **26** (`com.fixtures.demo.release-notes` and `…changelog-writer` each carry v1 and v2) |
+| VERIFIED badges re-minted | **16** — exactly the `Safe` versions, no more |
+| Skipped | the 47 `com.sterish.it-*` / `e2e-*` / `canon-*` entries, by `namespaces.is_test_skill_id` |
+
+`com.fixtures.*` is **not** test residue and was migrated: it is demo data that is meant to be
+visible. Entries were replayed in the old registry's `SkillIndex` order, which is registration
+order, so `query_all_skills` pages identically and the dashboard's ordering did not change.
+
+Verification reads back from the **new chain state**, never from what the script had just sent:
+content hash, verdict, trust score, evidence hash and owner per version, plus the badge, plus the
+cross-check that a badge exists if and only if the registry says the version is `Safe`.
+
+Two things did **not** survive, and could not have:
+
+* `registered_at` / `audited_at` are stamped by the contract from the ledger clock, so the v2
+  records carry 2026-09-15 timestamps. The originals stay readable on the v1 contracts. A
+  migrated record is a faithful copy of the **claim**, not of when the claim was first made.
+* The v1 badges are soulbound and cannot be burned, so they still exist on Tokens v1. Nothing
+  reads Tokens v1 any more, but it is not empty and this document does not pretend otherwise.
+
+#### Wiring
+
+| Where | Change |
+|---|---|
+| `.env` (root, gitignored) | `REGISTRY_CA` / `TOKENS_CA` repointed; `OLD_REGISTRY_CA` / `OLD_TOKENS_CA` recorded |
+| `api/tests/conftest.py` | default `REGISTRY_CONTRACT_ID` / `TOKENS_CONTRACT_ID` |
+| `.github/workflows/deploy.yml` | stack-boot env |
+| `frontend/src/lib/fixtures.ts` | the offline-mock constant |
+| the deployed API (CT 204) | `deploy/.env` — needs a redeploy to take effect |
+
+**The frontend needs no code change, and that was checked rather than assumed.** The only
+literal contract id anywhere under `frontend/src` is the one in `fixtures.ts`, which feeds the
+offline mock. The real UI renders `evidence.contract_url` and `evidence.registry_contract_id`
+straight from the API response — `frontend/src/modules/skill-detail/component/EvidenceLinks.tsx`
+takes `evidence` as a prop and has no contract id of its own.
+
 ## Operational notes
 
-- **v1 is non-upgradeable.** If an interface changes, redeploy and update this document.
+- **Registry and Tokens are upgradeable since STE-44** — two-step, 300s timelock, events on
+  every step, and `renounce_upgradeability()` to switch it off permanently. **Escrow is not, and
+  must not become so**: it is the only contract holding real USDC, and an admin who can replace
+  the logic of a fund-holding contract can drain it. `scripts/verify-upgrade-target.sh` fails CI
+  if that ever stops being true in either direction.
 - **Testnet is reset periodically** by SDF — every contract address above disappears when that
   happens. `scripts/deploy-testnet.sh` exists so that redeploying is a single command.
   The next scheduled reset is **16 December 2026, 17:00 UTC**
