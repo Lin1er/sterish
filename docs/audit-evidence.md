@@ -448,7 +448,7 @@ skills and their 26 versions were, in the old registry's registration order, so
   That is a decision, not a missing piece: the same skill audited five times returned three
   different answers from the model, and a non-reproducible verdict would break both the promise
   that anyone can re-run the audit and get the same number, and the bond/slash mechanism that
-  makes a verdict worth trusting in the first place. See STE-39. The consequence is a good one:
+  makes a verdict worth trusting in the first place. The consequence is a good one:
   **every verdict here can be reproduced by anyone, offline, with no API key.**
 * **Escrow was not run** for this batch (`run_escrow=False`), so testnet USDC is not drained 25
   times over. The settle and slash paths were proven separately in STE-13 and STE-16, and escrow
@@ -462,6 +462,40 @@ skills and their 26 versions were, in the old registry's registration order, so
   `pipeline/corpus/fixtures/demo-*` to produce a specific verdict through a specific policy row,
   and each one states in its own text which row it targets. They demonstrate that the registry and
   the API render all four states correctly; they are not evidence about anybody's real skill.
+
+### Decided in STE-39 (15 September 2026): the model is advisory, and never on chain
+
+Of the three options the ticket laid out, **option 1** was taken: a model's answer is recorded as
+`llm_advisory` in the internal report, with `stricter_than_verdict` and `disagrees_with_verdict`
+flags for a human to review, and it changes **no** verdict field in either direction. Before, the
+answer was merged with `policy.tighten` (the model could raise a verdict and lower a score) and a
+model that was asked but failed forced `WARNING`. Both are gone, and the model's trail
+(`llm_advisory`, `llm_notes`, `llm_used`, `llm_attempted`, `llm_model`) is excluded from the
+internal-report hash, so the document — and the `evidence_hash` on chain — is byte-identical with
+or without a model, whatever it answered, and whether the gateway answered at all.
+
+Two more things were done, and measured against the live model (`openai/gpt-5.6-luna` through the
+configured gateway), five runs per skill, same bytes and config:
+
+| | `agentic-payments.x402` | `dapp.smart-accounts` |
+|---|---|---|
+| Before (old prompt, no sampling parameters) | WARNING/75, SAFE/100 ×4 | SAFE/100 ×2, WARNING/85, WARNING/65, WARNING/70 |
+| After (prompt fixed, `temperature` 0, `seed` 0) | **SAFE/100 ×5** | **SAFE/100 ×5** |
+| Distinct verdict-document hashes across the 5 runs, model on | **1** | **1** |
+
+Every "before" downgrade gave the same reason — *"…while declaring no permissions or tools"* — the
+category error STE-36 removed from the regex scanner. The stage-3 prompt now says that an Agent
+Skill published as markdown has no permission surface, so that absence is not a finding. The
+gateway accepted both sampling parameters.
+
+Five identical answers are not a proof of determinism, which is exactly why option 1 stands on its
+own: the prompt fix and the sampling parameters make the advisory more useful, and the exclusion
+from the verdict is what makes the ledger reproducible. Raw runs:
+[`evidence/ste-39-llm-variance-2026-09-15.json`](evidence/ste-39-llm-variance-2026-09-15.json).
+
+What this means for a seed run with a key configured: it is now safe in the sense STE-39 was
+blocking on. The verdicts it writes are the deterministic ones, and the model's opinion travels in
+the internal report beside them. (The 15 September re-seed in STE-18 ran before this landed.)
 
 ## Reproducing this
 
@@ -494,3 +528,22 @@ three numbers disagreeing is the point, and §3.4 of `api-spec.md` explains whic
 
 **All of steps 3 to 5 stop working on 16 December 2026.** Steps 1 and 2 do not: they never touch
 the network.
+
+### Which code reproduces which report (checked 16 September 2026)
+
+Step 2 re-derives every **verdict** at any commit. Getting the **same report bytes** — and so the
+same `evidence_hash` — depends on the pipeline version, because the document's own `evidence_hash`
+field hashes the internal report, whose shape has changed over time. Re-auditing every corpus entry
+and hashing the rebuilt document against the 25 published reports:
+
+| Reports | Reproduce byte-exact with |
+|---|---|
+| the 18 re-anchored on 15 September (13 catalogue, 5 demo) | `6825ae5`, default config, **no LLM key in the environment** |
+| the 7 fixtures still carrying their 10 September reports | `f36f690` |
+
+The "no LLM key" condition is not incidental. Until STE-39 the hashed report included the model's
+notes, so the same audit produced different bytes depending on whether a key was set
+(`use_llm=False` reproduced 0 of 25 at `6825ae5`). STE-39 removes the model's trail from that hash,
+which ends the config dependence for good — and shifts the bytes one last time, so at the commit
+that merges STE-39 all 25 reports need re-anchoring once more. That re-anchor rides on the
+re-submission STE-37 already requires for `cctp` and `price-checker`.
