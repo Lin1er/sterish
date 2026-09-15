@@ -309,14 +309,19 @@ def seed(
         run_escrow=False,
     )
 
-    table = Table("skill_id", "verdict", "score", "seconds", "result")
+    # `version` is a column, not a detail: the corpus can hold two versions of one
+    # skill, and a table keyed on skill_id alone shows the rug-pull demo as two
+    # identical-looking rows.
+    table = Table("skill_id", "version", "verdict", "score", "seconds", "result")
     log: list[dict] = []
     failures: list[str] = []
 
     for entry in entries:
         if entry.skill_id in held_back:
-            table.add_row(entry.skill_id, "—", "—", "—", "[yellow]held back[/yellow]")
-            log.append({"skill_id": entry.skill_id, "status": "held_back"})
+            table.add_row(entry.skill_id, entry.version, "—", "—", "—",
+                          "[yellow]held back[/yellow]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "held_back"})
             continue
 
         started = time.monotonic()
@@ -326,7 +331,8 @@ def seed(
             # `orchestrator.register_only` for why this is the only route to an
             # UNAUDITED record.
             if dry_run:
-                table.add_row(entry.skill_id, "UNAUDITED", "—", "—", "[cyan]dry-run[/cyan]")
+                table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
+                              "[cyan]dry-run[/cyan]")
                 log.append({"skill_id": entry.skill_id, "version": entry.version,
                             "status": "dry_run", "verdict": "UNAUDITED",
                             "content_hash": entry.content_hash})
@@ -337,7 +343,8 @@ def seed(
                 )
             except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
                 failures.append(f"{entry.skill_id}: {exc}")
-                table.add_row(entry.skill_id, "UNAUDITED", "—", "—", "[red]error[/red]")
+                table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
+                              "[red]error[/red]")
                 log.append({"skill_id": entry.skill_id, "version": entry.version,
                             "status": "error", "error": str(exc)})
                 continue
@@ -349,7 +356,7 @@ def seed(
             if not result.ok:
                 failures.append(f"{entry.skill_id}: registration incomplete")
             table.add_row(
-                entry.skill_id, "UNAUDITED", "—", f"{elapsed:.1f}",
+                entry.skill_id, entry.version, "UNAUDITED", "—", f"{elapsed:.1f}",
                 "[green]on chain (unaudited)[/green]" if result.ok else "[red]incomplete[/red]",
             )
             continue
@@ -368,12 +375,12 @@ def seed(
         if verdict == FinalVerdict.DANGEROUS.value and not allow_dangerous:
             elapsed = time.monotonic() - started
             table.add_row(
-                entry.skill_id, _verdict_markup(FinalVerdict.DANGEROUS), str(score),
-                f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
+                entry.skill_id, entry.version, _verdict_markup(FinalVerdict.DANGEROUS),
+                str(score), f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
             )
             log.append(
-                {"skill_id": entry.skill_id, "status": "skipped_dangerous",
-                 "verdict": verdict, "score": score}
+                {"skill_id": entry.skill_id, "version": entry.version,
+                 "status": "skipped_dangerous", "verdict": verdict, "score": score}
             )
             continue
 
@@ -381,17 +388,20 @@ def seed(
             specs.validate_verdict_document(payload, submittable=True)
         except Exception as exc:  # noqa: BLE001 - reported per entry, run continues
             failures.append(f"{entry.skill_id}: document invalid: {exc}")
-            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]invalid[/red]")
-            log.append({"skill_id": entry.skill_id, "status": "invalid", "error": str(exc)})
+            table.add_row(entry.skill_id, entry.version, verdict, str(score), "—",
+                          "[red]invalid[/red]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "invalid", "error": str(exc)})
             continue
 
         if dry_run:
             elapsed = time.monotonic() - started
             table.add_row(
-                entry.skill_id, verdict, str(score), f"{elapsed:.1f}", "[cyan]dry-run[/cyan]"
+                entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
+                "[cyan]dry-run[/cyan]",
             )
             log.append(
-                {"skill_id": entry.skill_id, "status": "dry_run",
+                {"skill_id": entry.skill_id, "version": entry.version, "status": "dry_run",
                  "verdict": verdict, "score": score,
                  "content_hash": payload["content_hash"], "seconds": round(elapsed, 1)}
             )
@@ -401,8 +411,10 @@ def seed(
             result = orchestrate(payload, orch_config, cfg)
         except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
             failures.append(f"{entry.skill_id}: {exc}")
-            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]error[/red]")
-            log.append({"skill_id": entry.skill_id, "status": "error", "error": str(exc)})
+            table.add_row(entry.skill_id, entry.version, verdict, str(score), "—",
+                          "[red]error[/red]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "error", "error": str(exc)})
             continue
 
         elapsed = time.monotonic() - started
@@ -414,7 +426,7 @@ def seed(
         if not result.ok:
             failures.append(f"{entry.skill_id}: orchestration incomplete")
         table.add_row(
-            entry.skill_id, verdict, str(score), f"{elapsed:.1f}",
+            entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
             "[green]on chain[/green]" if result.ok else "[red]incomplete[/red]",
         )
 
