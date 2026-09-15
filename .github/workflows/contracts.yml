@@ -38,8 +38,8 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      # Needed by verify-soulbound.sh, which reads the contract spec back out of
-      # the built wasm.
+      # Needed by verify-soulbound.sh and verify-upgrade-target.sh, which read
+      # the contract spec back out of the built wasm.
       #
       # Installed from the released binary rather than `cargo install stellar-cli`.
       # Building it from source pulls in libdbus-sys, whose build script needs
@@ -62,8 +62,10 @@ jobs:
         working-directory: contracts
         run: cargo clippy --all-targets -- -D warnings
 
-      # 133 per-contract unit tests + the cross-contract integration suite in
-      # contracts/tests.
+      # 160 per-contract unit tests + the cross-contract integration suite in
+      # contracts/tests, which includes the STE-44 upgrade suite. That suite
+      # needs real artifacts, so contracts/tests/build.rs compiles them into
+      # OUT_DIR before the tests are linked — no step ordering to preserve.
       - name: Run contract tests
         working-directory: contracts
         run: cargo test
@@ -99,6 +101,16 @@ jobs:
       # no transfer/approve/burn entrypoint is exported by the built wasm.
       - name: Verify soulbound ABI
         run: bash scripts/verify-soulbound.sh
+
+      # STE-44: the guard Soroban cannot give us. Nothing on chain can read a
+      # wasm hash's exports before committing to it, so a contract cannot refuse
+      # to upgrade into a replacement that has no upgrade function — and after
+      # that swap it is frozen forever. The only place the check can live is
+      # before the bytes are published, so it lives here. The same step also
+      # proves the escrow still exports NO upgrade entrypoint: it is the one
+      # contract holding real USDC, and "escrow is immutable" is load-bearing.
+      - name: Verify upgrade surfaces
+        run: bash scripts/verify-upgrade-target.sh
 
       # The wasm-hashes job below verifies one host per matrix leg. A host
       # recorded in the manifest with no leg to check it would go stale without
