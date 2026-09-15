@@ -70,6 +70,26 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
 - Redeploy Registry/Tokens: `bash scripts/deploy-testnet.sh --keep-escrow`, lalu migrasi
   isi registry dengan `uv run --project pipeline python scripts/migrate-registry.py`.
 
+## Batas plagiarisme: DITULIS, bukan dibangun (STE-31, 15 Sep 2026)
+
+- `content_hash` menjamin **byte**, bukan **karya**. R3 nolak salinan byte-identik
+  (`HashAlreadyRegistered`), tapi ubah satu byte dan hash berubah total — salinan itu
+  mendaftar sebagai skill baru yang sah, diaudit sendiri, dan **bisa dapat VERIFIED sendiri**.
+  Di v1 itu perilaku yang diinginkan, bukan bug. Tertulis di
+  `docs/specs/content-hash.md` §5 poin 6 + `docs/architecture.md` §7.
+- **HARAM bangun similarity detection** (simhash/minhash/embedding/LLM compare) di MVP.
+  Setengah jadi lebih berbahaya daripada tidak ada: false positive = menuduh penulis jujur
+  plagiat, dan itu ngerusak kepercayaan yang justru jadi jualan Sterish. Mau dibangun = tiket sendiri.
+- **Namespace ownership DITUNDA.** Alasannya BUKAN mahal — sejak STE-44 Registry upgradeable,
+  jadi itu upgrade, bukan redeploy, dan alamat tidak pindah. Alasannya semantik: per 15 Sep 2026
+  satu akun (`GD73M4F7...`) pegang **24 dari 24** entri Registry v2, termasuk 13
+  `org.stellar.skills.*` yang kita daftarkan sendiri sebagai auditor. Nyalakan sekarang =
+  `org.stellar.*` jadi milik KITA permanen, dan Stellar butuh izin kita buat daftar skill mereka
+  sendiri. Pertanyaan yang harus dijawab duluan: **siapa yang boleh klaim namespace, dan
+  dibuktikan bagaimana.**
+- Konsekuensinya: **typosquatting belum tertutup** (`skill_id` cuma divalidasi `is_empty()`),
+  dan itu memang disebut terbuka di docs — jangan diklaim aman.
+
 ## Registry testnet: append-only, dan bakal di-reset
 
 - **Registry TIDAK punya delete.** Apa pun yang di-register di testnet nempel selamanya.
