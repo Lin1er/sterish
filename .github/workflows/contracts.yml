@@ -38,8 +38,8 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      # Needed by verify-soulbound.sh and build-wasm.sh, both of which read the
-      # contract spec back out of the built wasm.
+      # Needed by verify-soulbound.sh, which reads the contract spec back out of
+      # the built wasm.
       #
       # Installed from the released binary rather than `cargo install stellar-cli`.
       # Building it from source pulls in libdbus-sys, whose build script needs
@@ -100,15 +100,77 @@ jobs:
       - name: Verify soulbound ABI
         run: bash scripts/verify-soulbound.sh
 
-      # STE-12: rebuild the three contracts and fail if any artifact drifted
-      # from the sha256 recorded in contracts/wasm-hashes.txt.
+  # STE-12: rebuild the three contracts and fail if any artifact drifted from
+  # the sha256 recorded in contracts/wasm-hashes.txt.
+  #
+  # This runs on TWO hosts on purpose, because the host is part of the artifact
+  # identity. A Soroban wasm build is byte-reproducible for a given host triple
+  # and NOT across host triples: same commit, same pinned rustc 1.93.0, same
+  # Cargo.lock, same profile, same path remapping, yet the linker lays the
+  # read-only data symbols out in a different order on each host, which shifts
+  # the pointer constants in the code section. Section sizes stay identical —
+  # which is exactly what the 8 red runs showed: same size, different sha256.
+  #
+  #   macos-15       aarch64-apple-darwin      <- the bytes LIVE ON TESTNET.
+  #                  This leg is what makes docs/deployments.md checkable by a
+  #                  third party: it rebuilds the deployed contracts from source
+  #                  and proves the sha256 still matches what is on chain.
+  #   ubuntu-latest  x86_64-unknown-linux-gnu  <- catches ordinary drift (source,
+  #                  Cargo.lock, profile, toolchain) on the cheap runner.
+  #
+  # Neither leg can be made green by editing the other's rows, so the manifest
+  # cannot be quietly rewritten to match whatever a runner happens to produce.
+  wasm-hashes:
+    name: Verify wasm hashes (${{ matrix.host }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            host: aarch64-apple-darwin
+            cli: aarch64-apple-darwin
+          - os: ubuntu-latest
+            host: x86_64-unknown-linux-gnu
+            cli: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.93.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.93.0'
+          targets: wasm32v1-none
+
+      # Fail loudly if the runner is not the host this leg claims to verify,
+      # rather than letting build-wasm.sh report a confusing hash mismatch.
+      - name: Confirm host triple
+        run: |
+          set -euo pipefail
+          actual="$(rustc -vV | awk '/^host: /{print $2}')"
+          echo "host: $actual"
+          [ "$actual" = "${{ matrix.host }}" ] || {
+            echo "::error::runner host is $actual, expected ${{ matrix.host }}"
+            exit 1
+          }
+
+      # build-wasm.sh reads the entrypoint count back out of each wasm with
+      # `stellar contract info interface`.
+      - name: Install stellar-cli 27.0.0
+        run: |
+          set -euo pipefail
+          curl -sSLf -o /tmp/stellar-cli.tar.gz \
+            "https://github.com/stellar/stellar-cli/releases/download/v27.0.0/stellar-cli-27.0.0-${{ matrix.cli }}.tar.gz"
+          sudo tar -xzf /tmp/stellar-cli.tar.gz -C /usr/local/bin stellar
+          stellar --version
+
       - name: Verify wasm hashes
         run: bash scripts/build-wasm.sh --check
 
       - name: Upload wasm artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sterish-contracts-wasm
+          name: sterish-contracts-wasm-${{ matrix.host }}
           path: |
             contracts/target/wasm32v1-none/release/sterish_registry.wasm
             contracts/target/wasm32v1-none/release/sterish_escrow.wasm
