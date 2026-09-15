@@ -3,8 +3,10 @@ extern crate std;
 
 use crate::{
     data::{BUMP_THRESHOLD, BUMP_TO, DAY_IN_LEDGERS},
-    AuditVerdict, DataKey, RegistryError, SkillEntry, SkillRegistered, SkillRegistry,
-    SkillRegistryClient, TrustScoreConfig, VerdictFlipped, VersionRecorded, VersionRegistered,
+    AuditVerdict, DataKey, PendingUpgrade, RegistryError, SkillEntry, SkillRegistered,
+    SkillRegistry, SkillRegistryClient, TrustScoreConfig, UpgradeCancelled, UpgradeProposed,
+    UpgradeabilityRenounced, VerdictFlipped, VersionRecorded, VersionRegistered,
+    FALLBACK_UPGRADE_DELAY,
 };
 use soroban_sdk::{
     testutils::{
@@ -18,6 +20,11 @@ use soroban_sdk::{
 /// Upgrade timelock every test deploys with, in seconds. Matches what testnet is
 /// deployed at (STE-44), so the tests exercise the real configuration.
 const UPGRADE_DELAY: u64 = 300;
+
+/// The fallback must be STRICTER than any delay we configure: a storage miss
+/// must be able to make the timelock longer, never switch it off. Checked at
+/// compile time so the two constants cannot drift apart unnoticed.
+const _: () = assert!(FALLBACK_UPGRADE_DELAY > UPGRADE_DELAY);
 
 /// Assert that a `try_*` call returned our typed contract error.
 macro_rules! assert_registry_err {
@@ -1625,4 +1632,351 @@ fn test_content_hash_v1_rejects_bad_input() {
             bad
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// STE-44 — upgradeability: the timelock state machine
+// ---------------------------------------------------------------------------
+//
+// The wasm actually being replaced cannot be exercised here: `env.register`
+// builds a native contract, and `update_current_contract_wasm` needs a real
+// uploaded artifact. That half lives in `contracts/tests/tests/upgrade.rs`,
+// which deploys the built wasm and swaps it for real. What is proved here is
+// everything that happens BEFORE the swap — and every path that must stop the
+// swap from happening at all.
+
+/// The hash of a wasm that is never uploaded. Every test below either fails
+/// before `update_current_contract_wasm` is reached, or is not in this section.
+fn wasm_hash(env: &Env, byte: u8) -> BytesN<32> {
+    BytesN::from_array(env, &[byte; 32])
+}
+
+#[test]
+fn test_constructor_stores_upgrade_delay() {
+    let ctx = setup();
+    let client = ctx.client();
+
+    assert_eq!(client.get_upgrade_delay(), UPGRADE_DELAY);
+    assert!(client.is_upgradeable());
+    assert_eq!(client.get_pending_upgrade(), None);
+}
+
+#[test]
+#[should_panic]
+fn test_constructor_rejects_zero_delay() {
+    // A contract whose ABI advertises a timelock but was deployed with 0 has no
+    // timelock at all, while still telling every reader that it has one.
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let auditor = Address::generate(&env);
+    env.register(SkillRegistry, (admin, auditor, 0u64));
+}
+
+#[test]
+fn test_upgrade_delay_falls_back_when_the_key_is_absent() {
+    // The one way this can happen: a future wasm upgraded in from a build that
+    // predates the key. The fallback must be STRICTER than any configured
+    // delay, never 0 — a storage miss must not be able to switch the timelock
+    // off.
+    let ctx = setup();
+    ctx.env.as_contract(&ctx.contract_id, || {
+        ctx.env.storage().instance().remove(&DataKey::UpgradeDelay);
+    });
+    assert_eq!(ctx.client().get_upgrade_delay(), FALLBACK_UPGRADE_DELAY);
+}
+
+#[test]
+fn test_propose_upgrade_stores_the_proposal_and_publishes_it() {
+    let ctx = setup();
+    let client = ctx.client();
+    ctx.env.ledger().set_timestamp(1_000);
+    let h = wasm_hash(&ctx.env, 0xAB);
+
+    let ready_at = client.propose_upgrade(&h);
+    assert_eq!(ready_at, 1_000 + UPGRADE_DELAY);
+
+    // The timelock is only worth something if the clock starts in public: the
+    // event carries the replacement hash AND both ends of the window. Asserted
+    // first because `events().all()` is scoped to the latest invocation, so any
+    // read-back call would clear it.
+    assert_eq!(
+        ctx.env.events().all(),
+        std::vec![UpgradeProposed {
+            wasm_hash: h.clone(),
+            proposed_at: 1_000,
+            ready_at: 1_000 + UPGRADE_DELAY,
+        }
+        .to_xdr(&ctx.env, &ctx.contract_id)]
+    );
+
+    assert_eq!(
+        client.get_pending_upgrade(),
+        Some(PendingUpgrade {
+            wasm_hash: h,
+            proposed_at: 1_000,
+            ready_at: 1_000 + UPGRADE_DELAY,
+        })
+    );
+}
+
+#[test]
+fn test_propose_upgrade_rejects_a_second_proposal() {
+    // Overwriting would let an admin announce benign bytes, let the delay run
+    // down in public, then swap the hash just before executing — a timelock on
+    // the announcement instead of on the code.
+    let ctx = setup();
+    let client = ctx.client();
+    let first = wasm_hash(&ctx.env, 0x01);
+    let second = wasm_hash(&ctx.env, 0x02);
+
+    client.propose_upgrade(&first);
+    assert_registry_err!(
+        client.try_propose_upgrade(&second),
+        RegistryError::UpgradeAlreadyPending
+    );
+    assert_eq!(client.get_pending_upgrade().unwrap().wasm_hash, first);
+
+    // Replacing it is allowed, but only the long way round: a visible
+    // cancellation and a fresh, full delay.
+    client.cancel_upgrade();
+    client.propose_upgrade(&second);
+    assert_eq!(client.get_pending_upgrade().unwrap().wasm_hash, second);
+}
+
+#[test]
+fn test_execute_upgrade_before_ready_at_is_rejected() {
+    let ctx = setup();
+    let client = ctx.client();
+    ctx.env.ledger().set_timestamp(1_000);
+    client.propose_upgrade(&wasm_hash(&ctx.env, 0xAB));
+
+    // One second short of the window is still short of the window.
+    for t in [1_000u64, 1_000 + UPGRADE_DELAY - 1] {
+        ctx.env.ledger().set_timestamp(t);
+        assert_registry_err!(client.try_execute_upgrade(), RegistryError::UpgradeNotReady);
+    }
+    // Rejected, not consumed.
+    assert!(client.get_pending_upgrade().is_some());
+}
+
+#[test]
+fn test_execute_upgrade_without_a_proposal_is_rejected() {
+    let ctx = setup();
+    assert_registry_err!(
+        ctx.client().try_execute_upgrade(),
+        RegistryError::NoPendingUpgrade
+    );
+}
+
+#[test]
+fn test_cancel_upgrade_clears_the_proposal_and_publishes_it() {
+    let ctx = setup();
+    let client = ctx.client();
+    ctx.env.ledger().set_timestamp(1_000);
+    let h = wasm_hash(&ctx.env, 0xAB);
+
+    client.propose_upgrade(&h);
+    ctx.env.ledger().set_timestamp(1_200);
+    client.cancel_upgrade();
+
+    assert_eq!(
+        ctx.env.events().all(),
+        std::vec![UpgradeCancelled {
+            wasm_hash: h,
+            cancelled_at: 1_200,
+        }
+        .to_xdr(&ctx.env, &ctx.contract_id)]
+    );
+    assert_eq!(client.get_pending_upgrade(), None);
+    assert!(client.is_upgradeable());
+}
+
+#[test]
+fn test_cancel_upgrade_without_a_proposal_is_rejected() {
+    let ctx = setup();
+    assert_registry_err!(
+        ctx.client().try_cancel_upgrade(),
+        RegistryError::NoPendingUpgrade
+    );
+}
+
+#[test]
+fn test_renounce_makes_every_later_upgrade_attempt_fail_permanently() {
+    let ctx = setup();
+    let client = ctx.client();
+    client.renounce_upgradeability();
+
+    assert!(!client.is_upgradeable());
+
+    // Every door, not just the one that replaces the wasm. Renouncing does not
+    // leave a half-usable mechanism behind.
+    assert_registry_err!(
+        client.try_propose_upgrade(&wasm_hash(&ctx.env, 0xAB)),
+        RegistryError::UpgradeabilityRenounced
+    );
+    assert_registry_err!(
+        client.try_execute_upgrade(),
+        RegistryError::UpgradeabilityRenounced
+    );
+    assert_registry_err!(
+        client.try_cancel_upgrade(),
+        RegistryError::UpgradeabilityRenounced
+    );
+    // There is no un-renounce, and calling it again does not become one.
+    assert_registry_err!(
+        client.try_renounce_upgradeability(),
+        RegistryError::UpgradeabilityRenounced
+    );
+    assert!(!client.is_upgradeable());
+
+    // And the contract still works. Renouncing gives up the right to change the
+    // rules, not the ability to run them.
+    let skill_id = sid(&ctx.env, "com.example.send-email");
+    let version = sid(&ctx.env, "1.0.0");
+    client.register_skill(&ctx.owner, &skill_id, &version, &hash(&ctx.env, 0x01));
+    assert_eq!(client.get_latest(&skill_id).version, version);
+}
+
+#[test]
+fn test_renounce_cancels_an_open_proposal_and_says_so() {
+    // A watcher must never see a proposal simply stop existing.
+    let ctx = setup();
+    let client = ctx.client();
+    ctx.env.ledger().set_timestamp(1_000);
+    let h = wasm_hash(&ctx.env, 0xAB);
+
+    client.propose_upgrade(&h);
+    client.renounce_upgradeability();
+
+    assert_eq!(
+        ctx.env.events().all(),
+        std::vec![
+            UpgradeCancelled {
+                wasm_hash: h,
+                cancelled_at: 1_000,
+            }
+            .to_xdr(&ctx.env, &ctx.contract_id),
+            UpgradeabilityRenounced {
+                renounced_at: 1_000,
+                admin: ctx.admin.clone(),
+            }
+            .to_xdr(&ctx.env, &ctx.contract_id),
+        ]
+    );
+    assert_eq!(client.get_pending_upgrade(), None);
+}
+
+#[test]
+fn test_renounce_publishes_the_admin_that_gave_the_power_up() {
+    let ctx = setup();
+    ctx.env.ledger().set_timestamp(7_777);
+    ctx.client().renounce_upgradeability();
+
+    assert_eq!(
+        ctx.env.events().all(),
+        std::vec![UpgradeabilityRenounced {
+            renounced_at: 7_777,
+            admin: ctx.admin.clone(),
+        }
+        .to_xdr(&ctx.env, &ctx.contract_id)]
+    );
+}
+
+/// Every mutating upgrade entrypoint, checked against a non-admin caller.
+///
+/// Written as one table rather than four near-identical tests: the thing being
+/// asserted is that the set is complete, and a table makes a missing row
+/// visible in a way four separate functions do not.
+#[test]
+fn test_every_upgrade_entrypoint_is_admin_only() {
+    for fn_name in [
+        "propose_upgrade",
+        "execute_upgrade",
+        "cancel_upgrade",
+        "renounce_upgradeability",
+    ] {
+        let ctx = setup_no_auth();
+        let client = ctx.client();
+        let intruder = Address::generate(&ctx.env);
+        let hash32 = wasm_hash(&ctx.env, 0xAB);
+
+        // Set the contract up as the admin would, so the call under test fails
+        // on authorization and not on state: `execute_upgrade` and
+        // `cancel_upgrade` need an open proposal to reach the auth check for
+        // the right reason, and `propose_upgrade` needs there to be none.
+        if fn_name != "propose_upgrade" {
+            let auth = [MockAuth {
+                address: &ctx.admin,
+                invoke: &MockAuthInvoke {
+                    contract: &ctx.contract_id,
+                    fn_name: "propose_upgrade",
+                    args: (hash32.clone(),).into_val(&ctx.env),
+                    sub_invokes: &[],
+                },
+            }];
+            client.mock_auths(&auth).propose_upgrade(&hash32);
+        }
+
+        let args: soroban_sdk::Vec<soroban_sdk::Val> = if fn_name == "propose_upgrade" {
+            (hash32.clone(),).into_val(&ctx.env)
+        } else {
+            ().into_val(&ctx.env)
+        };
+        let auth = [MockAuth {
+            address: &intruder,
+            invoke: &MockAuthInvoke {
+                contract: &ctx.contract_id,
+                fn_name,
+                args,
+                sub_invokes: &[],
+            },
+        }];
+        let intruding = client.mock_auths(&auth);
+
+        let res = match fn_name {
+            "propose_upgrade" => intruding.try_propose_upgrade(&hash32).err(),
+            "execute_upgrade" => intruding.try_execute_upgrade().err(),
+            "cancel_upgrade" => intruding.try_cancel_upgrade().err(),
+            _ => intruding.try_renounce_upgradeability().err(),
+        };
+        assert!(res.is_some(), "{fn_name} must require the admin\'s auth");
+
+        // Nothing moved: the intruder neither renounced nor touched the queue.
+        assert!(
+            client.is_upgradeable(),
+            "{fn_name} changed the renounce flag"
+        );
+        assert_eq!(
+            client.get_pending_upgrade().is_some(),
+            fn_name != "propose_upgrade",
+            "{fn_name} changed the pending proposal"
+        );
+    }
+}
+
+#[test]
+fn test_renounce_is_refused_before_authorization_is_even_asked_for() {
+    // After renouncing there is no privileged upgrade caller at all, so the
+    // honest answer to the admin is "the door is gone", not "you are not
+    // authorized". `setup_no_auth` proves it: with no auth mocked, the call
+    // still returns the typed error instead of panicking on require_auth.
+    let ctx = setup_no_auth();
+    let client = ctx.client();
+
+    client
+        .mock_auths(&[MockAuth {
+            address: &ctx.admin,
+            invoke: &MockAuthInvoke {
+                contract: &ctx.contract_id,
+                fn_name: "renounce_upgradeability",
+                args: ().into_val(&ctx.env),
+                sub_invokes: &[],
+            },
+        }])
+        .renounce_upgradeability();
+
+    assert_registry_err!(
+        client.try_propose_upgrade(&wasm_hash(&ctx.env, 0xAB)),
+        RegistryError::UpgradeabilityRenounced
+    );
 }
