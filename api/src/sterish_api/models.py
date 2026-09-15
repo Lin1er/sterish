@@ -97,6 +97,8 @@ class SkillListResponse(BaseModel):
     """
 
     skills: list[SkillListItem]
+    # With any filter or sort parameter, the number of rows AFTER filtering; without,
+    # the contract's skill count (api-spec 3.4).
     total: int
     start: int
     limit: int
@@ -107,6 +109,12 @@ class SkillListResponse(BaseModel):
     hidden_test_entries: int
     #: Echo of the request, so a cached body is self-describing.
     include_test: bool = False
+    # STE-34, filtered listings only: when the snapshot the rows were chosen from was
+    # read from chain (unix seconds). Null for the listing without STE-34 parameters.
+    as_of: int | None = None
+    # STE-34: rows chosen from the snapshot whose live verdict no longer matched the
+    # verdict filter, left out of this page. Non-zero means the next page may shift.
+    excluded_stale: int = 0
 
 
 class FeedItem(BaseModel):

@@ -70,6 +70,10 @@ class Settings:
     # bucket and generated URLs said http://. Only proxies are trusted, never clients:
     # the port is not published outside the compose network.
     trusted_proxies: str
+    # Max age of the chain-read registry view used to filter and sort /skills (STE-34).
+    # Inside the 60 s per-version caching api-spec section 6 allows; dropped early when
+    # the indexer sees a new registry event.
+    skills_snapshot_ttl_seconds: int
 
     @property
     def network(self) -> str:
@@ -128,6 +132,7 @@ def load_settings() -> Settings:
         skills_dir=os.getenv("STERISH_SKILLS_DIR", "").strip(),
         reports_dir=os.getenv("STERISH_REPORTS_DIR", "").strip(),
         chain_concurrency=_env_int("STERISH_CHAIN_CONCURRENCY", fanout.DEFAULT_CONCURRENCY),
+        skills_snapshot_ttl_seconds=_env_int("STERISH_SKILLS_SNAPSHOT_TTL", 30),
         rpc_url=os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org").strip(),
         network_passphrase=os.getenv("STELLAR_NETWORK_PASSPHRASE", TESTNET_PASSPHRASE),
         db_path=os.getenv("STERISH_DB_PATH", "sterish_index.db"),
