@@ -14,7 +14,11 @@ DOCUMENTED_ITEM_FIELDS = {
     "event", "skill_id", "version", "content_hash", "verdict", "trust_score",
     "ledger", "tx_hash", "tx_url", "occurred_at", "occurred_at_iso",
 }
-DOCUMENTED_TOP_FIELDS = {"events", "total", "indexer_enabled", "last_indexed_ledger"}
+DOCUMENTED_TOP_FIELDS = {
+    "events", "total", "indexer_enabled", "last_indexed_ledger",
+    # STE-18: the feed hides test namespaces by default and says how many.
+    "hidden_test_events", "include_test",
+}
 
 # The four the indexer tails; named in 3.9.
 DOCUMENTED_EVENTS = {
@@ -53,6 +57,7 @@ class TestDefaults:
         assert client.get("/feed?limit=0").status_code == 422
         assert client.get("/feed?offset=-1").status_code == 422
         assert client.get("/feed?limit=200&offset=0").status_code == 200
+        assert client.get("/feed?include_test=true").status_code == 200
 
     def test_indexer_off_is_distinguishable_from_a_quiet_registry(self, client):
         """The empty feed must not read as 'nothing has happened' — 3.9 says so."""

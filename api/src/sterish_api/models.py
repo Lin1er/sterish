@@ -87,10 +87,26 @@ class SkillListItem(BaseModel):
 
 
 class SkillListResponse(BaseModel):
+    """`GET /skills`.
+
+    Three counts, not one, and that is deliberate (see `skills.py`). `total` is what
+    the current filter leaves, `chain_total` is `get_skill_count()` exactly as the
+    contract returns it, and `hidden_test_entries` is the difference. A client that
+    renders only `total` still cannot claim to be showing the whole chain, because
+    the number that contradicts it is in the same object.
+    """
+
     skills: list[SkillListItem]
     total: int
     start: int
     limit: int
+    #: Skills registered on chain, unfiltered. Always the contract's own number.
+    chain_total: int
+    #: Entries under a test namespace that `total` leaves out. Reveal them with
+    #: `?include_test=true`.
+    hidden_test_entries: int
+    #: Echo of the request, so a cached body is self-describing.
+    include_test: bool = False
 
 
 class FeedItem(BaseModel):
@@ -110,10 +126,16 @@ class FeedItem(BaseModel):
 
 
 class FeedResponse(BaseModel):
+    """`GET /feed`. Same honesty rule as `SkillListResponse`: the feed hides events
+    from test namespaces by default and says how many it hid."""
+
     events: list[FeedItem]
     total: int
     indexer_enabled: bool
     last_indexed_ledger: int | None = None
+    #: Indexed events belonging to a test namespace that `total` leaves out.
+    hidden_test_events: int = 0
+    include_test: bool = False
 
 
 class LicenseStatusResponse(BaseModel):

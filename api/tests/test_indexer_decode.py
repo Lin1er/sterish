@@ -33,10 +33,10 @@ def test_version_recorded_decodes_to_indexable_row():
         scval.to_symbol("trust_score"): scval.to_uint32(5),
         scval.to_symbol("auditor"): scval.to_address(Address(G)),
     })
-    event = _event(["version_recorded", "com.evil.token-drainer", "1.0.0"], value)
+    event = _event(["version_recorded", "com.fixtures.poisoned.token-drainer", "1.0.0"], value)
     row = indexer._decode_event(event)
     assert row["event"] == "version_recorded"
-    assert row["skill_id"] == "com.evil.token-drainer"
+    assert row["skill_id"] == "com.fixtures.poisoned.token-drainer"
     assert row["version"] == "1.0.0"
     assert row["verdict"] == "DANGEROUS"
     assert row["trust_score"] == 5
@@ -47,7 +47,9 @@ def test_version_recorded_decodes_to_indexable_row():
 
 def test_events_from_failed_calls_are_not_indexed():
     value = scval.to_map({scval.to_symbol("owner"): scval.to_address(Address(G))})
-    ev = _event(["skill_registered", "com.evil.token-drainer"], value, successful=False)
+    ev = _event(
+        ["skill_registered", "com.fixtures.poisoned.token-drainer"], value, successful=False
+    )
     assert indexer._decode_event(ev) is None
 
 
@@ -60,7 +62,9 @@ def test_versionless_event_stores_empty_string_so_dedupe_works():
     """SQLite treats NULLs as distinct in a UNIQUE constraint, so a NULL version would
     let overlapping polls insert the same skill_registered row twice."""
     value = scval.to_map({scval.to_symbol("owner"): scval.to_address(Address(G))})
-    row = indexer._decode_event(_event(["skill_registered", "com.evil.token-drainer"], value))
+    row = indexer._decode_event(
+        _event(["skill_registered", "com.fixtures.poisoned.token-drainer"], value)
+    )
     assert row["version"] == ""
 
     assert indexer._store([row]) == 1
