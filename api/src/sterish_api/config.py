@@ -64,6 +64,20 @@ class Settings:
     # human to approve a wallet prompt, short enough that a captured signature is
     # worthless soon after. Clamped to [30, 900].
     proof_ttl_seconds: int
+    # --- demo buyer (STE-43) ---
+    horizon_url: str
+    # Classic USDC the treasury funds agents with; its SAC is usdc_sac.
+    usdc_asset_code: str
+    usdc_classic_issuer: str
+    demo_enabled: bool
+    # The account that funds each fresh demo agent. Testnet only, never a real key.
+    demo_treasury_secret: str
+    # Where the demo buyer reaches /use: itself, over HTTP, like any outside agent.
+    demo_self_url: str
+    demo_daily_limit: int
+    demo_per_client_per_hour: int
+    # Two base reserves for the account plus one for the USDC trustline is 1.5 XLM.
+    demo_agent_starting_xlm: str
 
     @property
     def network(self) -> str:
@@ -132,6 +146,18 @@ def load_settings() -> Settings:
         indexer_chunk_ledgers=_env_int("INDEXER_CHUNK_LEDGERS", 4000),
         report_base_url=os.getenv("REPORT_BASE_URL", "").rstrip("/"),
         proof_ttl_seconds=min(900, max(30, _env_int("STERISH_PROOF_TTL_SECONDS", 300))),
+        horizon_url=os.getenv("HORIZON_URL", "https://horizon-testnet.stellar.org").rstrip("/"),
+        usdc_asset_code=os.getenv("USDC_ASSET_CODE", "USDC").strip(),
+        usdc_classic_issuer=(
+            os.getenv("USDC_CLASSIC_ISSUER")
+            or "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+        ).strip(),
+        demo_enabled=os.getenv("DEMO_BUYER_ENABLED", "0") in ("1", "true", "True"),
+        demo_treasury_secret=os.getenv("DEMO_TREASURY_SECRET", "").strip(),
+        demo_self_url=os.getenv("DEMO_SELF_URL", "http://127.0.0.1:8000").rstrip("/"),
+        demo_daily_limit=_env_int("DEMO_DAILY_LIMIT", 50),
+        demo_per_client_per_hour=_env_int("DEMO_PER_CLIENT_PER_HOUR", 5),
+        demo_agent_starting_xlm=os.getenv("DEMO_AGENT_STARTING_XLM", "2").strip(),
     )
 
 

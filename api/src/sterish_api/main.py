@@ -25,6 +25,7 @@ from .errors import (
 from .models import HealthResponse
 from .ratelimit import RateLimitMiddleware
 from .routes.check import router as check_router
+from .routes.demo import router as demo_router
 from .routes.license import router as license_router
 from .routes.reports import router as reports_router
 from .routes.use import router as use_router
@@ -83,7 +84,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET"],
+    # POST only for /demo/purchases (STE-43); everything else is a read.
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
     # Buyers read the challenge and the receipt off these; without expose_headers a
     # browser client sees neither.
@@ -106,6 +108,7 @@ app.include_router(check_router, prefix="", tags=["verification"])
 app.include_router(license_router, prefix="", tags=["verification"])
 app.include_router(reports_router, prefix="", tags=["verification"])
 app.include_router(use_router, prefix="", tags=["x402"])
+app.include_router(demo_router, prefix="", tags=["demo"])
 
 
 @app.get("/health", response_model=HealthResponse)
