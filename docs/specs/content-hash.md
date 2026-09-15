@@ -189,6 +189,37 @@ An error **never** means "hash it anyway". There is no silent fallback.
    `.DS_Store` cannot include it.
 5. **No Unicode normalisation** (§4). Two paths that look identical on screen can produce two
    different hashes.
+6. **`content_hash` identifies the bytes, not the work.** A byte-identical copy cannot be
+   registered twice — invariant R3 refuses the second one with `HashAlreadyRegistered`(6) — but
+   change a single byte and the hash changes completely, and the copy registers cleanly as a new
+   skill. Vector `one-byte-flip` (§6) is exactly that proof, run in all three languages on every
+   CI pass. §4 is the reason: canonical bytes v1 deliberately does no whitespace trimming and no
+   Unicode normalisation, so renaming a file, adding a space, or rewriting a description is
+   enough to defeat it. **On v1 this is the intended behaviour, not a bug.** `content_hash`
+   answers *"have these exact bytes been audited"*, and it answers that correctly. It does not
+   answer *"who wrote this first"*, and nothing else in the system answers it either — there is
+   no similarity detection anywhere in `pipeline/` or `api/`, and v1 does not add one.
+
+   The consequences, stated plainly:
+
+   - **A modified copy can earn its own VERIFIED badge.** It enters the pipeline as a new skill,
+     is audited on its own content, and if the verdict is `Safe` then R7 mints VERIFIED for it.
+     That is the rules working as written, not a hole in them.
+   - **R3 actively pushes a plagiarist towards modifying.** An exact copy is refused, so the only
+     path that works is to change something — and the moment they do, the registry loses sight of
+     the relationship entirely. The one case the contract catches is the one case a determined
+     copier will never attempt twice.
+   - **Licences bind to `content_hash`, so the damage is confined to revenue.** A buyer of the
+     original still holds a licence for the original bytes, nobody is misled about safety, and
+     the copier pays for their own audit. What is lost is the original author's income — a
+     different class of problem from the one Sterish promises to solve.
+   - **`skill_id` is not protected either.** The contract validates it only with `is_empty()`, so
+     `com.acrne.pdf-suite` can sit beside `com.acme.pdf-suite`. Namespace ownership would close
+     that; it is deferred, and `../architecture.md` §7 records why.
+
+> Adding an entry to this list does not unfreeze §1–§4. Everything above describes behaviour the
+> algorithm already has. The algorithm itself is untouched and `sterish-content-hash/v1` still
+> produces the same bytes for the same input.
 
 ---
 

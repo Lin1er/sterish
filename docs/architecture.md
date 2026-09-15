@@ -13,8 +13,9 @@
 4. [x402 Pay-Per-Use Licensing](#4-x402-pay-per-use-licensing)
 5. [Trust Score](#5-trust-score)
 6. [Verification REST API](#6-verification-rest-api)
-7. [Tech Stack](#tech-stack)
-8. [Open Questions](#open-questions)
+7. [Threat Model and Non-Goals](#7-threat-model-and-non-goals)
+8. [Tech Stack](#tech-stack)
+9. [Open Questions](#open-questions)
 
 ---
 
@@ -502,6 +503,91 @@ Full specification: [`api-spec.md`](api-spec.md)
   "version": "0.1.0"
 }
 ```
+
+---
+
+## 7. Threat Model and Non-Goals
+
+Sterish makes one claim: **these exact bytes were audited, and this is the verdict**. Everything
+the registry enforces serves that claim. Things that sound adjacent — authorship, originality,
+brand ownership — are outside it, and this section says which is which so a reader does not have
+to infer it from the contract.
+
+### What the registry does close
+
+| Case | Closed by | Where |
+|---|---|---|
+| A byte-identical copy registered under a different `skill_id` | R3 → `HashAlreadyRegistered`(6) | `register_skill`, `contracts/registry/src/lib.rs` |
+| A copy differing only in line endings (CRLF vs LF) | canonical bytes v1 normalisation | test vector `crlf-equals-lf` |
+| Someone else adding a version to a `skill_id` they do not own | R1 → `NotAuthorized`(2) | `register_skill` |
+
+Those are real, they are enforced on chain, and they are covered by tests. See
+[`specs/interfaces.md`](specs/interfaces.md) §2.3 for the full invariant list.
+
+### What it does not close: plagiarism
+
+Change one byte and `content_hash` changes completely — test vector `one-byte-flip` proves it in
+Python, TypeScript and Rust on every run of `make verify-content-hash`. The copy then registers as
+a new skill and nothing refuses it. Canonical bytes v1 deliberately does no whitespace trimming and no Unicode
+normalisation ([`specs/content-hash.md`](specs/content-hash.md) §4), so a renamed file, an added
+space, or a rewritten description is enough. There is no similarity detection anywhere in
+`pipeline/` or `api/` — no simhash, no minhash, no embedding comparison — and v1 does not add one.
+
+Two consequences follow, and both are worth stating out loud:
+
+- **A modified copy can earn its own VERIFIED badge.** It is audited as a new skill on its own
+  content; if that content is safe, the verdict is `Safe` and R7 mints VERIFIED for it. The badge
+  is not lying — those bytes really were audited and really are safe. It simply says nothing about
+  who wrote them.
+- **R3 pushes a plagiarist towards modifying.** An exact copy is refused, so the only path that
+  works is to change something, and the moment they change something the registry loses sight of
+  the relationship entirely.
+
+**Why v1 does not build detection.** Licences bind to `content_hash`, so a buyer of the original
+still holds a licence for the original bytes, nobody is misled about safety, and the copier pays
+for their own audit. The loss lands on the **original author's revenue**, not on user safety —
+a different class of problem from the one this product promises to solve. And half-built
+similarity detection is worse than none: a false positive accuses an honest author of plagiarism,
+which destroys precisely the trust Sterish sells. Proper detection is its own project, with its own
+error budget, and it belongs in its own ticket.
+
+### No namespace ownership, so no typosquatting protection
+
+`skill_id` is validated only with `is_empty()`. Nothing binds a prefix to an owner, so
+`com.acrne.pdf-suite` can sit beside `com.acme.pdf-suite` and the registry treats them as two
+unrelated skills.
+
+Namespace ownership — the owner of `com.acme.pdf-suite` holds all of `com.acme.*` — would close
+this cheaply. It is **deferred**, and not for the reason one would expect. Since STE-44 the
+Registry is upgradeable behind a timelock, so the change would be an upgrade rather than a
+redeploy and the contract address would not move; cost is no longer the objection.
+
+The objection is semantic, and it is decisive. Measured on Registry v2
+(`CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`) on **15 Sep 2026**: one account,
+`GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU`, owns **all 24 entries**, including all
+13 `org.stellar.skills.*` catalogue skills, which we registered ourselves as the auditor. Turning
+namespace ownership on today would therefore hand **us** the `org.stellar.*` namespace permanently
+— the namespace of the organisation funding this grant, who would then need our permission to
+register their own skills. That is the wrong outcome, and it comes from seeding a registry as a
+third party, not from the design.
+
+So the open question is not *when* to ship namespace ownership but **who may claim a namespace, and
+how is that claim proven**. Until there is an answer to that, turning it on would freeze today's
+seeding accident into policy.
+
+### Out of scope for the MVP, stated so it is not mistaken for an oversight
+
+- Similarity or plagiarism detection in any form.
+- Ownership claims or disputes between authors; the registry records who registered first, not who
+  wrote first.
+- Namespace or trademark arbitration.
+
+### Other trust assumptions
+
+The largest one is not in this section: `settle` and `slash` are gated to the admin key and
+**nothing in the escrow contract verifies a verdict on chain**. See
+[§2 — Gating of `settle` / `slash`](#gating-of-settle--slash--mvp-testnet), which also lists the
+roadmap that removes the admin from that decision.
 
 ---
 
