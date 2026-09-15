@@ -58,9 +58,13 @@ the release profile and the `$CARGO_HOME` path remapping all held equal:
 
 | Host triple | `sterish_registry` | `sterish_escrow` | `sterish_tokens` | |
 |---|---|---|---|---|
-| `aarch64-apple-darwin` | `8c438004…` | `cb241f74…` | `318f4458…` | **live on testnet** |
+| `aarch64-apple-darwin` | `8c438004…` | `cb241f74…` | `318f4458…` | **was live on testnet** |
 | `x86_64-unknown-linux-gnu` | `48305dba…` | `611f6eae…` | `f13c9ee6…` | |
 | `aarch64-unknown-linux-gnu` | `dde6631a…` | `f3294593…` | `401571b9…` | |
+
+> These are the **v1** hashes. The Registry and Tokens rows were replaced by STE-44; the escrow
+> rows were not, on any host. The current manifest is
+> [`contracts/wasm-hashes.txt`](../contracts/wasm-hashes.txt).
 
 Byte-identical within a host triple, different across them. All three files keep identical
 **sizes** on every host; what moves is the order the linker lays out the read-only data symbols,
