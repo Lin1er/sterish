@@ -9,7 +9,7 @@ from pathlib import Path
 
 from sterish_pipeline.audit import audit_normalized
 from sterish_pipeline.content_hash import content_hash
-from sterish_pipeline.intake.corpus import Corpus, Provenance
+from sterish_pipeline.intake.corpus import SEED_MODE_REGISTER_ONLY, Corpus, Provenance
 from sterish_pipeline.intake.normalize import SourceKind
 from sterish_pipeline.models import FinalVerdict
 
@@ -151,7 +151,13 @@ class TestCorpusRoundTrip:
         written = (tmp_path / "entries" / "eol" / "a.txt").read_bytes()
         assert written == b"line1\r\nline2\r\n"
 
-    def test_duplicate_skill_id_is_reported(self, tmp_path: Path) -> None:
+    def test_two_versions_of_one_skill_are_allowed(self, tmp_path: Path) -> None:
+        """Identity is (skill_id, version), not skill_id.
+
+        The registry scores a verdict per version (invariant R4), so a corpus that
+        cannot hold v1 and v2 of the same skill cannot express the one case the
+        product exists to catch: a SAFE v1 followed by a poisoned v2.
+        """
         corpus = Corpus(tmp_path)
         e1 = corpus.write_entry(
             skill_id="dup",
@@ -170,4 +176,55 @@ class TestCorpusRoundTrip:
             provenance=Provenance(source="t"),
         )
         corpus.save_index([e1, e2], datetime.now(UTC).isoformat())
-        assert any("duplicate skill_id" in p for p in corpus.verify_all())
+        assert corpus.verify_all() == []
+        assert {e.key for e in corpus.load()} == {("dup", "1"), ("dup", "2")}
+
+    def test_duplicate_skill_id_and_version_is_reported(self, tmp_path: Path) -> None:
+        corpus = Corpus(tmp_path)
+        e1 = corpus.write_entry(
+            skill_id="dup",
+            version="1",
+            kind=SourceKind.AGENT_SKILL,
+            files={"a": b"x"},
+            relative_path="e1",
+            provenance=Provenance(source="t"),
+        )
+        e2 = corpus.write_entry(
+            skill_id="dup",
+            version="1",
+            kind=SourceKind.AGENT_SKILL,
+            files={"a": b"y"},
+            relative_path="e2",
+            provenance=Provenance(source="t"),
+        )
+        corpus.save_index([e1, e2], datetime.now(UTC).isoformat())
+        assert any("duplicate entry in index" in p for p in corpus.verify_all())
+
+    def test_unknown_seed_mode_is_reported(self, tmp_path: Path) -> None:
+        corpus = Corpus(tmp_path)
+        entry = corpus.write_entry(
+            skill_id="com.test.demo",
+            version="1.0.0",
+            kind=SourceKind.AGENT_SKILL,
+            files={"SKILL.md": b"# Demo"},
+            relative_path="entries/demo",
+            provenance=Provenance(source="t"),
+        )
+        entry.seed_mode = "publish-everything"
+        corpus.save_index([entry], datetime.now(UTC).isoformat())
+        assert any("unknown seed_mode" in p for p in corpus.verify_all())
+
+    def test_register_only_is_recognised(self, tmp_path: Path) -> None:
+        corpus = Corpus(tmp_path)
+        entry = corpus.write_entry(
+            skill_id="com.test.demo",
+            version="2.0.0",
+            kind=SourceKind.AGENT_SKILL,
+            files={"SKILL.md": b"# Demo"},
+            relative_path="entries/demo2",
+            provenance=Provenance(source="t"),
+            seed_mode=SEED_MODE_REGISTER_ONLY,
+        )
+        corpus.save_index([entry], datetime.now(UTC).isoformat())
+        assert corpus.verify_all() == []
+        assert corpus.load()[0].register_only is True

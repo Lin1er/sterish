@@ -68,7 +68,7 @@ def fetch(corpus_dir: str, limit: int | None, timeout: float) -> None:
             label="catalog",
             expected_verdict="",
         )
-        existing[entry.skill_id] = entry
+        existing[entry.key] = entry
         console.print(f"  [green]+[/green] {entry.skill_id} ({entry.content_hash[:12]}…)")
 
     corpus.save_index(list(existing.values()), datetime.now(UTC).isoformat(timespec="seconds"))
@@ -136,7 +136,7 @@ def audit_corpus(
     mismatches: list[str] = []
     poisoned_marked_safe: list[str] = []
 
-    for entry in sorted(entries, key=lambda e: e.skill_id):
+    for entry in sorted(entries, key=lambda e: e.key):
         skill = corpus.normalized(entry)
         report = audit_normalized(skill, config=cfg, skip_sandbox=skip_sandbox)
 
@@ -291,7 +291,7 @@ def seed(
     corpus = Corpus(corpus_dir)
     wanted = set(labels)
     held_back = set(excluded)
-    entries = [e for e in sorted(corpus.load(), key=lambda e: e.skill_id) if e.label in wanted]
+    entries = [e for e in sorted(corpus.load(), key=lambda e: e.key) if e.label in wanted]
     if not entries:
         console.print(f"[red]no corpus entries with label(s) {sorted(wanted)}[/red]")
         raise SystemExit(1)
@@ -409,9 +409,15 @@ def seed(
         raise SystemExit(1)
 
 
-def _load_existing(corpus: Corpus) -> dict[str, CorpusEntry]:
+def _load_existing(corpus: Corpus) -> dict[tuple[str, str], CorpusEntry]:
+    """Existing entries by (skill_id, version).
+
+    Keyed on the pair, not on skill_id: a corpus may legitimately hold two
+    versions of one skill, and keying on the id alone silently dropped one of
+    them on the next `intake fetch`.
+    """
     if corpus.index_path.exists():
-        return {e.skill_id: e for e in corpus.load()}
+        return {e.key: e for e in corpus.load()}
     return {}
 
 

@@ -92,7 +92,7 @@ FIXTURES = [
 
 def main() -> None:
     corpus = Corpus(CORPUS_DIR)
-    entries = {e.skill_id: e for e in corpus.load()} if corpus.index_path.exists() else {}
+    entries = {e.key: e for e in corpus.load()} if corpus.index_path.exists() else {}
 
     for folder, skill_id, version, kind, label, expected, note in FIXTURES:
         source_dir = corpus.root / FIXTURE_ROOT / folder
@@ -112,7 +112,7 @@ def main() -> None:
             label=label,
             expected_verdict=expected,
         )
-        entries[entry.skill_id] = entry
+        entries[entry.key] = entry
         print(f"  {label:8} {skill_id}  {entry.content_hash[:12]}  -> expect {expected}")
 
     corpus.save_index(list(entries.values()), datetime.now(UTC).isoformat(timespec="seconds"))
