@@ -42,13 +42,15 @@
 
 mod data;
 mod test;
+mod upgrade;
 
 pub use data::{
-    DataKey, LicenseMinted, RegistryClient, RegistryInterface, TokenError, TokenKind, TokenRecord,
-    VerifiedMinted,
+    DataKey, LicenseMinted, PendingUpgrade, RegistryClient, RegistryInterface, TokenError,
+    TokenKind, TokenRecord, UpgradeCancelled, UpgradeExecuted, UpgradeProposed,
+    UpgradeabilityRenounced, VerifiedMinted, FALLBACK_UPGRADE_DELAY,
 };
 use data::{BUMP_THRESHOLD, BUMP_TO};
-use soroban_sdk::{contract, contractimpl, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, panic_with_error, Address, Env, String};
 
 #[contract]
 pub struct SterishTokens;
@@ -118,13 +120,29 @@ impl SterishTokens {
     /// `registry` is stored once and has no setter: repointing it would move the
     /// `Safe` gate to an attacker-controlled contract. Same policy as the USDC
     /// address in `contracts/escrow`.
+    ///
+    /// `upgrade_delay_secs` is the upgrade timelock, in seconds — a constructor
+    /// parameter rather than a constant so testnet and mainnet differ by
+    /// configuration instead of by code, written once with no setter because an
+    /// admin able to shorten the delay would not have a timelock. Testnet is
+    /// deployed at 300s. A zero delay is rejected: a contract whose ABI advertises
+    /// a timelock it does not have is worse than one that never claimed it.
+    ///
+    /// **This constructor does not run again on upgrade.** Soroban replaces the
+    /// wasm and leaves storage untouched, so any field a future version adds must
+    /// be initialised by an explicit migration call, never by editing this
+    /// function. See `contracts/tokens/src/upgrade.rs`.
     pub fn __constructor(
         env: Env,
         admin: Address,
         registry: Address,
         auditor: Address,
         minter: Address,
+        upgrade_delay_secs: u64,
     ) {
+        if upgrade_delay_secs == 0 {
+            panic_with_error!(&env, TokenError::InvalidInput);
+        }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Registry, &registry);
         env.storage()
@@ -132,6 +150,9 @@ impl SterishTokens {
             .set(&DataKey::AuditorRole, &auditor);
         env.storage().instance().set(&DataKey::MinterRole, &minter);
         env.storage().instance().set(&DataKey::NextTokenId, &1u32);
+        env.storage()
+            .instance()
+            .set(&DataKey::UpgradeDelay, &upgrade_delay_secs);
         bump_instance(&env);
     }
 

@@ -1,0 +1,16 @@
+[package]
+name = "sterish-upgrade-probe"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# TEST FIXTURE. This crate is never deployed and is deliberately absent from
+# contracts/wasm-hashes.txt and from scripts/deploy-testnet.sh. It exists so that
+# contracts/tests can prove the one thing a native `Env` cannot: that replacing
+# the wasm really does preserve storage, really does expose the new code, and
+# really does become irreversible when the replacement has no upgrade path.
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }

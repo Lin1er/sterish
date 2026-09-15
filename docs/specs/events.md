@@ -1,14 +1,18 @@
-# Sterish — Frozen Event Layouts (v1)
+# Sterish — Frozen Event Layouts (v2)
 
 > **STATUS: FROZEN.** These layouts are the handoff contract to the off-chain indexer
 > (STE-13), the API (STE-12) and the dashboard (STE-14). Changing a topic or a data key
 > silently breaks every consumer, so treat this file as wire format, not documentation.
 >
 > Companion: `docs/specs/interfaces.md` (functions, errors, invariants).
+>
+> **v2.0.0 (STE-44) is additive**: four upgrade events, emitted by BOTH the Registry and the
+> Tokens contract (§3c). Nothing in §2, §3 or §3b changed shape. The Escrow emits none of them —
+> it has no upgrade path, by design.
 
 | | |
 |---|---|
-| Spec version | `1.0.0` |
+| Spec version | `2.0.0` |
 | Derived from | `stellar contract info interface --output json` over the built WASM |
 | Toolchain | `soroban-sdk 27.0.6`, `stellar-cli 27.0.0`, target `wasm32v1-none` |
 
@@ -332,6 +336,107 @@ Emitted by `sterish_tokens` (STE-11). Both token kinds are soulbound, so there i
 
 ---
 
+## 3c. Upgrade events (v2, STE-44)
+
+Emitted by **both** `sterish_registry` and `sterish_tokens`, identically. The Escrow emits none
+of them: it has no upgrade path and must not gain one (`scripts/verify-upgrade-target.sh`).
+
+These are not decoration. A timelock's whole value is that an outsider can see a change coming;
+without the events it is a delay nobody can observe. `upgrade_proposed` in particular carries the
+replacement wasm hash **and both ends of the window**, so anyone watching can fetch those bytes,
+read their interface, and object while there is still time.
+
+### 3c.1 `upgrade_proposed`
+
+| | |
+|---|---|
+| Rust type | `UpgradeProposed` |
+| Emitted by | `propose_upgrade` |
+| Topic filter (base64 XDR) | `AAAADwAAABB1cGdyYWRlX3Byb3Bvc2Vk` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"upgrade_proposed"` | `ScSymbol` |
+| 1 | `wasm_hash` | `ScBytes` (32) |
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `proposed_at` | `ScU64` | Ledger timestamp the proposal was made. |
+| `ready_at` | `ScU64` | Earliest timestamp `execute_upgrade` will be accepted. `ready_at - proposed_at` is the configured delay. |
+
+### 3c.2 `upgrade_executed`
+
+| | |
+|---|---|
+| Rust type | `UpgradeExecuted` |
+| Emitted by | `execute_upgrade`, immediately **before** the wasm is replaced |
+| Topic filter (base64 XDR) | `AAAADwAAABB1cGdyYWRlX2V4ZWN1dGVk` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"upgrade_executed"` | `ScSymbol` |
+| 1 | `wasm_hash` | `ScBytes` (32) |
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `executed_at` | `ScU64` | Ledger timestamp of the swap. |
+
+### 3c.3 `upgrade_cancelled`
+
+| | |
+|---|---|
+| Rust type | `UpgradeCancelled` |
+| Emitted by | `cancel_upgrade`, and by `renounce_upgradeability` when a proposal was still open |
+| Topic filter (base64 XDR) | `AAAADwAAABF1cGdyYWRlX2NhbmNlbGxlZAAAAA==` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"upgrade_cancelled"` | `ScSymbol` |
+| 1 | `wasm_hash` | `ScBytes` (32) |
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `cancelled_at` | `ScU64` | Ledger timestamp. |
+
+### 3c.4 `upgradeability_renounced`
+
+| | |
+|---|---|
+| Rust type | `UpgradeabilityRenounced` |
+| Emitted by | `renounce_upgradeability` |
+| Topic filter (base64 XDR) | `AAAADwAAABh1cGdyYWRlYWJpbGl0eV9yZW5vdW5jZWQ=` |
+
+**Topics**
+
+| # | Value | SCVal type |
+|---|---|---|
+| 0 | `"upgradeability_renounced"` | `ScSymbol` |
+
+No further topic: there is exactly one of these per contract, ever.
+
+**Data** — `ScMap`, keys in this order:
+
+| Key | SCVal type | Meaning |
+|---|---|---|
+| `admin` | `ScAddress` | The admin that gave the power up, recorded so the act is attributable. |
+| `renounced_at` | `ScU64` | Ledger timestamp. |
+
+There is no counterpart event, because there is no way back.
+
+---
+
 ## 4. Emission order (frozen)
 
 Order within a single transaction is part of the contract, because a consumer that folds
@@ -350,6 +455,11 @@ events in stream order must land on the right final state.
 | `slash` / `claim_forfeited` | two USDC SAC `transfer`s (bond→reporter, then fee→requestor), then `slashed` |
 | `mint_verified` | `verified_minted` only |
 | `mint_license` | `license_minted` only |
+| `propose_upgrade` | `upgrade_proposed` only |
+| `execute_upgrade` | `upgrade_executed`, **then** the wasm is replaced (the new code takes effect only after the invocation ends) |
+| `cancel_upgrade` | `upgrade_cancelled` only |
+| `renounce_upgradeability` — nothing pending | `upgradeability_renounced` only |
+| `renounce_upgradeability` — a proposal was open | `upgrade_cancelled`, then `upgradeability_renounced` |
 
 A failed call emits nothing: every event is published after the state write and after any
 token transfer, and any error unwinds the whole transaction.

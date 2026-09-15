@@ -1,5 +1,5 @@
 [workspace]
-members = ["registry", "escrow", "tokens", "tests"]
+members = ["registry", "escrow", "tokens", "tests", "upgrade-probe"]
 resolver = "2"
 
 [workspace.dependencies]

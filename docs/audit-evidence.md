@@ -23,8 +23,12 @@ before relying on any link below.
 | Time per skill | median **5.6 s**, slowest **14.7 s** (delivery-plan criterion: under 5 minutes) |
 | Held back from publication | **0** |
 
-Contracts: Registry `CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND`,
-Tokens `CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX`. Deployment detail in
+Contracts, **since 15 September 2026 (STE-44)**: Registry
+`CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`, Tokens
+`CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T`. The seed run described below was
+performed against the superseded pair (`CAPDQW2X…` / `CCHVZRLO…`), which is still on chain and
+still readable; every entry was replayed onto the new contracts and **re-verified by reading it
+back** — see [After the STE-44 redeploy](#after-the-ste-44-redeploy). Deployment detail in
 [`deployments.md`](deployments.md).
 
 Reproduce the 25/25 claim yourself, with no key and no trust in this table:
@@ -386,6 +390,39 @@ that exact equality by name across all 25 published reports and finds none:
 25 report(s) checked, 0 problem(s).
 ```
 
+## After the STE-44 redeploy
+
+On 15 September 2026 the Registry and Tokens contracts were redeployed as **upgradeable**
+contracts, at new addresses. Upgradeability cannot be added to a live Soroban contract — the
+contract replaces its own wasm, so the capability has to be in the bytes already deployed — so a
+new address was unavoidable. The reasoning and the mechanism are in
+[`SYSTEM_DESIGN.md` §4.4](SYSTEM_DESIGN.md#44-upgradeability-ste-44-implemented).
+
+What that does and does not do to the evidence in this document:
+
+| claim | still true on the new contracts? |
+|---|---|
+| `sha256(report bytes)` equals the on-chain `evidence_hash` | **yes** — re-checked by reading every version back from the new registry |
+| the verdicts, trust scores, content hashes and owners are the same | **yes** — compared field by field against the old contract |
+| a VERIFIED badge exists exactly for the `Safe` versions | **yes** — 16 badges, cross-checked against `is_verified` on the new registry |
+| `registered_at` / `audited_at` are the original timestamps | **no** — see below |
+| the transaction links in this document resolve | **yes** — they point at the v1 contracts, which are untouched |
+
+`registered_at` and `audited_at` are stamped by the contract from the ledger clock, so a replayed
+record carries a 15 September 2026 timestamp rather than the date the audit first ran. The
+originals stay readable on the v1 contracts until the testnet reset. **A migrated record is a
+faithful copy of the claim, not of when the claim was first made** — and this document would
+rather say that than let a reader infer a provenance the chain no longer carries.
+
+One more thing that is true and easy to miss: the v1 VERIFIED badges are soulbound and cannot be
+burned, so Tokens v1 still holds all 58 of them. Nothing reads it any more. It is not empty, and
+pretending otherwise would be the same category of quiet omission that the test-namespace filter
+exists to prevent.
+
+The 47 `com.sterish.it-*` / `e2e-*` / `canon-*` test entries were **not** migrated. The 24 real
+skills and their 26 versions were, in the old registry's registration order, so
+`query_all_skills` pages identically.
+
 ## Limits worth stating
 
 * **Stage 2 did not run for the 25 entries above, and that is correct.** The seed run passed
@@ -417,6 +454,10 @@ that exact equality by name across all 25 published reports and finds none:
   times over. The settle and slash paths were proven separately in STE-13 and STE-16, and escrow
   demo data remains the one piece of this picture that has no live example. It is deliberately out
   of scope here and still outstanding.
+* **The migrated records carry today's timestamps, not the original ones.** See
+  [After the STE-44 redeploy](#after-the-ste-44-redeploy). Everything a verdict asserts survived
+  the move; when it was first asserted did not, and cannot, because the contract stamps that
+  field itself.
 * **The four demo skills are fixtures, and say so.** They are authored in
   `pipeline/corpus/fixtures/demo-*` to produce a specific verdict through a specific policy row,
   and each one states in its own text which row it targets. They demonstrate that the registry and

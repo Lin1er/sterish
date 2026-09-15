@@ -14,7 +14,7 @@ as long as everyone abides by what is in here.
 |---|---|---|
 | [`content-hash.md`](content-hash.md) | Canonical bytes v1 and `content_hash = sha256(...)`, byte-exact | pipeline (intake), contracts (`lookup_by_hash`), dashboard (check-before-install) |
 | [`interfaces.md`](interfaces.md) | Every public function signature of Registry, Escrow and Tokens | everyone |
-| [`events.md`](events.md) | Every `#[contractevent]` layout including which fields become topics (10 events) | indexer, API, dashboard |
+| [`events.md`](events.md) | Every `#[contractevent]` layout including which fields become topics (14 events since v2.0.0: 10, plus the 4 upgrade events both Registry and Tokens emit) | indexer, API, dashboard |
 | [`verdict-json.md`](verdict-json.md) + [`verdict.schema.json`](verdict.schema.json) | The verdict JSON schema the pipeline emits | stage 3, the on-chain submitter, API, dashboard |
 | [`../api-spec.md`](../api-spec.md) | API response shapes, including check-by-`content_hash` and the evidence links | dashboard, calling agents |
 | [`vectors/`](vectors/) | `content_hash` test vectors (plus error cases) | all three implementations |
@@ -65,14 +65,69 @@ The specs in this folder are **frozen**. Any change to an interface, an event la
   **new** algorithm (`sterish-content-hash/v2\n` as the MAGIC), not an edit to v1. Old hashes
   must remain recomputable forever; otherwise every verdict already written on chain becomes
   unverifiable.
-- **Contract error codes** (`RegistryError` 1–9, `EscrowError` 1–9, `TokenError` 1–6) are public
-  ABI. Variants may be **added** at the next number; they may **not** be renumbered or removed.
+- **Contract error codes** (`RegistryError` 1–13, `EscrowError` 1–9, `TokenError` 1–10) are
+  public ABI. Variants may be **added** at the next number; they may **not** be renumbered or
+  removed. The Registry's 10–13 and the Tokens' 7–10 were appended in v2.0.0 (STE-44).
+- **Storage keys** are append-only, and since v2.0.0 that is load-bearing rather than tidy: an
+  upgrade reinterprets the existing bytes with the new code and nothing checks compatibility.
+  A `#[contracttype]` unit variant encodes as its **name**, so there is no ordering dependency —
+  and no protection against a rename either.
 - **Events**: adding a new event is additive and safe. Changing the fields or topics of an
   existing one is breaking, and must go through the rules above.
 
 ---
 
 ## Changelog
+
+### v2.0.0 — 2026-09-15 (STE-44, PR #34)
+
+**MAJOR for `sterish-registry` and `sterish-tokens`. `sterish-escrow` is untouched** — its
+generated ABI block is byte-identical to the one frozen in v1.0.0, and so is its wasm sha256 on
+all three recorded host triples.
+
+Why a major bump when nothing was renamed: both `__constructor`s gained a trailing
+`upgrade_delay_secs: u64`. That is breaking for anyone deploying these contracts, even though it
+is invisible to anyone *calling* them. Everything else is additive.
+
+- **Seven new entrypoints on each of Registry and Tokens**: `propose_upgrade`,
+  `execute_upgrade`, `cancel_upgrade`, `renounce_upgradeability`, `get_pending_upgrade`,
+  `get_upgrade_delay`, `is_upgradeable`. Registry goes 15 → 22 exports, Tokens 14 → 21.
+- **Four new error discriminants on each**, appended: Registry `UpgradeabilityRenounced = 10`,
+  `NoPendingUpgrade = 11`, `UpgradeAlreadyPending = 12`, `UpgradeNotReady = 13`; Tokens the same
+  four at 7–10.
+- **Three new instance storage keys on each**, appended: `UpgradeDelay`, `PendingUpgrade`,
+  `UpgradeRenounced`.
+- **Four new events on each**: `upgrade_proposed`, `upgrade_executed`, `upgrade_cancelled`,
+  `upgradeability_renounced`. Additive, per the rules above.
+- **New invariants** R11–R16 (Registry) and T5b, T8, T9 (Tokens).
+
+Why the contracts moved address at all: upgradeability **cannot be added to a live Soroban
+contract**. A contract replaces its own wasm, so the capability must be in the bytes that were
+already deployed. Tokens had to move with the Registry because its `registry` field has no
+setter, by design. The v1 pair is superseded, not deleted; see `docs/deployments.md`.
+
+Decisions worth recording, with the evidence:
+
+- **Hand-rolled, not OpenZeppelin.** Measured 2026-09-15: `stellar-contract-utils` 0.7.2 (latest,
+  2026-06-09) declares `soroban-sdk ^26.1.0`, which does not admit the workspace's pinned 27.0.6.
+  A real `cargo generate-lockfile` on that pair resolves two incompatible SDK copies. Same wall
+  as v1.1.0 hit with the non-fungible module.
+- **The timelock delay is a constructor parameter held in state, with no setter.** Testnet and
+  mainnet differ by configuration rather than by code, and an admin who could shorten the delay
+  would not have a timelock. A delay of `0` is refused at construction.
+- **A second proposal while one is open is refused**, so the timelock is on the code rather than
+  on the announcement.
+- **`renounce_upgradeability` is permanent**, and is the answer to the hardest question about
+  this design — see `SYSTEM_DESIGN.md` §4.4, which states the tension rather than burying it.
+
+Known limit, left deliberately and documented:
+
+- **Nothing on chain can refuse an upgrade into a wasm that has no upgrade entrypoint.**
+  `update_current_contract_wasm` takes a hash, and no host function reads a wasm's exports, so
+  the contract cannot check. `contracts/tests/tests/upgrade.rs` demonstrates the cost on real
+  artifacts, and `scripts/verify-upgrade-target.sh` places the guard where it *can* live — in CI,
+  before any artifact is published. That script also fails if `sterish_escrow.wasm` ever gains an
+  upgrade entrypoint.
 
 ### v1.1.0 — 2026-09-03 (STE-11, PR TBD)
 

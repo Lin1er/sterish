@@ -3,7 +3,7 @@ import os
 # Point every test at a throwaway DB and a known contract id before the app imports
 # its settings (config.py reads the environment once, at import time).
 os.environ.setdefault(
-    "REGISTRY_CONTRACT_ID", "CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND"
+    "REGISTRY_CONTRACT_ID", "CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2"
 )
 os.environ.setdefault("STELLAR_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015")
 os.environ.setdefault("INDEXER_ENABLED", "0")
@@ -13,7 +13,7 @@ os.environ.setdefault("INDEXER_ENABLED", "0")
 # no .env — caught that the assertions were reading ambient values rather than
 # fixed ones.
 os.environ.setdefault(
-    "TOKENS_CONTRACT_ID", "CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX"
+    "TOKENS_CONTRACT_ID", "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T"
 )
 os.environ.setdefault(
     "X402_PAY_TO", "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU"

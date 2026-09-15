@@ -23,7 +23,7 @@
 # only against the rows for the host it runs on. A host with no row here cannot
 # verify these artifacts — it can only produce its own, equally valid, build.
 #
-# generated:   2026-09-15T14:55:51Z
+# generated:   2026-09-15T15:46:52Z
 # rustc:       rustc 1.93.0 (254b59607 2026-01-19)
 # cargo:       cargo 1.93.0 (083ac5135 2025-12-15)
 # soroban-sdk: 27.0.6 (contracts/Cargo.lock)
@@ -39,16 +39,16 @@
 #
 # columns: <file> <size_bytes> <sha256> <exported_entrypoints> <host_triple>
 
-# --- aarch64-apple-darwin --- recorded 2026-09-03T11:29:09Z --- LIVE ON TESTNET (STE-13)
-sterish_registry.wasm     35658  8c438004591f65d84f8087738c4ff327bc016b38e443b2661bb36f6cd3852489  15  aarch64-apple-darwin
+# --- aarch64-apple-darwin --- recorded 2026-09-15T15:46:52Z --- LIVE ON TESTNET (STE-13)
+sterish_registry.wasm     47506  ba740db865b23834b795a8a985cc22ae996605c06e776f46780575e52f56839f  22  aarch64-apple-darwin
 sterish_escrow.wasm       29754  cb241f74d20146b9d4895160e68d0c337f68317c3b6c1f272b0505cdb84d0ad0  10  aarch64-apple-darwin
-sterish_tokens.wasm       28566  318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206  14  aarch64-apple-darwin
+sterish_tokens.wasm       40500  719f93beab52ace8d1cecf9b5ef1a1c987798fd2c6230f83a0e3d258490d5825  21  aarch64-apple-darwin
 
-# --- x86_64-unknown-linux-gnu --- recorded 2026-09-15T14:52:45Z --- GitHub Actions ubuntu-latest
-sterish_registry.wasm     35658  48305dba3c4e6c185b754fac642f6d5b749eb1120017c37978743e88d8c48877  15  x86_64-unknown-linux-gnu
+# --- x86_64-unknown-linux-gnu --- recorded 2026-09-15T15:59:33Z --- GitHub Actions ubuntu-latest (run 34992007267)
+sterish_registry.wasm     47506  f576eade3468932b9b26dbf9b7ade9a2f110776cbc06150af5029b502e8afdee  22  x86_64-unknown-linux-gnu
 sterish_escrow.wasm       29754  611f6eaecbe5a6d096045867947d09540f72e08ab455a7ff964970c1c527ffea  10  x86_64-unknown-linux-gnu
-sterish_tokens.wasm       28566  f13c9ee6815bbdb3b86953da91d1d9663a7cb8eb2b94a4c3798bf0d9817d4e1e  14  x86_64-unknown-linux-gnu
-# --- aarch64-unknown-linux-gnu --- recorded 2026-09-15T14:52:40Z --- GitHub Actions ubuntu-24.04-arm
-sterish_registry.wasm     35658  dde6631a70d936f06af2cf56f5e5141e5a3507181f7f94ee5fb76fb0e5ffec93  15  aarch64-unknown-linux-gnu
+sterish_tokens.wasm       40500  6c50817475a2552406aca2c77b47afd4dae7f4a7cee76c0902ba4d7866b14e9c  21  x86_64-unknown-linux-gnu
+# --- aarch64-unknown-linux-gnu --- recorded 2026-09-15T15:59:24Z --- GitHub Actions ubuntu-24.04-arm (run 34992007267)
+sterish_registry.wasm     47506  3da6d495cd51864cc6ac69c855c73d85252751c0f898a1f2f100b3e5991dd086  22  aarch64-unknown-linux-gnu
 sterish_escrow.wasm       29754  f3294593c0260d679803e5f4a96f01a64cea278f29e5feed7e3b1dbe96c7f3a5  10  aarch64-unknown-linux-gnu
-sterish_tokens.wasm       28566  401571b92fa825fb5b1606ba650f2c621db0505a82884c45eb0c064a392a19a4  14  aarch64-unknown-linux-gnu
+sterish_tokens.wasm       40500  ebe1102d032c7e860eda90f8dc7054583723f693c77e760e5afbcfe212f3738b  21  aarch64-unknown-linux-gnu

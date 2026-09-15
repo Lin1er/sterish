@@ -2,13 +2,15 @@
 
 mod data;
 mod test;
+mod upgrade;
 
 pub use data::{
-    AuditVerdict, DataKey, RegistryError, SkillEntry, SkillRegistered, TrustScoreConfig,
-    VerdictFlipped, VersionRecord, VersionRecorded, VersionRegistered,
+    AuditVerdict, DataKey, PendingUpgrade, RegistryError, SkillEntry, SkillRegistered,
+    TrustScoreConfig, UpgradeCancelled, UpgradeExecuted, UpgradeProposed, UpgradeabilityRenounced,
+    VerdictFlipped, VersionRecord, VersionRecorded, VersionRegistered, FALLBACK_UPGRADE_DELAY,
 };
 use data::{BUMP_THRESHOLD, BUMP_TO};
-use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, panic_with_error, Address, BytesN, Env, String, Vec};
 
 #[contract]
 pub struct SkillRegistry;
@@ -30,13 +32,35 @@ fn bump_persistent(env: &Env, key: &DataKey) {
 impl SkillRegistry {
     /// Constructor — runs atomically at deploy time, so there is no deploy->initialize
     /// window for anyone to front-run (that was the `initialize` pattern's weakness).
-    pub fn __constructor(env: Env, admin: Address, auditor: Address) {
+    ///
+    /// `upgrade_delay_secs` is the upgrade timelock, in seconds. It is a
+    /// constructor parameter rather than a constant so that testnet and mainnet
+    /// differ by configuration instead of by code, and it is written once with no
+    /// setter: an admin able to shorten the delay would not have a timelock.
+    /// Testnet is deployed at 300s — long enough to be a real, demonstrable wait,
+    /// short enough not to block the team.
+    ///
+    /// **This constructor does not run again on upgrade.** Soroban replaces the
+    /// wasm and leaves storage untouched, so any field a future version adds must
+    /// be initialised by an explicit migration call, never by editing this
+    /// function. See `contracts/registry/src/upgrade.rs`.
+    ///
+    /// A zero delay is rejected. A contract that advertises a timelock and was
+    /// deployed with `0` is worse than one with no timelock at all, because the
+    /// ABI says the guarantee exists.
+    pub fn __constructor(env: Env, admin: Address, auditor: Address, upgrade_delay_secs: u64) {
+        if upgrade_delay_secs == 0 {
+            panic_with_error!(&env, RegistryError::InvalidInput);
+        }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Auditor, &auditor);
         env.storage()
             .instance()
             .set(&DataKey::TrustConfig, &TrustScoreConfig::default());
         env.storage().instance().set(&DataKey::SkillCount, &0u32);
+        env.storage()
+            .instance()
+            .set(&DataKey::UpgradeDelay, &upgrade_delay_secs);
         bump_instance(&env);
     }
 

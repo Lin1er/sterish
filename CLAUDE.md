@@ -47,11 +47,33 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
     Wajib: `--workspace ce4519a7-2b8f-44fe-a12f-801f5cd366e8` (workspace **Sterish**) di TIAP call.
   - Contoh: `orca-ide linear list --filter all --team STE --workspace ce4519a7-... --limit 100 --json`
 
+## Upgradeability (STE-44, 15 Sep 2026)
+
+- **Registry + Tokens SEKARANG upgradeable**, dengan timelock dua-langkah + event
+  (`propose_upgrade` / `execute_upgrade` / `cancel_upgrade`) dan off-switch permanen
+  `renounce_upgradeability()`. Delay = **parameter konstruktor** (testnet: 300 detik),
+  disimpan di state, **tanpa setter**. Admin = satu akun Stellar; mau 2-of-3 nanti =
+  `Set Options` di akun itu, **tanpa ubah kontrak**.
+- **Escrow HARAM dibikin upgradeable dan HARAM di-redeploy.** Dia satu-satunya kontrak
+  yang pegang USDC beneran; admin yang bisa ganti logic kontrak pemegang dana bisa
+  menguras dana itu. `scripts/verify-upgrade-target.sh` bikin CI merah kalau Escrow
+  sampai punya entrypoint upgrade — atau kalau Registry/Tokens kehilangan salah satunya.
+- **Alamat baru** (v1 superseded, TIDAK dihapus — transaksi lama tetap sah):
+  Registry `CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`,
+  Tokens `CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T`,
+  Escrow **tetap** `CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE`.
+- **Jebakan yang wajib diingat:** konstruktor TIDAK jalan lagi saat upgrade (field baru
+  harus lewat jalur migrasi); storage itu **append-only** — jangan hapus/rename/ganti tipe
+  key yang sudah ada; dan upgrade ke wasm tanpa fungsi `upgrade` = kehilangan
+  upgradeability SELAMANYA (tidak ada guard on-chain yang bisa nolak — itu sebabnya
+  guard-nya di CI). Detail + alasannya: `docs/SYSTEM_DESIGN.md` §4.4.
+- Redeploy Registry/Tokens: `bash scripts/deploy-testnet.sh --keep-escrow`, lalu migrasi
+  isi registry dengan `uv run --project pipeline python scripts/migrate-registry.py`.
+
 ## Registry testnet: append-only, dan bakal di-reset
 
-- **Registry TIDAK punya delete, dan TIDAK ada kontrak Sterish yang upgradeable**
-  (tidak ada `update_current_contract_wasm` di `contracts/`). Apa pun yang di-register
-  di testnet nempel selamanya. 47 dari 71 entri sekarang = sampah test.
+- **Registry TIDAK punya delete.** Apa pun yang di-register di testnet nempel selamanya.
+  47 dari 71 entri di Registry v1 = sampah test (v2 cuma dimigrasi yang beneran).
 - **Tiap test yang register skill ke chain WAJIB pakai `sterish_pipeline.namespaces.new_test_skill_id()`**
   (prefix `com.sterish.it-` / `e2e-` / `canon-`). Bikin id pakai f-string sendiri = sampah baru
   yang lolos filter dan tampil di dashboard seolah-olah skill beneran.

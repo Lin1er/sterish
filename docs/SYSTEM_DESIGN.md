@@ -175,6 +175,123 @@ Purpose: lock the developer's audit fee and the auditor's bond in USDC, then eit
 - **VERIFIED token** - a SEP-41 / OZ Non-Fungible token minted per skill version when the verdict is SAFE. It is the on-chain "this passed" badge. Owned by the skill owner.
 - **License token** - a per-skill-version token minted to an agent when it pays via x402 (or already holds the VERIFIED badge). Holding it grants access; it goes stale on the next audited version. OZ's **Royalties** NFT extension can route an author royalty on each license, matching ethnyc's HTS custom-fee design.
 
+### 4.4 Upgradeability (STE-44, implemented)
+
+**Registry and Tokens are upgradeable. Escrow is not, and must not become so.**
+
+Soroban has no proxies: a contract replaces its own wasm with `update_current_contract_wasm`.
+That has one consequence that drove this whole ticket — **upgradeability cannot be added to a
+contract that is already live**, because the capability has to be in the bytes that were
+deployed. Making the Registry upgradeable therefore always meant a fresh address, which is why
+the v1 pair is superseded rather than modified (see [`deployments.md`](deployments.md)).
+
+Tokens had to move with it: its `__constructor` stores `registry` and there is deliberately no
+setter, so it could not be repointed at the new Registry.
+
+Escrow was left exactly where it was. It is the only contract holding real USDC, and an admin who
+can swap the logic of a fund-holding contract can drain it. It also holds no Registry reference —
+its constructor takes only `usdc_token` and `admin` — so nothing forced it to move.
+
+**The mechanism**
+
+```
+propose_upgrade(wasm_hash) -> ready_at   admin only; stores (hash, now, now + delay); UpgradeProposed
+execute_upgrade()                        admin only; rejected while now < ready_at;   UpgradeExecuted
+cancel_upgrade()                         admin only;                                  UpgradeCancelled
+renounce_upgradeability()                admin only; PERMANENT;               UpgradeabilityRenounced
+```
+
+Three details that are decisions, not defaults:
+
+* **The delay is a constructor parameter held in state**, not a constant, so testnet (300s) and
+  mainnet differ by configuration rather than by code. It has **no setter** — an admin who can
+  shorten the delay does not have a timelock — and a delay of `0` is refused by the constructor,
+  because a contract whose ABI advertises a guarantee it does not have is worse than one that
+  never claimed it.
+* **A second proposal while one is open is rejected**, not allowed to overwrite. Overwriting would
+  let an admin announce benign bytes, let the delay run down in public, then swap the hash just
+  before executing — the timelock would be on the announcement, not on the code. Replacing a
+  proposal costs a visible `UpgradeCancelled` and a fresh, full delay.
+* **The events are load-bearing.** A timelock's entire value is that outsiders can see a change
+  coming; without events it is a delay nobody can observe. `UpgradeProposed` carries the wasm
+  hash and both ends of the window, so anyone can fetch the replacement bytes, read their
+  interface, and object while there is still time.
+
+#### The tension this creates, stated plainly
+
+Sterish sells verdicts that cannot be forged. An admin who can replace the Registry's wasm can
+change what `is_verified` means — retroactively, for every version already on chain — and the
+value of "on-chain proof" then rests on that admin choosing not to. Making the Registry
+upgradeable does not remove that; it is that.
+
+It is sharper for Tokens. The missing `registry` setter is a security property, not an oversight:
+repointing the registry would move the `Safe` gate to a contract an attacker controls, and every
+badge minted afterwards would be worthless. Making Tokens upgradeable technically reopens that
+door, because an upgrade could introduce exactly the setter the current design refuses to have.
+
+Nothing in Soroban closes that door while an upgrade path exists. What the design above does is
+bound it, in two ways, and both are the answer to the question rather than a deflection of it:
+
+1. **It cannot be done silently.** The proposal is public for the whole delay. A `set_registry`
+   that was not there before is visible in the proposed wasm's interface, by anyone, before it
+   takes effect.
+2. **It can be switched off permanently.** `renounce_upgradeability()` is one-way by
+   construction: the flag is only ever written `true`, and afterwards `propose`, `execute`,
+   `cancel` and `renounce` itself all refuse, forever. Once the verdict rules stabilise, the admin
+   gives the power up and these contracts become as immutable as ones that never had an upgrade
+   function — while still doing their job.
+
+A reader who spots this tension should find that we spotted it first. That is what this section
+is for.
+
+#### The trap nothing on chain can close
+
+`update_current_contract_wasm` takes a hash, and **there is no host function that can read a
+wasm's exports**. A contract therefore cannot refuse to upgrade into a replacement that has no
+upgrade function — and the moment it does, it is frozen at that code forever, with no way back.
+
+`contracts/tests/tests/upgrade.rs` demonstrates that on real artifacts rather than asserting it.
+The guard that *can* exist runs before the bytes are published:
+[`scripts/verify-upgrade-target.sh`](../scripts/verify-upgrade-target.sh) reads the built spec
+back with `stellar contract info interface` and fails CI if Registry or Tokens has lost any of
+the seven upgrade entrypoints — and fails equally if Escrow ever gains one. That is a narrower
+promise than an on-chain guard and is written into the script's own header as such: it protects
+the artifacts this repository builds, not an operator who uploads a wasm from somewhere else.
+
+#### Storage is append-only, and the constructor does not re-run
+
+Two rules that the tests enforce rather than the type system:
+
+* **Never remove, rename or retype an existing storage key.** An upgrade reinterprets the old
+  bytes with the new code and nothing checks compatibility. Adding keys is safe; Soroban keys a
+  `#[contracttype]` variant by its **name**, not its index, so there is no ordering dependency —
+  and no protection against a rename either.
+* **The constructor does not run again.** Any field a future version adds starts absent, and must
+  be initialised by an explicit migration call. Because the new implementation only takes effect
+  after the current invocation ends, a contract cannot upgrade itself and then call its own new
+  migration in the same call; an auxiliary `Upgrader` contract can, and that is the pattern to
+  use when the migration must be atomic.
+
+#### Access control
+
+The upgrade functions authorize against the stored admin `Address` and nothing else — no role
+system, no governance contract. On Tokens this is specifically `Admin`, not `AuditorRole` or
+`MinterRole`: rotating a mint role must never come with power over the code.
+
+The admin is a **single Stellar account** for now. This costs nothing later: Stellar multisig is
+a property of the *account*, so going 2-of-3 is a `Set Options` transaction on that account with
+**no contract change at all**. Nobody should ever propose a migration for that reason.
+
+#### Why hand-rolled instead of OpenZeppelin
+
+Measured on 2026-09-15, not assumed: `stellar-contract-utils` 0.7.2 — the latest release, dated
+2026-06-09 — declares `soroban-sdk ^26.1.0`. This workspace is pinned to 27.0.6, which `^26.1.0`
+does not admit, and a real `cargo generate-lockfile` on that pair resolves **two** copies of
+soroban-sdk (26.1.1 and 27.0.6) whose `Env` and `Address` are mutually incompatible types. That
+is the same wall the Tokens contract already hit with the OZ non-fungible module. The
+`Upgradeable` derive is about thirty lines of machinery; `contracts/{registry,tokens}/src/upgrade.rs`
+is that, plus the timelock and the off switch the macro does not provide.
+
 ---
 
 ## 5. Audit pipeline design (D2)

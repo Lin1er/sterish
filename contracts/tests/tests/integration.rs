@@ -36,6 +36,9 @@ const FEE: i128 = 5_000_000;
 const BOND: i128 = 3_000_000;
 /// Opening USDC balance handed to every funded actor (10 USDC).
 const MINT: i128 = 10_000_000;
+/// Upgrade timelock both upgradeable contracts are deployed with, in seconds
+/// (STE-44) — the same value testnet runs.
+const UPGRADE_DELAY: u64 = 300;
 
 /// Assert that a `try_*` call returned our typed contract error (not a host panic).
 macro_rules! assert_err {
@@ -205,7 +208,10 @@ fn setup() -> World {
     let agent = Address::generate(&env);
     let reporter = Address::generate(&env);
 
-    let registry_id = env.register(SkillRegistry, (admin.clone(), auditor.clone()));
+    let registry_id = env.register(
+        SkillRegistry,
+        (admin.clone(), auditor.clone(), UPGRADE_DELAY),
+    );
     let escrow_id = env.register(UsdcEscrow, (usdc.clone(), admin.clone()));
     let tokens_id = env.register(
         SterishTokens,
@@ -214,6 +220,7 @@ fn setup() -> World {
             registry_id.clone(),
             auditor.clone(),
             minter.clone(),
+            UPGRADE_DELAY,
         ),
     );
 
