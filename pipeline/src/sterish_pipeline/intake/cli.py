@@ -269,7 +269,7 @@ def seed(
     import time
 
     from sterish_pipeline.audit import to_verdict_json
-    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate
+    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate, register_only
     from sterish_pipeline.stages.stage3_verdict_synthesis import build_verdict_document
 
     cfg = PipelineConfig.load(config)
@@ -320,6 +320,40 @@ def seed(
             continue
 
         started = time.monotonic()
+
+        if entry.register_only:
+            # Deliberately unaudited: register the bytes and stop. See
+            # `orchestrator.register_only` for why this is the only route to an
+            # UNAUDITED record.
+            if dry_run:
+                table.add_row(entry.skill_id, "UNAUDITED", "—", "—", "[cyan]dry-run[/cyan]")
+                log.append({"skill_id": entry.skill_id, "version": entry.version,
+                            "status": "dry_run", "verdict": "UNAUDITED",
+                            "content_hash": entry.content_hash})
+                continue
+            try:
+                result = register_only(
+                    entry.skill_id, entry.version, entry.content_hash, orch_config, cfg
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
+                failures.append(f"{entry.skill_id}: {exc}")
+                table.add_row(entry.skill_id, "UNAUDITED", "—", "—", "[red]error[/red]")
+                log.append({"skill_id": entry.skill_id, "version": entry.version,
+                            "status": "error", "error": str(exc)})
+                continue
+            elapsed = time.monotonic() - started
+            row = result.to_dict()
+            row["seconds"] = round(elapsed, 1)
+            row["tx"] = result.tx_hashes()
+            log.append(row)
+            if not result.ok:
+                failures.append(f"{entry.skill_id}: registration incomplete")
+            table.add_row(
+                entry.skill_id, "UNAUDITED", "—", f"{elapsed:.1f}",
+                "[green]on chain (unaudited)[/green]" if result.ok else "[red]incomplete[/red]",
+            )
+            continue
+
         skill = corpus.normalized(entry)
         report = audit_normalized(skill, config=cfg, skip_sandbox=True)
 

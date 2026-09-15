@@ -31,7 +31,7 @@ from stellar_sdk import Keypair
 
 from sterish_pipeline import onchain, reports
 from sterish_pipeline.config import PipelineConfig
-from sterish_pipeline.models import FinalVerdict
+from sterish_pipeline.models import FinalVerdict, Verdict
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +276,61 @@ def orchestrate(
     if config.run_escrow and config.escrow_id:
         result.steps.extend(_run_escrow(journal, cfg, config, skill_id, version, verdict))
 
+    return result
+
+
+def register_only(
+    skill_id: str,
+    version: str,
+    content_hash: str,
+    config: OrchestratorConfig,
+    pipeline_config: PipelineConfig | None = None,
+) -> OrchestrationResult:
+    """Register a version and stop. No report, no verdict, no badge.
+
+    This is how an **UNAUDITED** record is produced, and the only way: the contract
+    refuses `AuditVerdict::Unaudited` in `submit_verdict` (registry error #9), so a
+    version is unaudited exactly when nobody has submitted a verdict for it yet.
+
+    It exists for the demo data the dashboard needs: a skill whose *latest* version
+    has not been audited is the case that makes `latest_version` and
+    `latest_audited_version` differ, which is the stale-version warning at
+    api-spec 3.3. Faking that state in a fixture would prove nothing — the warning
+    has to fire on what the chain actually holds.
+    """
+    cfg = pipeline_config or PipelineConfig()
+    result = OrchestrationResult(
+        skill_id=skill_id, version=version, content_hash=content_hash,
+        verdict=Verdict.UNAUDITED.value,
+        score=0,
+    )
+    journal = Journal(config.journal_path)
+
+    stuck = journal.has_unknown(skill_id, version)
+    if stuck:
+        raise onchain.OnChainError(
+            f"previous run left {stuck} in an UNKNOWN state for {skill_id}@{version}. "
+            "Check the ledger and clear that entry from the journal before re-running."
+        )
+
+    existing = onchain.lookup_by_hash(cfg, config.registry_id, content_hash)
+    if existing is not None:
+        pinned = f"{existing.get('skill_id')}@{existing.get('version')}"
+        result.steps.append(StepResult(
+            Step.REGISTER, "skipped", None, f"content_hash already registered as {pinned}",
+        ))
+    else:
+        result.steps.append(_run_step(
+            journal, skill_id, version, Step.REGISTER,
+            lambda: onchain.register_skill(
+                cfg, config.registry_id, config.owner_secret, skill_id, version, content_hash),
+        ))
+
+    result.steps.append(StepResult(
+        Step.VERDICT, "skipped", None,
+        "register-only: no verdict submitted, the version stays UNAUDITED"))
+    result.steps.append(StepResult(
+        Step.MINT, "skipped", None, "verdict is UNAUDITED, not SAFE — no badge"))
     return result
 
 

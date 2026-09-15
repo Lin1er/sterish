@@ -206,3 +206,37 @@ def test_a_completed_escrow_job_is_not_reopened(cfg, chain):
     # The registry steps still run here because the stubbed chain reports no state;
     # what matters is that no second escrow job is opened.
     assert "create" not in chain and "bond" not in chain and "settle" not in chain
+
+
+class TestRegisterOnly:
+    """`register_only` is how the UNAUDITED demo state is produced (STE-18)."""
+
+    def test_registers_and_submits_nothing_else(self, cfg, chain):
+        result = orchestrator.register_only("com.acme.demo", "2.0.0", "b" * 64, cfg)
+        assert chain == ["register"]
+        assert result.ok
+        assert result.verdict == "UNAUDITED"
+        assert result.score == 0
+
+    def test_no_verdict_and_no_badge(self, cfg, chain):
+        result = orchestrator.register_only("com.acme.demo", "2.0.0", "b" * 64, cfg)
+        steps = {str(s.step): s for s in result.steps}
+        assert steps["submit_verdict"].status == "skipped"
+        assert steps["mint_verified"].status == "skipped"
+        assert "UNAUDITED" in steps["submit_verdict"].detail
+
+    def test_publishes_no_report(self, cfg, chain):
+        """An unaudited version has no evidence, so it must not advertise any."""
+        result = orchestrator.register_only("com.acme.demo", "2.0.0", "b" * 64, cfg)
+        assert result.evidence_hash == ""
+        assert result.report_uri == ""
+        assert not (cfg.reports_dir / "com.acme.demo").exists()
+
+    def test_already_registered_hash_is_skipped(self, cfg, chain, monkeypatch):
+        monkeypatch.setattr(
+            onchain, "lookup_by_hash",
+            lambda *a, **k: {"skill_id": "com.acme.demo", "version": "2.0.0"},
+        )
+        result = orchestrator.register_only("com.acme.demo", "2.0.0", "b" * 64, cfg)
+        assert chain == []
+        assert next(s for s in result.steps if s.step == Step.REGISTER).status == "skipped"
