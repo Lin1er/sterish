@@ -22,7 +22,8 @@ the chain does not already hold.
 git clone https://github.com/Lin1er/sterish && cd sterish/deploy
 cp .env.example .env      # fill it in; see below
 chmod 600 .env
-mkdir -p artifacts        # <skill_id>/<version>/ trees served by /use
+mkdir -p artifacts        # <skill_id>/<version>/ trees served by /use — NOT in git;
+                          # fill it with "What is for sale" below
 
 docker compose --env-file .env up -d --build
 bash verify.sh https://your.domain
@@ -82,6 +83,51 @@ docker compose up -d
 The next poll refills it from the chain. Verdicts are unaffected while it is
 empty — only the transaction links in `evidence` and the `/feed` list are, and
 they come back as `null` rather than wrong.
+
+**Never remove `deploy_payments`.** It is not the cache. It records every x402
+settlement that is still owed a licence (STE-42): `/use` settles the payment and
+then mints, and if the mint fails in between, this is the only record that the
+buyer paid. Their next request finishes the mint from it without charging again.
+Delete it and those buyers have paid for nothing. To see anything still owed:
+
+```bash
+docker compose exec api python -c "import sqlite3; c=sqlite3.connect('/payments/sterish_payments.db'); \
+print(c.execute('select payer, skill_id, version, settle_tx, last_error from payments where minted_at is null').fetchall())"
+```
+
+A row that stays owed with `NotSafeVerdict` means the version was re-audited away
+from SAFE between settlement and mint. That buyer is owed a refund, which is a
+manual USDC transfer back to `payer`.
+
+## What is for sale
+
+`/use` prices a version only when its artifact is on disk **and** hashes to the
+on-chain `content_hash` (STE-42). Everything else answers `404 ARTIFACT_NOT_FOUND`
+with no payment challenge, so nobody can pay for bytes the API cannot hand over.
+
+`deploy/artifacts/` is operator-supplied and gitignored (STE-25), so a fresh clone
+sells nothing until it is filled. Fill it from the corpus, never by hand — on the
+host, from `deploy/`, with the same image and `.env` the API uses:
+
+```bash
+docker compose --env-file .env --profile tools run --rm publish-artifacts
+```
+
+Run it after every redeploy that brings a new corpus or a new seed run. It writes a
+skill only when the bytes, the corpus index and the registry agree on the hash and
+the on-chain verdict is SAFE, and it is idempotent: an artifact that already
+matches is left alone. Directories are written `0755` and files `0644`, so the API's
+unprivileged user can read what a root-run publish wrote.
+
+The same command from a checkout, without Docker:
+
+```bash
+cd pipeline && set -a && . ../.env && set +a
+uv run sterish intake publish-artifacts --corpus corpus --out ../deploy/artifacts
+```
+
+Then check the result from outside: `verify.sh` fails if any SAFE row is priced
+without being deliverable.
 
 ## Publishing on a public hostname
 
