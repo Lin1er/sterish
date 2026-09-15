@@ -24,8 +24,56 @@ contract addresses (`C…`); keys live in a git-ignored `.env` (see `CLAUDE.md`)
 | **Tokens** (VERIFIED + license, soulbound) | `CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX` | `318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206` | [open](https://stellar.expert/explorer/testnet/contract/CCHVZRLOFGZ5IAYQUSHIPQOTVFABOX6SK5MHNZZUKAOT333KZNVW4EJX) |
 
 The WASM sha256 **is** the Soroban wasm hash (`stellar contract upload` stores a contract under
-`sha256(file)`), so the values above pin exactly the bytes that were deployed. Re-verify with
-`bash scripts/build-wasm.sh --check`.
+`sha256(file)`), so the values above pin exactly the bytes that were deployed.
+
+### What a third party can verify, and what they must pin (STE-12)
+
+These three hashes are reproducible from source, and CI reproduces them on every run — but
+**only on `aarch64-apple-darwin`**, which is the host that built them. That is not a caveat about
+this repo; it is how Rust works. Rust promises byte-identical output across builds on the same
+host, not across host platforms.
+
+Measured in STE-12 on four independent machines, with the commit, `rustc 1.93.0`, `Cargo.lock`,
+the release profile and the `$CARGO_HOME` path remapping all held equal:
+
+| Host triple | `sterish_registry` | `sterish_escrow` | `sterish_tokens` | |
+|---|---|---|---|---|
+| `aarch64-apple-darwin` | `8c438004…` | `cb241f74…` | `318f4458…` | **live on testnet** |
+| `x86_64-unknown-linux-gnu` | `48305dba…` | `611f6eae…` | `f13c9ee6…` | |
+| `aarch64-unknown-linux-gnu` | `dde6631a…` | `f3294593…` | `401571b9…` | |
+
+Byte-identical within a host triple, different across them. All three files keep identical
+**sizes** on every host; what moves is the order the linker lays out the read-only data symbols,
+which shifts the pointer constants in the code section. All three builds are equally valid
+compilations of the same source — only the darwin one is the one that was uploaded.
+
+**To verify the deployed contracts yourself**, on an Apple-silicon Mac:
+
+```bash
+git checkout <this commit>
+bash scripts/build-wasm.sh --check     # rebuilds and compares against contracts/wasm-hashes.txt
+```
+
+**From any machine**, without building at all, compare against the chain directly — this is the
+strongest check and needs no toolchain:
+
+```bash
+stellar contract fetch --id CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND \
+  --network testnet --out-file registry.wasm
+sha256sum registry.wasm   # 8c438004591f65d84f8087738c4ff327bc016b38e443b2661bb36f6cd3852489
+```
+
+**On Linux**, `bash scripts/build-wasm.sh --check` verifies your own host's row in
+`contracts/wasm-hashes.txt` — real drift detection for source, `Cargo.lock`, profile or
+toolchain changes, but it cannot reproduce the deployed bytes. The script says so explicitly
+rather than failing with an unexplained hash mismatch.
+
+The `Contracts` workflow runs `--check` on **both** `macos-15` and `ubuntu-latest`, so the claim
+above is re-proved on every pull request rather than asserted once.
+
+One more thing worth pinning: these bytes came from a bare
+`cargo build --target wasm32v1-none --release`, **not** from `stellar contract build`, which runs
+the wasm optimizer by default and would produce different bytes.
 
 ### Payment asset
 
