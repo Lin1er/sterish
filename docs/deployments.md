@@ -654,6 +654,35 @@ artifacts this repository builds, not an operator who uploads a wasm from somewh
 bounds *that* is the timelock, which makes the proposed hash public for its whole duration, and
 `renounce_upgradeability()`, which ends the question permanently.
 
+#### The timelock, exercised on chain
+
+The mechanism was run against the live Registry immediately after deploying, before any of the
+above was written down. The target was the **identical** wasm hash already deployed, so the swap
+was a no-op and nothing about the contract changed — what is being proved is the path, not a new
+version.
+
+| Step | Ledger time | Result |
+|---|---|---|
+| `propose_upgrade(ba740db8…)` | `proposed_at 1789488092` | ok, `ready_at 1789488392` (= +300s exactly). Event `UpgradeProposed` — [`17b09809…`](https://stellar.expert/explorer/testnet/tx/17b0980977d56d4eb17bd4e6a05f00c9ce2c8eabacfd8b1abc7e90b482eab8fd) |
+| `execute_upgrade()` **during** the window | — | **rejected**, `Error(Contract, #13)` = `UpgradeNotReady`. The proposal was not consumed: `get_pending_upgrade` still returned it |
+| `execute_upgrade()` after `ready_at` | `executed_at 1789488407` | ok. Event `UpgradeExecuted` — [`604dab0d…`](https://stellar.expert/explorer/testnet/tx/604dab0de14ee28abf2d1c6958f45d5f2338ff188b8994330fb0855c75849312) |
+
+Read back from chain afterwards:
+
+```
+skill_count    = 24                       <- every migrated skill survived a real wasm swap
+admin          = GAGU7Z5R…                <- instance storage intact
+auditor        = GCFCURTZ…
+upgrade_delay  = 300
+is_upgradeable = true                     <- upgradeability came across with the new bytes
+pending        = null                     <- the executed proposal was cleared, not left behind
+cctp@2026.8.31 = Dangerous, score 10      <- a persistent VersionRecord, unchanged
+wasm sha256    = ba740db8…                <- the same bytes, as intended for a no-op swap
+```
+
+So the 300-second delay is not a claim about what the code would do; it is a measured wait, with
+an on-chain rejection in the middle of it that anyone can look up.
+
 #### Migration
 
 `scripts/migrate-registry.py` replayed the meaningful entries onto the v2 pair, reading them off
