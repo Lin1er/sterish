@@ -1,7 +1,7 @@
 {
   "capabilities": [],
-  "content_hash": "5c9d232fba6c6be661f2d09a58062a177ce9cbff1e61b41053f7a2c14649f5fd",
-  "evidence_hash": "dcf55b37958aee905e4a7fb9c73947e82662f59a532f2adea0c80c6ef690de3b",
+  "content_hash": "e5da489eb751e96fb30bb622602b8ab471de4898f333028aeeb7a36211d341f5",
+  "evidence_hash": "dae0cab86cde7824c9c8203a5997b652f2372c20460c9b13149d4e82a17eacc3",
   "findings": [
     {
       "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
@@ -13,8 +13,8 @@
   "recommendation": "ALLOW",
   "risk": "none",
   "score": 100,
-  "skill_id": "org.stellar.skills.dapp.data-fetching",
+  "skill_id": "com.fixtures.demo.release-notes",
   "spec_version": "1.0.0",
   "verdict": "SAFE",
-  "version": "2026.8.31"
+  "version": "1.0.0"
 }

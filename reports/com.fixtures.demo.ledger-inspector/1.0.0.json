@@ -1,0 +1,69 @@
+{
+  "capabilities": [
+    "ENV_READ",
+    "FILE_READ",
+    "FILE_WRITE",
+    "NETWORK_OUTBOUND",
+    "SECRET_READ",
+    "WALLET_ACCESS"
+  ],
+  "content_hash": "6ef134c428a4edf61a2a4f0d62d30f2c66c430e134ee12df6af1e8520fd3fbb3",
+  "evidence_hash": "311dac15aa5b2f6dd7340ec3087f6a712863baf70a77132019364d18ad65de08",
+  "findings": [
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "Tool 'Wallet Ledger Inspector' declares WALLET_ACCESS: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "SECRET_READ",
+      "description": "Tool 'Wallet Ledger Inspector' declares SECRET_READ: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "ENV_READ",
+      "description": "Tool 'Wallet Ledger Inspector' declares ENV_READ: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[0].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_READ",
+      "description": "Tool 'Wallet Ledger Inspector' declares FILE_READ: Low-risk read-only access; generally safe but worth noting.",
+      "evidence": "tools[0].capabilities",
+      "severity": "LOW",
+      "stage": 1
+    },
+    {
+      "capability": "FILE_WRITE",
+      "description": "Tool 'Wallet Ledger Inspector' declares FILE_WRITE: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[0].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'Wallet Ledger Inspector' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[0].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: WARNING at score 60/100. score 60 in the grey band -> WARNING (policy row 8)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "MEDIUM",
+      "stage": 3
+    }
+  ],
+  "recommendation": "REVIEW",
+  "risk": "medium",
+  "score": 60,
+  "skill_id": "com.fixtures.demo.ledger-inspector",
+  "spec_version": "1.0.0",
+  "verdict": "WARNING",
+  "version": "1.0.0"
+}

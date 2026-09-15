@@ -1,0 +1,51 @@
+{
+  "capabilities": [
+    "ENV_READ",
+    "FILE_READ",
+    "NETWORK_OUTBOUND"
+  ],
+  "content_hash": "94fcd1273701e1e949fc99a5f537a028dce1072b6899d035622eb9eba0446bf0",
+  "evidence_hash": "4bee944cb0f21f91161034c5c4fb66b53b1c84943ed154a702840ffbacb3a51d",
+  "findings": [
+    {
+      "capability": "FILE_READ",
+      "description": "Tool 'format_table' declares FILE_READ: Low-risk read-only access; generally safe but worth noting.",
+      "evidence": "tools[0].capabilities",
+      "severity": "LOW",
+      "stage": 1
+    },
+    {
+      "capability": "NETWORK_OUTBOUND",
+      "description": "Tool 'table-formatter:server' declares NETWORK_OUTBOUND: This capability grants direct access to sensitive resources and cannot be fully sandboxed.",
+      "evidence": "tools[2].capabilities",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "ENV_READ",
+      "description": "Tool 'table-formatter:server' declares ENV_READ: This capability could leak information or mutate state in unexpected ways.",
+      "evidence": "tools[2].capabilities",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "description": "[name_behaviour_mismatch] Tool named 'format_table' says nothing about credentials or wallets, but its description talks about 'wallet'. The name is what an agent shows the user; the description is what it acts on.",
+      "evidence": "tools[0].description: \"...lines up; it never touches a wallet.\"",
+      "severity": "MEDIUM",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: WARNING at score 78/100. injection finding(s) ['name_behaviour_mismatch'] present -> WARNING (policy row 6)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "MEDIUM",
+      "stage": 3
+    }
+  ],
+  "recommendation": "REVIEW",
+  "risk": "medium",
+  "score": 78,
+  "skill_id": "com.fixtures.demo.table-formatter",
+  "spec_version": "1.0.0",
+  "verdict": "WARNING",
+  "version": "1.0.0"
+}

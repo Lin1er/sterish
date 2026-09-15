@@ -1,0 +1,36 @@
+{
+  "capabilities": [
+    "WALLET_ACCESS"
+  ],
+  "content_hash": "f6fcdb2907ded30e75bcd61ac13263f41ad45f9921923784f77305734e69cf2b",
+  "evidence_hash": "8d3793b867638227f42e0d871a74b3f5cb772a5e06927f0870ab902c55d15f2d",
+  "findings": [
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "manifest.description: \"...//developers.circle.com/cctp) moves USDC by **burning it on the s...\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "capability": "WALLET_ACCESS",
+      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "evidence": "manifest.description: \"Circle's [Cross-Chain Transfer Protocol](https://developers....\"",
+      "severity": "HIGH",
+      "stage": 1
+    },
+    {
+      "description": "Synthesis: DANGEROUS at score 10/100. critical injection pattern(s) wallet_op -> DANGEROUS, score capped at 10 (policy row 1)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "HIGH",
+      "stage": 3
+    }
+  ],
+  "recommendation": "BLOCK",
+  "risk": "critical",
+  "score": 10,
+  "skill_id": "org.stellar.skills.cross-chain.cctp",
+  "spec_version": "1.0.0",
+  "verdict": "DANGEROUS",
+  "version": "2026.8.31"
+}
