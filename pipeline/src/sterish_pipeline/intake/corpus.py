@@ -19,6 +19,11 @@ from sterish_pipeline.intake.normalize import NormalizedSkill, SourceKind, norma
 INDEX_FILENAME = "index.json"
 CORPUS_SCHEMA = "sterish.corpus/v1"
 
+#: `seed_mode` values. See `CorpusEntry.seed_mode`.
+SEED_MODE_AUDIT = "audit"
+SEED_MODE_REGISTER_ONLY = "register-only"
+SEED_MODES = frozenset({SEED_MODE_AUDIT, SEED_MODE_REGISTER_ONLY})
+
 
 @dataclass
 class Provenance:
@@ -44,11 +49,31 @@ class CorpusEntry:
     file_digests: dict[str, str] = field(default_factory=dict)
     expected_verdict: str = ""
     label: str = ""
+    #: What `intake seed` should do with this entry.
+    #:
+    #: ``"audit"`` (the default) is the whole pipeline: audit, publish the report,
+    #: `register_skill` + `submit_verdict` (+ `mint_verified` when SAFE).
+    #: ``"register-only"`` stops after `register_skill`, so the version lands on
+    #: chain carrying the contract's default `AuditVerdict::Unaudited`. There is no
+    #: other way to produce an UNAUDITED record: `submit_verdict` rejects the
+    #: variant outright (registry error #9, InvalidVerdict), by design.
+    seed_mode: str = SEED_MODE_AUDIT
     provenance: Provenance = field(default_factory=Provenance)
 
     @property
     def is_poisoned(self) -> bool:
         return self.label == "poisoned"
+
+    @property
+    def key(self) -> tuple[str, str]:
+        """Identity of an entry. A skill_id alone is NOT one: the registry stores a
+        verdict per (skill_id, version), so the corpus has to be able to hold two
+        versions of the same skill — that is what invariant R4 is demonstrated with."""
+        return (self.skill_id, self.version)
+
+    @property
+    def register_only(self) -> bool:
+        return self.seed_mode == SEED_MODE_REGISTER_ONLY
 
     def to_json(self) -> dict:
         payload = asdict(self)
@@ -131,11 +156,18 @@ class Corpus:
 
     def verify_all(self) -> list[str]:
         problems: list[str] = []
-        seen_ids: set[str] = set()
+        seen: set[tuple[str, str]] = set()
         for entry in self.load():
-            if entry.skill_id in seen_ids:
-                problems.append(f"duplicate skill_id in index: {entry.skill_id}")
-            seen_ids.add(entry.skill_id)
+            if entry.key in seen:
+                problems.append(
+                    f"duplicate entry in index: {entry.skill_id}@{entry.version}"
+                )
+            seen.add(entry.key)
+            if entry.seed_mode not in SEED_MODES:
+                problems.append(
+                    f"{entry.skill_id}@{entry.version}: unknown seed_mode "
+                    f"{entry.seed_mode!r} (expected one of {sorted(SEED_MODES)})"
+                )
             problems.extend(self.verify(entry))
         return problems
 
@@ -151,6 +183,7 @@ class Corpus:
         provenance: Provenance,
         label: str = "",
         expected_verdict: str = "",
+        seed_mode: str = SEED_MODE_AUDIT,
     ) -> CorpusEntry:
         """Write snapshot bytes to disk and return the index entry for them."""
         target = self.root / relative_path
@@ -171,11 +204,12 @@ class Corpus:
             file_digests={path: hash_bytes(data) for path, data in sorted(files.items())},
             expected_verdict=expected_verdict,
             label=label,
+            seed_mode=seed_mode,
             provenance=provenance,
         )
 
     def save_index(self, entries: list[CorpusEntry], generated_at: str) -> None:
-        ordered = sorted(entries, key=lambda e: e.skill_id)
+        ordered = sorted(entries, key=lambda e: e.key)
         document = {
             "schema": CORPUS_SCHEMA,
             "content_hash_spec": "sterish-content-hash/v1",

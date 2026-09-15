@@ -38,7 +38,7 @@ def test_dropping_the_cache_keeps_the_verdict_and_only_drops_tx_links(client, mo
 
 def test_rebuild_is_idempotent_and_restores_the_same_rows(client):
     indexer._store([ROW, AUDIT_ROW])
-    before, total_before = indexer.feed()
+    before, total_before, _ = indexer.feed()
     assert total_before == 2
 
     indexer.rebuild()
@@ -46,7 +46,7 @@ def test_rebuild_is_idempotent_and_restores_the_same_rows(client):
     assert indexer.last_indexed_ledger() is None
 
     indexer._store([ROW, AUDIT_ROW])          # what a re-poll would do
-    after, total_after = indexer.feed()
+    after, total_after, _ = indexer.feed()
     assert total_after == total_before
     assert [r["tx_hash"] for r in after] == [r["tx_hash"] for r in before]
 

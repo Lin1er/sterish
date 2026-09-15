@@ -47,6 +47,23 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
     Wajib: `--workspace ce4519a7-2b8f-44fe-a12f-801f5cd366e8` (workspace **Sterish**) di TIAP call.
   - Contoh: `orca-ide linear list --filter all --team STE --workspace ce4519a7-... --limit 100 --json`
 
+## Registry testnet: append-only, dan bakal di-reset
+
+- **Registry TIDAK punya delete, dan TIDAK ada kontrak Sterish yang upgradeable**
+  (tidak ada `update_current_contract_wasm` di `contracts/`). Apa pun yang di-register
+  di testnet nempel selamanya. 47 dari 71 entri sekarang = sampah test.
+- **Tiap test yang register skill ke chain WAJIB pakai `sterish_pipeline.namespaces.new_test_skill_id()`**
+  (prefix `com.sterish.it-` / `e2e-` / `canon-`). Bikin id pakai f-string sendiri = sampah baru
+  yang lolos filter dan tampil di dashboard seolah-olah skill beneran.
+- Filter-nya di API (`sterish_api/skills.py`): `/skills` + `/feed` nyembunyiin namespace test
+  by default, **tapi selalu lapor** `chain_total` + `hidden_test_entries`, dan `?include_test=true`
+  buka semuanya. **Nyembunyiin diam-diam = HARAM.** Pembaca tidak boleh bisa menyimpulkan
+  bahwa yang ditampilkan itu seluruh isi chain.
+- `com.fixtures.*` BUKAN namespace test — itu data demo yang memang harus kelihatan.
+- **Testnet reset ke genesis 16 Desember 2026, 17:00 UTC** (resmi, kehapus semua ledger entry
+  termasuk contract data). Tiap klaim yang bergantung ke link stellar.expert punya tanggal
+  kedaluwarsa — tulis itu di dokumen, jangan janjikan permanensi yang tidak ada.
+
 ## Testing (WAJIB, no bug)
 - e2e + edge + positive + negative tiap tiket. Kontrak: `cargo llvm-cov` **>80%**, semua revert/guard path.
 

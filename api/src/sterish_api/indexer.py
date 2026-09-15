@@ -31,6 +31,7 @@ from typing import Any
 from stellar_sdk import SorobanServer, scval
 from stellar_sdk import xdr as stellar_xdr
 from stellar_sdk.soroban_rpc import EventFilter, EventFilterType
+from sterish_pipeline.namespaces import LEGACY_TEST_SKILL_IDS, TEST_SKILL_ID_PREFIXES
 
 from .chain import address_str, decode_verdict
 from .config import settings
@@ -127,18 +128,48 @@ def tx_for(skill_id: str, version: str, event: str) -> str | None:
         return None
 
 
-def feed(limit: int = 50, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
+#: SQL that matches an event from a test namespace, and the parameters it binds.
+#: Built from `sterish_pipeline.namespaces` so the feed and the `/skills` filter
+#: cannot drift apart — they are the same rule, applied to two tables.
+_TEST_NS_SQL = " OR ".join(
+    ["skill_id = ?"] * len(LEGACY_TEST_SKILL_IDS)
+    + ["skill_id LIKE ?"] * len(TEST_SKILL_ID_PREFIXES)
+)
+_TEST_NS_PARAMS = [*sorted(LEGACY_TEST_SKILL_IDS), *(f"{p}%" for p in TEST_SKILL_ID_PREFIXES)]
+
+
+def feed(
+    limit: int = 50, offset: int = 0, include_test: bool = False
+) -> tuple[list[dict[str, Any]], int, int]:
+    """One page of indexed activity: `(rows, total, hidden)`.
+
+    `total` counts the rows this filter leaves and `hidden` counts the ones it
+    removed, so a caller can always tell a quiet registry from a filtered one.
+    `LIKE` with a literal prefix uses the same left-anchored comparison as
+    `str.startswith`; none of the prefixes contains a `%` or `_` wildcard, and
+    `test_feed_filter.py` pins the two implementations against each other.
+    """
     try:
         with _lock, _connect() as conn:
             total = conn.execute("SELECT COUNT(*) AS c FROM events").fetchone()["c"]
+            hidden = conn.execute(
+                f"SELECT COUNT(*) AS c FROM events WHERE {_TEST_NS_SQL}", _TEST_NS_PARAMS
+            ).fetchone()["c"]
+            if include_test:
+                rows = conn.execute(
+                    "SELECT * FROM events ORDER BY ledger DESC, id DESC LIMIT ? OFFSET ?",
+                    (limit, offset),
+                ).fetchall()
+                return [dict(r) for r in rows], int(total), 0
             rows = conn.execute(
-                "SELECT * FROM events ORDER BY ledger DESC, id DESC LIMIT ? OFFSET ?",
-                (limit, offset),
+                f"SELECT * FROM events WHERE NOT ({_TEST_NS_SQL}) "
+                "ORDER BY ledger DESC, id DESC LIMIT ? OFFSET ?",
+                (*_TEST_NS_PARAMS, limit, offset),
             ).fetchall()
-            return [dict(r) for r in rows], int(total)
+            return [dict(r) for r in rows], int(total) - int(hidden), int(hidden)
     except sqlite3.Error as exc:
         logger.warning("feed query failed: %s", exc)
-        return [], 0
+        return [], 0, 0
 
 
 # --- polling ----------------------------------------------------------------

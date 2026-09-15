@@ -8,7 +8,7 @@ import re
 
 from fastapi import APIRouter, Query
 
-from .. import chain, fanout, indexer
+from .. import chain, fanout, indexer, skills
 from ..config import settings
 from ..errors import ApiError
 from ..models import (
@@ -200,8 +200,14 @@ def skill_detail(skill_id: str):
 def list_skills(
     start: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    include_test: bool = Query(
+        default=False,
+        description="Include skills registered under a test namespace. Hidden by "
+        "default; `hidden_test_entries` says how many, and `chain_total` is always "
+        "the real on-chain count.",
+    ),
 ):
-    entries = chain.query_all_skills(start, limit)
+    entries, total, chain_total, hidden = skills.visible_page(start, limit, include_test)
 
     def _latest_audited_record(entry: dict) -> dict | None:
         latest_audited = entry["latest_audited_version"]
@@ -236,7 +242,13 @@ def list_skills(
         )
 
     return SkillListResponse(
-        skills=items, total=chain.get_skill_count(), start=start, limit=limit
+        skills=items,
+        total=total,
+        start=start,
+        limit=limit,
+        chain_total=chain_total,
+        hidden_test_entries=hidden,
+        include_test=include_test,
     )
 
 
@@ -244,10 +256,19 @@ def list_skills(
 def activity_feed(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    include_test: bool = Query(
+        default=False,
+        description="Include events from test namespaces. Hidden by default, with "
+        "`hidden_test_events` reporting how many were left out.",
+    ),
 ):
     """Indexed registry activity, newest first. Served from the cache by definition —
-    it is a convenience feed, not a verdict source."""
-    rows, total = indexer.feed(limit=limit, offset=offset)
+    it is a convenience feed, not a verdict source.
+
+    Test namespaces are hidden here for the same reason as in `/skills`: 47 of the 66
+    registered skills are scaffolding no contract call can remove, and a feed they
+    dominate shows activity nobody performed on purpose."""
+    rows, total, hidden = indexer.feed(limit=limit, offset=offset, include_test=include_test)
     return FeedResponse(
         events=[
             FeedItem(
@@ -268,4 +289,6 @@ def activity_feed(
         total=total,
         indexer_enabled=settings.indexer_enabled,
         last_indexed_ledger=indexer.last_indexed_ledger(),
+        hidden_test_events=hidden,
+        include_test=include_test,
     )

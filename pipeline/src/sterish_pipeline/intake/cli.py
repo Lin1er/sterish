@@ -68,7 +68,7 @@ def fetch(corpus_dir: str, limit: int | None, timeout: float) -> None:
             label="catalog",
             expected_verdict="",
         )
-        existing[entry.skill_id] = entry
+        existing[entry.key] = entry
         console.print(f"  [green]+[/green] {entry.skill_id} ({entry.content_hash[:12]}…)")
 
     corpus.save_index(list(existing.values()), datetime.now(UTC).isoformat(timespec="seconds"))
@@ -136,7 +136,7 @@ def audit_corpus(
     mismatches: list[str] = []
     poisoned_marked_safe: list[str] = []
 
-    for entry in sorted(entries, key=lambda e: e.skill_id):
+    for entry in sorted(entries, key=lambda e: e.key):
         skill = corpus.normalized(entry)
         report = audit_normalized(skill, config=cfg, skip_sandbox=skip_sandbox)
 
@@ -269,7 +269,7 @@ def seed(
     import time
 
     from sterish_pipeline.audit import to_verdict_json
-    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate
+    from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate, register_only
     from sterish_pipeline.stages.stage3_verdict_synthesis import build_verdict_document
 
     cfg = PipelineConfig.load(config)
@@ -291,7 +291,7 @@ def seed(
     corpus = Corpus(corpus_dir)
     wanted = set(labels)
     held_back = set(excluded)
-    entries = [e for e in sorted(corpus.load(), key=lambda e: e.skill_id) if e.label in wanted]
+    entries = [e for e in sorted(corpus.load(), key=lambda e: e.key) if e.label in wanted]
     if not entries:
         console.print(f"[red]no corpus entries with label(s) {sorted(wanted)}[/red]")
         raise SystemExit(1)
@@ -309,17 +309,58 @@ def seed(
         run_escrow=False,
     )
 
-    table = Table("skill_id", "verdict", "score", "seconds", "result")
+    # `version` is a column, not a detail: the corpus can hold two versions of one
+    # skill, and a table keyed on skill_id alone shows the rug-pull demo as two
+    # identical-looking rows.
+    table = Table("skill_id", "version", "verdict", "score", "seconds", "result")
     log: list[dict] = []
     failures: list[str] = []
 
     for entry in entries:
         if entry.skill_id in held_back:
-            table.add_row(entry.skill_id, "—", "—", "—", "[yellow]held back[/yellow]")
-            log.append({"skill_id": entry.skill_id, "status": "held_back"})
+            table.add_row(entry.skill_id, entry.version, "—", "—", "—",
+                          "[yellow]held back[/yellow]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "held_back"})
             continue
 
         started = time.monotonic()
+
+        if entry.register_only:
+            # Deliberately unaudited: register the bytes and stop. See
+            # `orchestrator.register_only` for why this is the only route to an
+            # UNAUDITED record.
+            if dry_run:
+                table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
+                              "[cyan]dry-run[/cyan]")
+                log.append({"skill_id": entry.skill_id, "version": entry.version,
+                            "status": "dry_run", "verdict": "UNAUDITED",
+                            "content_hash": entry.content_hash})
+                continue
+            try:
+                result = register_only(
+                    entry.skill_id, entry.version, entry.content_hash, orch_config, cfg
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
+                failures.append(f"{entry.skill_id}: {exc}")
+                table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
+                              "[red]error[/red]")
+                log.append({"skill_id": entry.skill_id, "version": entry.version,
+                            "status": "error", "error": str(exc)})
+                continue
+            elapsed = time.monotonic() - started
+            row = result.to_dict()
+            row["seconds"] = round(elapsed, 1)
+            row["tx"] = result.tx_hashes()
+            log.append(row)
+            if not result.ok:
+                failures.append(f"{entry.skill_id}: registration incomplete")
+            table.add_row(
+                entry.skill_id, entry.version, "UNAUDITED", "—", f"{elapsed:.1f}",
+                "[green]on chain (unaudited)[/green]" if result.ok else "[red]incomplete[/red]",
+            )
+            continue
+
         skill = corpus.normalized(entry)
         report = audit_normalized(skill, config=cfg, skip_sandbox=True)
 
@@ -334,12 +375,12 @@ def seed(
         if verdict == FinalVerdict.DANGEROUS.value and not allow_dangerous:
             elapsed = time.monotonic() - started
             table.add_row(
-                entry.skill_id, _verdict_markup(FinalVerdict.DANGEROUS), str(score),
-                f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
+                entry.skill_id, entry.version, _verdict_markup(FinalVerdict.DANGEROUS),
+                str(score), f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
             )
             log.append(
-                {"skill_id": entry.skill_id, "status": "skipped_dangerous",
-                 "verdict": verdict, "score": score}
+                {"skill_id": entry.skill_id, "version": entry.version,
+                 "status": "skipped_dangerous", "verdict": verdict, "score": score}
             )
             continue
 
@@ -347,17 +388,20 @@ def seed(
             specs.validate_verdict_document(payload, submittable=True)
         except Exception as exc:  # noqa: BLE001 - reported per entry, run continues
             failures.append(f"{entry.skill_id}: document invalid: {exc}")
-            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]invalid[/red]")
-            log.append({"skill_id": entry.skill_id, "status": "invalid", "error": str(exc)})
+            table.add_row(entry.skill_id, entry.version, verdict, str(score), "—",
+                          "[red]invalid[/red]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "invalid", "error": str(exc)})
             continue
 
         if dry_run:
             elapsed = time.monotonic() - started
             table.add_row(
-                entry.skill_id, verdict, str(score), f"{elapsed:.1f}", "[cyan]dry-run[/cyan]"
+                entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
+                "[cyan]dry-run[/cyan]",
             )
             log.append(
-                {"skill_id": entry.skill_id, "status": "dry_run",
+                {"skill_id": entry.skill_id, "version": entry.version, "status": "dry_run",
                  "verdict": verdict, "score": score,
                  "content_hash": payload["content_hash"], "seconds": round(elapsed, 1)}
             )
@@ -367,8 +411,10 @@ def seed(
             result = orchestrate(payload, orch_config, cfg)
         except Exception as exc:  # noqa: BLE001 - one bad entry must not end the batch
             failures.append(f"{entry.skill_id}: {exc}")
-            table.add_row(entry.skill_id, verdict, str(score), "—", "[red]error[/red]")
-            log.append({"skill_id": entry.skill_id, "status": "error", "error": str(exc)})
+            table.add_row(entry.skill_id, entry.version, verdict, str(score), "—",
+                          "[red]error[/red]")
+            log.append({"skill_id": entry.skill_id, "version": entry.version,
+                        "status": "error", "error": str(exc)})
             continue
 
         elapsed = time.monotonic() - started
@@ -380,7 +426,7 @@ def seed(
         if not result.ok:
             failures.append(f"{entry.skill_id}: orchestration incomplete")
         table.add_row(
-            entry.skill_id, verdict, str(score), f"{elapsed:.1f}",
+            entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
             "[green]on chain[/green]" if result.ok else "[red]incomplete[/red]",
         )
 
@@ -409,9 +455,15 @@ def seed(
         raise SystemExit(1)
 
 
-def _load_existing(corpus: Corpus) -> dict[str, CorpusEntry]:
+def _load_existing(corpus: Corpus) -> dict[tuple[str, str], CorpusEntry]:
+    """Existing entries by (skill_id, version).
+
+    Keyed on the pair, not on skill_id: a corpus may legitimately hold two
+    versions of one skill, and keying on the id alone silently dropped one of
+    them on the next `intake fetch`.
+    """
     if corpus.index_path.exists():
-        return {e.skill_id: e for e in corpus.load()}
+        return {e.key: e for e in corpus.load()}
     return {}
 
 

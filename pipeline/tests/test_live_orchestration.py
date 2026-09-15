@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import time
 from pathlib import Path
 
 import pytest
@@ -31,6 +30,7 @@ import pytest
 from sterish_pipeline import onchain, orchestrator, reports
 from sterish_pipeline.audit import run_audit
 from sterish_pipeline.config import PipelineConfig
+from sterish_pipeline.namespaces import new_test_skill_id
 from sterish_pipeline.orchestrator import OrchestratorConfig, Step
 
 pytestmark = pytest.mark.skipif(
@@ -85,12 +85,13 @@ def orch_cfg(tmp_path) -> OrchestratorConfig:
 def _fresh_skill(tmp_path: Path, fixture: str) -> tuple[Path, str]:
     """Copy a fixture under a unique skill_id so each run registers new bytes.
 
-    The fixture directory name is sanitised: the frozen verdict schema's skill_id
-    pattern allows only lowercase alphanumerics, hyphens and dots, so an underscore
-    from a directory name would fail validation before anything reached the chain.
+    The id comes from `namespaces.test_skill_id`, not from an f-string here. The
+    registry is append-only and none of our contracts is upgradeable, so every id
+    this test invents is on the ledger forever; the `com.sterish.it-` prefix is what
+    lets the API filter keep it out of the dashboard. An id built by hand can drift
+    off that prefix, and then it is served as a real audited skill.
     """
-    slug = fixture.replace("_", "-")
-    skill_id = f"com.sterish.it-{slug}-{int(time.time())}"
+    skill_id = new_test_skill_id("it", fixture.replace("_", "-"))
     skill_dir = tmp_path / "skill"
     shutil.copytree(FIXTURES / fixture, skill_dir)
 
@@ -242,3 +243,4 @@ def test_dangerous_skill_slashes_the_bond(tmp_path, pipeline_cfg, orch_cfg):
     assert statuses[Step.SLASH] == "done"
     assert Step.SETTLE not in statuses
     assert statuses[Step.MINT] == "skipped"
+

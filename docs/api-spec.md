@@ -36,12 +36,12 @@ testnet deployment. Every section here is implemented.
 | 3.1 `GET /check/by-hash/{content_hash}` | implemented |
 | 3.2 `GET /check/{skill_id}/{version}` | implemented |
 | 3.3 `GET /skills/{skill_id}` | implemented |
-| 3.4 `GET /skills` | implemented |
+| 3.4 `GET /skills` | implemented — hides test namespaces by default and reports the hidden count (STE-18) |
 | 3.5 `GET /health` | implemented |
 | 3.6 `GET /reports/{skill_id}/{version}` | implemented (STE-32) — `report_uri` is advertised only when a base URL is set **and** the report exists |
 | 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19) |
 | 3.8 `GET /license/{skill_id}/{version}` | implemented (STE-35) |
-| 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35 |
+| 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35; test namespaces filtered in STE-18 |
 
 What the scaffold had, and what replaced it:
 
@@ -249,8 +249,9 @@ Paginated catalogue. Backed by `query_all_skills(start, limit)`.
 
 | Parameter | Type | Default | Notes |
 |---|---|---|---|
-| `start` | integer ≥ 0 | `0` | Offset into the registration-order index. |
+| `start` | integer ≥ 0 | `0` | Offset into the **filtered** list, not into the raw on-chain index. |
 | `limit` | integer 1–100 | `20` | Clamped to 100. |
+| `include_test` | boolean | `false` | Include skills registered under a test namespace. |
 
 ```json
 {
@@ -267,15 +268,46 @@ Paginated catalogue. Backed by `query_all_skills(start, limit)`.
       "latest_audited_is_verified": true
     }
   ],
-  "total": 42,
+  "total": 19,
   "start": 0,
-  "limit": 20
+  "limit": 20,
+  "chain_total": 66,
+  "hidden_test_entries": 47,
+  "include_test": false
 }
 ```
 
 The verdict fields are prefixed `latest_audited_` rather than being bare `verdict` /
 `trust_score`. Verbose on purpose: a bare `verdict` on a list row is what let a UI show a badge
-next to a skill whose newest version was never audited. `total` comes from `get_skill_count()`.
+next to a skill whose newest version was never audited.
+
+**Test namespaces are hidden by default, and the response says so (STE-18).**
+
+47 of the 66 skills on the testnet registry are scaffolding that integration and end-to-end
+runs registered on their way past. None of it can be removed: `contracts/registry` exposes no
+delete, and no Sterish contract is upgradeable, so adding one would mean a new contract address
+and a full registry migration. The filter therefore lives in this layer.
+
+Three counts, never one:
+
+| Field | Meaning |
+|---|---|
+| `total` | Rows available under the current filter. `start`/`limit` index **this** sequence. |
+| `chain_total` | `get_skill_count()` exactly as the contract returns it. Never filtered. |
+| `hidden_test_entries` | How many entries the filter left out. `0` when `include_test=true`. |
+
+The rule they exist to satisfy: **a reader must never be able to conclude that what this
+endpoint returns is the whole chain.** Hiding silently was considered and rejected. A client
+rendering only `total` still cannot claim completeness, because `chain_total` is in the same
+object and differs; a dashboard is expected to surface `hidden_test_entries` as a control that
+re-requests with `include_test=true`.
+
+An id is test scaffolding when it starts with `com.sterish.it-`, `com.sterish.e2e-` or
+`com.sterish.canon-`, or is one of the two ids the STE-13 manual seed left behind
+(`com.sterish.weather-lookup`, `com.evil.token-drainer`). The list is `sterish_pipeline.namespaces`,
+shared with the tests that generate the ids — a filter and a test that disagree about the prefix
+produce exactly the junk the filter exists to remove. `com.fixtures.*` is **not** on it: those are
+published demo data, and hiding them would empty the dashboard of what it is meant to show.
 
 ### 3.5 `GET /health`
 
@@ -438,6 +470,7 @@ Registry events the indexer has tailed, newest first. Backed by SQLite, not by t
 |---|---|---|---|
 | `limit` | integer 1–200 | `50` | |
 | `offset` | integer ≥ 0 | `0` | |
+| `include_test` | boolean | `false` | Include events from test namespaces. |
 
 ```json
 {
@@ -458,7 +491,9 @@ Registry events the indexer has tailed, newest first. Backed by SQLite, not by t
   ],
   "total": 231,
   "indexer_enabled": true,
-  "last_indexed_ledger": 4584943
+  "last_indexed_ledger": 4584943,
+  "hidden_test_events": 612,
+  "include_test": false
 }
 ```
 
@@ -475,6 +510,11 @@ part worth trusting, because it points at something a third party can verify ind
 `indexer_enabled` and `last_indexed_ledger` are returned so a caller can tell a genuinely quiet
 registry from an indexer that is switched off or has fallen behind; with `INDEXER_ENABLED=0` the
 feed is empty and `last_indexed_ledger` is null, which must not read as "nothing has happened".
+
+Events from test namespaces are hidden by default, by the same rule and for the same reason as
+in 3.4 — a feed dominated by 47 scaffolding skills shows activity nobody performed on purpose.
+`total` counts what is left, `hidden_test_events` counts what was removed, and
+`include_test=true` returns everything.
 
 ---
 

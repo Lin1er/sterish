@@ -1,9 +1,135 @@
 {
   "schema": "sterish.corpus/v1",
   "content_hash_spec": "sterish-content-hash/v1",
-  "generated_at": "2026-09-03T12:04:57+00:00",
-  "count": 20,
+  "generated_at": "2026-09-15T00:00:00+00:00",
+  "count": 26,
   "entries": [
+    {
+      "skill_id": "com.fixtures.demo.changelog-writer",
+      "version": "1.0.0",
+      "kind": "agent-skill",
+      "path": "fixtures/demo-changelog-writer-v1",
+      "content_hash": "56b259a35fb9fec2ca778b391672252a502e9554ccf8c2c7d5f37d0c99d49032",
+      "file_digests": {
+        "SKILL.md": "54c3a029baaa5fb405ecf7d1da55d26c127ae6f886ff0dc1c97d391ca3d8b764"
+      },
+      "expected_verdict": "SAFE",
+      "label": "demo",
+      "seed_mode": "audit",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-changelog-writer-v1",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Stale-version demo, half one: the version that actually was audited."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.demo.changelog-writer",
+      "version": "2.0.0",
+      "kind": "agent-skill",
+      "path": "fixtures/demo-changelog-writer-v2",
+      "content_hash": "fdab7be1890cf453c69b53fe86832370989e8fcf1aa205299c1633b8d780d01c",
+      "file_digests": {
+        "SKILL.md": "943a8a76be58a72260833378c0944e269d175360c73439fa94d7dd1b35c3893c"
+      },
+      "expected_verdict": "",
+      "label": "demo",
+      "seed_mode": "register-only",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-changelog-writer-v2",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Stale-version demo, half two: registered and never audited, so the chain holds AuditVerdict::Unaudited and latest_version != latest_audited_version. expected_verdict is empty because the pipeline never emits UNAUDITED."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.demo.ledger-inspector",
+      "version": "1.0.0",
+      "kind": "agent-skill",
+      "path": "fixtures/demo-ledger-inspector",
+      "content_hash": "6ef134c428a4edf61a2a4f0d62d30f2c66c430e134ee12df6af1e8520fd3fbb3",
+      "file_digests": {
+        "SKILL.md": "e7d60b0147786fbbd0616d871e2e59decc636415843acf285a6998648ee212ec"
+      },
+      "expected_verdict": "WARNING",
+      "label": "demo",
+      "seed_mode": "audit",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-ledger-inspector",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "WARNING via policy row 8: six honestly declared capabilities put the score at 60, inside the grey band, with zero injection findings."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "1.0.0",
+      "kind": "agent-skill",
+      "path": "fixtures/demo-release-notes-v1",
+      "content_hash": "e5da489eb751e96fb30bb622602b8ab471de4898f333028aeeb7a36211d341f5",
+      "file_digests": {
+        "SKILL.md": "3835c4c12d9d8c65670d9bc9475f175f82681b100ff566f8934016a66a260ff4"
+      },
+      "expected_verdict": "SAFE",
+      "label": "demo",
+      "seed_mode": "audit",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-release-notes-v1",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Rug pull, half one: a clean v1 that earns SAFE and a VERIFIED badge."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "2.0.0",
+      "kind": "agent-skill",
+      "path": "fixtures/demo-release-notes-v2",
+      "content_hash": "befb592d3cb1afa4c471a7c4ddf2666f1c6ebd0364e76977ecd294be7c01653d",
+      "file_digests": {
+        "SKILL.md": "f2be3190713f1aae37e81ee702a85b425ea36c3af81b610ae5bcba9da7db424b"
+      },
+      "expected_verdict": "DANGEROUS",
+      "label": "demo",
+      "seed_mode": "audit",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-release-notes-v2",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "Rug pull, half two: same skill_id, same author, credential exfiltration added in an HTML comment. Proves invariant R4 — v1's SAFE verdict and its badge do not reach v2."
+      }
+    },
+    {
+      "skill_id": "com.fixtures.demo.table-formatter",
+      "version": "1.0.0",
+      "kind": "mcp-server",
+      "path": "fixtures/demo-table-formatter",
+      "content_hash": "94fcd1273701e1e949fc99a5f537a028dce1072b6899d035622eb9eba0446bf0",
+      "file_digests": {
+        "table-formatter-mcp.json": "d902f56683419d99035d1e37f34ee6c7a2ebc861803ed6972c4848008e787cb0"
+      },
+      "expected_verdict": "WARNING",
+      "label": "demo",
+      "seed_mode": "audit",
+      "provenance": {
+        "source": "sterish-fixture",
+        "source_url": "repo:pipeline/corpus/fixtures/demo-table-formatter",
+        "fetched_at": "2026-09-15T14:57:20+00:00",
+        "upstream_etag": "",
+        "upstream_last_modified": "",
+        "note": "WARNING via policy row 6: one MEDIUM name_behaviour_mismatch, nothing critical, at a score (78) that would otherwise be SAFE."
+      }
+    },
     {
       "skill_id": "com.fixtures.poisoned.invoice-helper",
       "version": "1.0.0",
@@ -15,6 +141,7 @@
       },
       "expected_verdict": "DANGEROUS",
       "label": "poisoned",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/evil-mcp",
@@ -35,6 +162,7 @@
       },
       "expected_verdict": "DANGEROUS",
       "label": "poisoned",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/hidden-comment-skill",
@@ -55,6 +183,7 @@
       },
       "expected_verdict": "DANGEROUS",
       "label": "poisoned",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/poisoned-pdf-skill",
@@ -75,6 +204,7 @@
       },
       "expected_verdict": "DANGEROUS",
       "label": "poisoned",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/token-drainer-mcp",
@@ -95,6 +225,7 @@
       },
       "expected_verdict": "SAFE",
       "label": "safe",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/premium-pdf-suite",
@@ -115,6 +246,7 @@
       },
       "expected_verdict": "SAFE",
       "label": "safe",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/price-checker",
@@ -135,6 +267,7 @@
       },
       "expected_verdict": "SAFE",
       "label": "safe",
+      "seed_mode": "audit",
       "provenance": {
         "source": "sterish-fixture",
         "source_url": "repo:pipeline/corpus/fixtures/safe-weather-skill",
@@ -155,6 +288,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/agentic-payments/mpp.md",
@@ -175,6 +309,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/agentic-payments/x402.md",
@@ -195,6 +330,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/cross-chain/axelar.md",
@@ -215,6 +351,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/cross-chain/cctp.md",
@@ -235,6 +372,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/dapp/data-fetching.md",
@@ -255,6 +393,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/dapp/react.md",
@@ -275,6 +414,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/dapp/smart-accounts.md",
@@ -295,6 +435,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/data/horizon.md",
@@ -315,6 +456,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/smart-contracts/development.md",
@@ -335,6 +477,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/smart-contracts/security.md",
@@ -355,6 +498,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/smart-contracts/testing.md",
@@ -375,6 +519,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/standards/ecosystem.md",
@@ -395,6 +540,7 @@
       },
       "expected_verdict": "",
       "label": "catalog",
+      "seed_mode": "audit",
       "provenance": {
         "source": "skills.stellar.org",
         "source_url": "https://skills.stellar.org/skills/standards/resources.md",

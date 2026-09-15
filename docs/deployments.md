@@ -482,6 +482,41 @@ prefix — the route supplies that), `STERISH_REPORTS_DIR` through compose, plus
 
 Full audit evidence with the transaction tables: [`audit-evidence.md`](audit-evidence.md).
 
+### Seed run 2026-09-15 — cctp published, four demo skills, junk filtered (STE-18)
+
+No redeploy: this is a registry change plus an API behaviour change waiting on the next one.
+
+| | |
+|---|---|
+| Registry | 66 → **71** entries |
+| Real catalogue skills on chain | **13**, nothing held back |
+| Demo skills lighting all four registry states | **4** (6 versions) |
+| `sha256(report)` matching the on-chain `evidence_hash` | **25 / 25** |
+| Time per skill | median **5.6 s**, slowest **14.7 s** |
+
+New on chain, all under Registry `CAPDQW2XWTOCFQEP3AUCRRQHVJ5IOUZ45DWPNPVG7USNPE6RZQ3BUXND`:
+
+| skill_id | version | verdict |
+|---|---|---|
+| `org.stellar.skills.cross-chain.cctp` | 2026.8.31 | **DANGEROUS** — re-audited after the STE-36 fix, published rather than held back a second time |
+| `com.fixtures.demo.release-notes` | 1.0.0 / 2.0.0 | **SAFE** / **DANGEROUS** — the rug pull, invariant R4 |
+| `com.fixtures.demo.changelog-writer` | 1.0.0 / 2.0.0 | **SAFE** / **UNAUDITED** — the stale-version warning |
+| `com.fixtures.demo.ledger-inspector` | 1.0.0 | **WARNING** via policy row 8 |
+| `com.fixtures.demo.table-formatter` | 1.0.0 | **WARNING** via policy row 6 |
+
+Every transaction hash, the findings behind the `cctp` verdict, and the full hash table are in
+[`audit-evidence.md`](audit-evidence.md). Verify the whole set against the contract with
+`pipeline/scripts/verify_onchain.py`.
+
+The 12 pre-existing catalogue entries also received a fresh `submit_verdict` with an unchanged
+verdict and score: the internal report model changed after 10 September (STE-38, STE-40), which
+moves the document-level `evidence_hash`, and the ledger must point at a hash the served report
+reproduces. Superseded transactions are listed in `audit-evidence.md`.
+
+**Needs a redeploy to take effect in production:** `/skills` and `/feed` now hide test namespaces
+by default and report `chain_total` / `hidden_test_entries`. 47 of the 71 entries are test
+scaffolding that no contract call can remove. No new environment variables.
+
 ### Operations
 
 ```bash
@@ -501,5 +536,11 @@ URL with TLS"). To restrict it to the tailnet: `tailscale funnel --https=443 off
 - **v1 is non-upgradeable.** If an interface changes, redeploy and update this document.
 - **Testnet is reset periodically** by SDF — every contract address above disappears when that
   happens. `scripts/deploy-testnet.sh` exists so that redeploying is a single command.
+  The next scheduled reset is **16 December 2026, 17:00 UTC**
+  ([official schedule](https://developers.stellar.org/docs/networks#testnet-and-futurenet-data-reset)).
+  A reset clears all ledger entries, contract data included, so after it: redeploy the contracts,
+  update every address in this document, then re-seed with one `intake seed` run. What a third
+  party can and cannot verify either side of that date is set out in
+  [`audit-evidence.md`](audit-evidence.md).
 - The USDC SAC address in Escrow is **immutable** (locked in `__constructor`, no setter). Getting
   it wrong at deploy time means redeploying.
