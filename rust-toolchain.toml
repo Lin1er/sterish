@@ -1,7 +1,14 @@
 # Pinned so that `cargo build --target wasm32v1-none --release` produces the SAME
-# wasm — and therefore the same sha256 / Soroban wasm hash — on every machine and
-# in CI. `contracts/wasm-hashes.txt` records the hashes this exact toolchain
-# produces; `scripts/build-wasm.sh --check` re-verifies them.
+# wasm — and therefore the same sha256 / Soroban wasm hash — for a given host.
+# `contracts/wasm-hashes.txt` records the hashes this exact toolchain produces,
+# one row per host triple; `scripts/build-wasm.sh --check` re-verifies the row
+# for the host it runs on.
+#
+# Pinning the channel is necessary but NOT sufficient for a byte-identical
+# build: measured in STE-12, the same toolchain yields different (same-sized)
+# wasm on aarch64-apple-darwin, x86_64-unknown-linux-gnu and
+# aarch64-unknown-linux-gnu. The host is part of the artifact identity — see the
+# header of contracts/wasm-hashes.txt.
 #
 # Changing `channel` will change the wasm hashes. That is a deliberate act: it
 # means re-running `bash scripts/build-wasm.sh` and re-uploading the contracts.

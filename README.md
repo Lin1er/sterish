@@ -239,11 +239,11 @@ Run `make help` for the same list generated from the Makefile itself.
 | Network passphrase | `Test SDF Network ; September 2015` | |
 | Soroban RPC | `https://soroban-testnet.stellar.org` | |
 
-### Contract WASM hashes (built, pending deploy)
+### Contract WASM hashes
 
 The three contracts are built and hash-pinned via `make build-wasm`
 (`contracts/wasm-hashes.txt`). A Soroban contract is stored under `sha256(wasm)`,
-so these are exactly what will be uploaded:
+so these are exactly the bytes that were uploaded:
 
 | Contract | WASM sha256 (= Soroban wasm hash) |
 |---|---|
@@ -252,6 +252,14 @@ so these are exactly what will be uploaded:
 | `sterish_tokens` | `318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206` |
 
 Re-verify with `make verify-wasm`.
+
+Those hashes are the **`aarch64-apple-darwin`** build — the host that produced what is live on
+testnet. A Soroban wasm build is byte-reproducible for a given host triple and *not* across host
+triples, so `contracts/wasm-hashes.txt` records a row per host and `make verify-wasm` checks the
+row for the host it runs on. On Linux it verifies the Linux row: real drift detection, but not a
+reproduction of the deployed bytes. See
+[`docs/deployments.md`](docs/deployments.md#what-a-third-party-can-verify-and-what-they-must-pin-ste-12)
+for what a third party can check from any machine.
 
 ### Deployed contract IDs
 
