@@ -1,6 +1,12 @@
-# Sterish — Frozen Contract Interfaces (v1)
+# Sterish — Frozen Contract Interfaces (v2)
 
-> **STATUS: FROZEN** for `sterish-registry` and `sterish-escrow`.
+> **STATUS: FROZEN** for `sterish-registry`, `sterish-escrow` and `sterish-tokens`.
+>
+> **v2.0.0 (STE-44) is a MAJOR bump for Registry and Tokens.** Both `__constructor`s gained a
+> trailing `upgrade_delay_secs: u64`, which is breaking for anyone deploying them, and both
+> gained seven upgrade entrypoints. Nothing existing was renamed, reordered or retyped, and the
+> new error discriminants are appended. **`sterish-escrow` is untouched at v1.0.0** and its
+> generated block below is byte-identical to the one frozen in STE-10.
 > Everything in the "Generated ABI" blocks below is machine-generated from the WASM
 > that is actually built from `main`. It is **not** hand-written, and it is **not** a
 > design document. Where this file and `docs/SYSTEM_DESIGN.md` disagree, **this file
@@ -8,9 +14,9 @@
 
 | | |
 |---|---|
-| Spec version | `1.0.0` |
-| Frozen at | STE-10, branch `feat/6-freeze-interface-hash-spec` |
-| Source contracts | `contracts/registry` (STE-5, merged), `contracts/escrow` (STE-9, merged) |
+| Spec version | `2.0.0` |
+| Frozen at | STE-10 (`v1.0.0`), STE-11 (`v1.1.0`), STE-44 (`v2.0.0`) |
+| Source contracts | `contracts/registry` (STE-5, STE-44), `contracts/escrow` (STE-9, **unchanged since**), `contracts/tokens` (STE-11, STE-44) |
 | Toolchain | `soroban-sdk 27.0.6`, `stellar-cli 27.0.0`, `rustc 1.93.0`, target `wasm32v1-none` |
 
 ## 0. How to regenerate this file
@@ -88,6 +94,7 @@ pub trait Contract {
         env: soroban_sdk::Env,
         admin: soroban_sdk::Address,
         auditor: soroban_sdk::Address,
+        upgrade_delay_secs: u64,
     );
     fn lookup_by_hash(
         env: soroban_sdk::Env,
@@ -119,6 +126,16 @@ pub trait Contract {
         env: soroban_sdk::Env,
         config: TrustScoreConfig,
     ) -> Result<(), RegistryError>;
+    fn cancel_upgrade(env: soroban_sdk::Env) -> Result<(), RegistryError>;
+    fn is_upgradeable(env: soroban_sdk::Env) -> bool;
+    fn execute_upgrade(env: soroban_sdk::Env) -> Result<(), RegistryError>;
+    fn propose_upgrade(
+        env: soroban_sdk::Env,
+        wasm_hash: soroban_sdk::BytesN<32>,
+    ) -> Result<u64, RegistryError>;
+    fn get_upgrade_delay(env: soroban_sdk::Env) -> u64;
+    fn get_pending_upgrade(env: soroban_sdk::Env) -> Option<PendingUpgrade>;
+    fn renounce_upgradeability(env: soroban_sdk::Env) -> Result<(), RegistryError>;
 }
 #[soroban_sdk::contracttype(export = false)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -146,6 +163,13 @@ pub struct VersionRecord {
 }
 #[soroban_sdk::contracttype(export = false)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct PendingUpgrade {
+    pub proposed_at: u64,
+    pub ready_at: u64,
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+}
+#[soroban_sdk::contracttype(export = false)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TrustScoreConfig {
     pub desc_weight: u32,
     pub reputation_weight: u32,
@@ -162,6 +186,9 @@ pub enum DataKey {
     Version(soroban_sdk::String, soroban_sdk::String),
     HashIndex(soroban_sdk::BytesN<32>),
     SkillIndex(u32),
+    UpgradeDelay,
+    PendingUpgrade,
+    UpgradeRenounced,
 }
 #[soroban_sdk::contracttype(export = false)]
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -183,6 +210,77 @@ pub enum RegistryError {
     InvalidInput = 7,
     InvalidTrustScore = 8,
     InvalidVerdict = 9,
+    UpgradeabilityRenounced = 10,
+    NoPendingUpgrade = 11,
+    UpgradeAlreadyPending = 12,
+    UpgradeNotReady = 13,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["verdict_flipped"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct VerdictFlipped {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    #[topic]
+    pub version: soroban_sdk::String,
+    pub old_verdict: AuditVerdict,
+    pub new_verdict: AuditVerdict,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["skill_registered"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct SkillRegistered {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    pub owner: soroban_sdk::Address,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_executed"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub executed_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_proposed"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeProposed {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub proposed_at: u64,
+    pub ready_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["version_recorded"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct VersionRecorded {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    #[topic]
+    pub version: soroban_sdk::String,
+    pub content_hash: soroban_sdk::BytesN<32>,
+    pub verdict: AuditVerdict,
+    pub trust_score: u32,
+    pub auditor: soroban_sdk::Address,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_cancelled"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeCancelled {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub cancelled_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["version_registered"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct VersionRegistered {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    #[topic]
+    pub version: soroban_sdk::String,
+    pub content_hash: soroban_sdk::BytesN<32>,
+    pub owner: soroban_sdk::Address,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgradeability_renounced"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeabilityRenounced {
+    pub renounced_at: u64,
+    pub admin: soroban_sdk::Address,
 }
 ```
 <!-- END GENERATED -->
@@ -200,7 +298,7 @@ Auth column: `require_auth()` on which address. "Reads" functions are safe to ca
 
 | Function | Auth | Mutates | Returns | Errors | Events |
 |---|---|---|---|---|---|
-| `__constructor(admin, auditor)` | none (runs atomically at deploy) | `Admin`, `Auditor`, `TrustConfig`(default), `SkillCount=0` | `()` | — | none |
+| `__constructor(admin, auditor, upgrade_delay_secs)` | none (runs atomically at deploy) | `Admin`, `Auditor`, `TrustConfig`(default), `SkillCount=0`, `UpgradeDelay` | `()` | panics `InvalidInput`(7) if the delay is `0` | none |
 | `register_skill(owner, skill_id, version, content_hash)` | `owner` | `Skill`, `Version`, `HashIndex`, `SkillIndex`, `SkillCount` | `()` | `InvalidInput`(7), `NotAuthorized`(2), `VersionAlreadyExists`(5), `HashAlreadyRegistered`(6) | `skill_registered` (first version only) **then** `version_registered` (always) |
 | `submit_verdict(skill_id, version, verdict, score, evidence_hash)` | `auditor` (from instance storage) | `Version`, `Skill.latest_audited_version` | `()` | `NotInitialized`(1), `InvalidTrustScore`(8), `InvalidVerdict`(9), `SkillNotFound`(3), `VersionNotFound`(4) | `verdict_flipped` (only on a real flip) **then** `version_recorded` (always) |
 | `lookup_by_hash(content_hash)` | none | — | `Option<VersionRecord>` | never errors — a miss is `None` | none |
@@ -215,6 +313,17 @@ Auth column: `require_auth()` on which address. "Reads" functions are safe to ca
 | `get_auditor()` | none | — | `Address` | `NotInitialized`(1) | none |
 | `get_admin()` | none | — | `Address` | `NotInitialized`(1) | none |
 | `get_skill_count()` | none | — | `u32` (0 if unset) | never errors | none |
+| `propose_upgrade(wasm_hash)` **v2** | `admin` | `PendingUpgrade` | `u64` = `ready_at` | `UpgradeabilityRenounced`(10), `UpgradeAlreadyPending`(12), `NotInitialized`(1) | `upgrade_proposed` |
+| `execute_upgrade()` **v2** | `admin` | clears `PendingUpgrade`, then replaces the contract wasm | `()` | `UpgradeabilityRenounced`(10), `NoPendingUpgrade`(11), `UpgradeNotReady`(13) | `upgrade_executed` |
+| `cancel_upgrade()` **v2** | `admin` | clears `PendingUpgrade` | `()` | `UpgradeabilityRenounced`(10), `NoPendingUpgrade`(11) | `upgrade_cancelled` |
+| `renounce_upgradeability()` **v2** | `admin` | sets `UpgradeRenounced=true`, clears any `PendingUpgrade` | `()` | `UpgradeabilityRenounced`(10) if already renounced | `upgrade_cancelled` (only if one was open) **then** `upgradeability_renounced` |
+| `get_pending_upgrade()` **v2** | none | — | `Option<PendingUpgrade>` | never errors | none |
+| `get_upgrade_delay()` **v2** | none | — | `u64` seconds (fallback `86_400` if unset) | never errors | none |
+| `is_upgradeable()` **v2** | none | — | `bool` | never errors | none |
+
+`RegistryError` codes are public ABI and are appended, never renumbered. v2 adds
+`UpgradeabilityRenounced = 10`, `NoPendingUpgrade = 11`, `UpgradeAlreadyPending = 12`,
+`UpgradeNotReady = 13`.
 
 ### 2.3 Frozen invariants (enforced by code, covered by tests)
 
@@ -230,6 +339,12 @@ Auth column: `require_auth()` on which address. "Reads" functions are safe to ca
 | R8 | A `lookup_by_hash` miss returns `None`, never a panic and never a neighbouring version's record. | `lookup_by_hash` |
 | R9 | Unbounded state (`Skill`, `Version`, `HashIndex`, `SkillIndex`) is **persistent** and TTL-bumped on every write; only bounded state (`Admin`, `Auditor`, `TrustConfig`, `SkillCount`) is in instance storage. | `bump_persistent` / `bump_instance`, `DataKey` layout |
 | R10 | Deploy and initialization are atomic (`__constructor`), so there is no window in which a third party can claim admin. | `__constructor` |
+| R11 **v2** | An upgrade cannot be executed before `ready_at`, and `ready_at = proposed_at + UpgradeDelay` with a delay the admin cannot change after deployment. | `execute_upgrade` → `UpgradeNotReady`(13); no setter for `UpgradeDelay` |
+| R12 **v2** | A second proposal while one is open is refused, so replacing a proposal always costs a visible `upgrade_cancelled` and a fresh, full delay — the timelock is on the code, not on the announcement. | `propose_upgrade` → `UpgradeAlreadyPending`(12) |
+| R13 **v2** | Every step is observable from outside: propose, execute, cancel and renounce all emit, and `upgrade_proposed` carries the wasm hash plus both ends of the window. | `events.md`; `test_propose_upgrade_stores_the_proposal_and_publishes_it` |
+| R14 **v2** | `renounce_upgradeability` is permanent. Afterwards `propose`, `execute`, `cancel` and `renounce` itself all fail, forever, while the rest of the contract keeps working. | `UpgradeRenounced` is only ever written `true`; `test_renounce_makes_every_later_upgrade_attempt_fail_permanently` |
+| R15 **v2** | A delay of `0` cannot be deployed. A contract whose ABI advertises a timelock it does not have is worse than one that never claimed one. | `__constructor` panics `InvalidInput`(7) |
+| R16 **v2** | Upgrading into a wasm without the upgrade entrypoints loses upgradeability permanently, and **no on-chain guard can prevent it**: `update_current_contract_wasm` takes a hash and no host function reads a wasm's exports. The guard is build-time, in CI. | `scripts/verify-upgrade-target.sh`; `contracts/tests/tests/upgrade.rs` |
 
 ### 2.4 Storage layout (frozen keys)
 
@@ -243,6 +358,15 @@ Auth column: `require_auth()` on which address. "Reads" functions are safe to ca
 | `Version(skill_id, version)` | persistent | `VersionRecord` |
 | `HashIndex(content_hash)` | persistent | `(String, String)` = `(skill_id, version)` |
 | `SkillIndex(u32)` | persistent | `String` = `skill_id` |
+| `UpgradeDelay` **v2** | instance | `u64` seconds; written once by the constructor, no setter |
+| `PendingUpgrade` **v2** | instance | `PendingUpgrade { wasm_hash, proposed_at, ready_at }`; absent when nothing is proposed |
+| `UpgradeRenounced` **v2** | instance | `bool`; only ever written `true` |
+
+**Storage is append-only, and v2 makes that load-bearing.** An upgrade reinterprets the existing
+bytes with the new code and nothing checks compatibility for you. A `#[contracttype]` unit
+variant encodes as its **name**, so there is no ordering dependency — and equally no protection
+against a rename. New variants go at the end; existing ones are never removed, renamed or
+retyped.
 
 TTL policy (tuning, not ABI): `BUMP_THRESHOLD = 30 × 17_280` ledgers, `BUMP_TO = 120 × 17_280` ledgers.
 
@@ -447,139 +571,202 @@ bash scripts/verify-soulbound.sh     # or: make verify-soulbound
 
 The script reads the compiled WASM's contract spec, fails if any forbidden entrypoint is
 present, and also fails if the expected mint/view surface is missing (so an empty or wrong
-artifact cannot pass trivially). The 14 exported entrypoints are exactly:
+artifact cannot pass trivially). The 21 exported entrypoints are exactly:
 
 ```
 __constructor  get_admin  get_auditor_role  get_minter_role  get_registry
 get_token      has_license  is_verified_token  mint_license   mint_verified
 owner_of       set_auditor_role  set_minter_role  total_supply
+
+cancel_upgrade  execute_upgrade  get_pending_upgrade  get_upgrade_delay
+is_upgradeable  propose_upgrade  renounce_upgradeability
 ```
+
+The seven on the second line are v2 (STE-44). None of them can move a token either —
+`scripts/verify-soulbound.sh` still passes unchanged — and a second CI script,
+`scripts/verify-upgrade-target.sh`, asserts that this set is present here and **absent from
+`sterish_escrow.wasm`**.
 
 ### 5.2 Generated ABI
 
+<!-- BEGIN GENERATED: stellar contract info interface --wasm target/wasm32v1-none/release/sterish_tokens.wasm -->
 ```rust
-    #[soroban_sdk::contractargs(name = "Args")]
-    #[soroban_sdk::contractclient(name = "Client")]
-    pub trait Contract {
-        fn owner_of(
-            env: soroban_sdk::Env,
-            token_id: u32,
-        ) -> Result<soroban_sdk::Address, TokenError>;
-        fn get_admin(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
-        fn get_token(
-            env: soroban_sdk::Env,
-            token_id: u32,
-        ) -> Result<TokenRecord, TokenError>;
-        fn has_license(
-            env: soroban_sdk::Env,
-            agent: soroban_sdk::Address,
-            skill_id: soroban_sdk::String,
-            version: soroban_sdk::String,
-        ) -> bool;
-        fn get_registry(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
-        fn mint_license(
-            env: soroban_sdk::Env,
-            agent: soroban_sdk::Address,
-            skill_id: soroban_sdk::String,
-            version: soroban_sdk::String,
-        ) -> Result<u32, TokenError>;
-        fn total_supply(env: soroban_sdk::Env) -> u32;
-        fn __constructor(
-            env: soroban_sdk::Env,
-            admin: soroban_sdk::Address,
-            registry: soroban_sdk::Address,
-            auditor: soroban_sdk::Address,
-            minter: soroban_sdk::Address,
-        );
-        fn mint_verified(
-            env: soroban_sdk::Env,
-            skill_id: soroban_sdk::String,
-            version: soroban_sdk::String,
-            owner: soroban_sdk::Address,
-        ) -> Result<u32, TokenError>;
-        fn get_minter_role(
-            env: soroban_sdk::Env,
-        ) -> Result<soroban_sdk::Address, TokenError>;
-        fn set_minter_role(
-            env: soroban_sdk::Env,
-            minter: soroban_sdk::Address,
-        ) -> Result<(), TokenError>;
-        fn get_auditor_role(
-            env: soroban_sdk::Env,
-        ) -> Result<soroban_sdk::Address, TokenError>;
-        fn set_auditor_role(
-            env: soroban_sdk::Env,
-            auditor: soroban_sdk::Address,
-        ) -> Result<(), TokenError>;
-        fn is_verified_token(
-            env: soroban_sdk::Env,
-            skill_id: soroban_sdk::String,
-            version: soroban_sdk::String,
-        ) -> bool;
-    }
-    #[soroban_sdk::contracttype(export = false)]
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub struct TokenRecord {
-        pub kind: TokenKind,
-        pub minted_at: u64,
-        pub owner: soroban_sdk::Address,
-        pub skill_id: soroban_sdk::String,
-        pub token_id: u32,
-        pub version: soroban_sdk::String,
-    }
-    #[soroban_sdk::contracttype(export = false)]
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub enum DataKey {
-        Admin,
-        Registry,
-        AuditorRole,
-        MinterRole,
-        NextTokenId,
-        Token(u32),
-        VerifiedOf(soroban_sdk::String, soroban_sdk::String),
-        LicenseOf(soroban_sdk::Address, soroban_sdk::String, soroban_sdk::String),
-    }
-    #[soroban_sdk::contracttype(export = false)]
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub enum TokenKind {
-        Verified,
-        License,
-    }
-    #[soroban_sdk::contracterror(export = false)]
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub enum TokenError {
-        NotInitialized = 1,
-        TokenNotFound = 2,
-        AlreadyMinted = 3,
-        NotSafeVerdict = 4,
-        NotVerified = 5,
-        InvalidInput = 6,
-    }
-    #[soroban_sdk::contractevent(export = false, topics = ["license_minted"])]
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub struct LicenseMinted {
-        #[topic]
-        pub skill_id: soroban_sdk::String,
-        #[topic]
-        pub version: soroban_sdk::String,
-        pub agent: soroban_sdk::Address,
-    }
-    #[soroban_sdk::contractevent(export = false, topics = ["verified_minted"])]
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub struct VerifiedMinted {
-        #[topic]
-        pub skill_id: soroban_sdk::String,
-        #[topic]
-        pub version: soroban_sdk::String,
-        pub owner: soroban_sdk::Address,
-    }
+#[soroban_sdk::contractargs(name = "Args")]
+#[soroban_sdk::contractclient(name = "Client")]
+pub trait Contract {
+    fn owner_of(
+        env: soroban_sdk::Env,
+        token_id: u32,
+    ) -> Result<soroban_sdk::Address, TokenError>;
+    fn get_admin(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
+    fn get_token(
+        env: soroban_sdk::Env,
+        token_id: u32,
+    ) -> Result<TokenRecord, TokenError>;
+    fn has_license(
+        env: soroban_sdk::Env,
+        agent: soroban_sdk::Address,
+        skill_id: soroban_sdk::String,
+        version: soroban_sdk::String,
+    ) -> bool;
+    fn get_registry(env: soroban_sdk::Env) -> Result<soroban_sdk::Address, TokenError>;
+    fn mint_license(
+        env: soroban_sdk::Env,
+        agent: soroban_sdk::Address,
+        skill_id: soroban_sdk::String,
+        version: soroban_sdk::String,
+    ) -> Result<u32, TokenError>;
+    fn total_supply(env: soroban_sdk::Env) -> u32;
+    fn __constructor(
+        env: soroban_sdk::Env,
+        admin: soroban_sdk::Address,
+        registry: soroban_sdk::Address,
+        auditor: soroban_sdk::Address,
+        minter: soroban_sdk::Address,
+        upgrade_delay_secs: u64,
+    );
+    fn mint_verified(
+        env: soroban_sdk::Env,
+        skill_id: soroban_sdk::String,
+        version: soroban_sdk::String,
+        owner: soroban_sdk::Address,
+    ) -> Result<u32, TokenError>;
+    fn get_minter_role(
+        env: soroban_sdk::Env,
+    ) -> Result<soroban_sdk::Address, TokenError>;
+    fn set_minter_role(
+        env: soroban_sdk::Env,
+        minter: soroban_sdk::Address,
+    ) -> Result<(), TokenError>;
+    fn get_auditor_role(
+        env: soroban_sdk::Env,
+    ) -> Result<soroban_sdk::Address, TokenError>;
+    fn set_auditor_role(
+        env: soroban_sdk::Env,
+        auditor: soroban_sdk::Address,
+    ) -> Result<(), TokenError>;
+    fn is_verified_token(
+        env: soroban_sdk::Env,
+        skill_id: soroban_sdk::String,
+        version: soroban_sdk::String,
+    ) -> bool;
+    fn cancel_upgrade(env: soroban_sdk::Env) -> Result<(), TokenError>;
+    fn is_upgradeable(env: soroban_sdk::Env) -> bool;
+    fn execute_upgrade(env: soroban_sdk::Env) -> Result<(), TokenError>;
+    fn propose_upgrade(
+        env: soroban_sdk::Env,
+        wasm_hash: soroban_sdk::BytesN<32>,
+    ) -> Result<u64, TokenError>;
+    fn get_upgrade_delay(env: soroban_sdk::Env) -> u64;
+    fn get_pending_upgrade(env: soroban_sdk::Env) -> Option<PendingUpgrade>;
+    fn renounce_upgradeability(env: soroban_sdk::Env) -> Result<(), TokenError>;
+}
+#[soroban_sdk::contracttype(export = false)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TokenRecord {
+    pub kind: TokenKind,
+    pub minted_at: u64,
+    pub owner: soroban_sdk::Address,
+    pub skill_id: soroban_sdk::String,
+    pub token_id: u32,
+    pub version: soroban_sdk::String,
+}
+#[soroban_sdk::contracttype(export = false)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct PendingUpgrade {
+    pub proposed_at: u64,
+    pub ready_at: u64,
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+}
+#[soroban_sdk::contracttype(export = false)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum DataKey {
+    Admin,
+    Registry,
+    AuditorRole,
+    MinterRole,
+    NextTokenId,
+    Token(u32),
+    VerifiedOf(soroban_sdk::String, soroban_sdk::String),
+    LicenseOf(soroban_sdk::Address, soroban_sdk::String, soroban_sdk::String),
+    UpgradeDelay,
+    PendingUpgrade,
+    UpgradeRenounced,
+}
+#[soroban_sdk::contracttype(export = false)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum TokenKind {
+    Verified,
+    License,
+}
+#[soroban_sdk::contracterror(export = false)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum TokenError {
+    NotInitialized = 1,
+    TokenNotFound = 2,
+    AlreadyMinted = 3,
+    NotSafeVerdict = 4,
+    NotVerified = 5,
+    InvalidInput = 6,
+    UpgradeabilityRenounced = 7,
+    NoPendingUpgrade = 8,
+    UpgradeAlreadyPending = 9,
+    UpgradeNotReady = 10,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["license_minted"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct LicenseMinted {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    #[topic]
+    pub version: soroban_sdk::String,
+    pub agent: soroban_sdk::Address,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["verified_minted"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct VerifiedMinted {
+    #[topic]
+    pub skill_id: soroban_sdk::String,
+    #[topic]
+    pub version: soroban_sdk::String,
+    pub owner: soroban_sdk::Address,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_executed"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub executed_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_proposed"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeProposed {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub proposed_at: u64,
+    pub ready_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgrade_cancelled"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeCancelled {
+    #[topic]
+    pub wasm_hash: soroban_sdk::BytesN<32>,
+    pub cancelled_at: u64,
+}
+#[soroban_sdk::contractevent(export = false, topics = ["upgradeability_renounced"])]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UpgradeabilityRenounced {
+    pub renounced_at: u64,
+    pub admin: soroban_sdk::Address,
+}
 ```
+<!-- END GENERATED -->
 
 ### 5.3 Function reference
 
 | Function | Auth | Mutates | Errors | Events |
 |---|---|---|---|---|
-| `__constructor(admin, registry, auditor, minter)` | — | `Admin`, `Registry`, `AuditorRole`, `MinterRole`, `NextTokenId=1` | — | — |
+| `__constructor(admin, registry, auditor, minter, upgrade_delay_secs)` | — | `Admin`, `Registry`, `AuditorRole`, `MinterRole`, `NextTokenId=1`, `UpgradeDelay` | panics `InvalidInput`(6) if the delay is `0` | — |
 | `mint_verified(skill_id, version, owner)` | `AuditorRole` | `Token(id)`, `VerifiedOf(skill,ver)`, `NextTokenId` | `InvalidInput`, `NotSafeVerdict`, `AlreadyMinted` | `verified_minted` |
 | `mint_license(agent, skill_id, version)` | `MinterRole` | `Token(id)`, `LicenseOf(agent,skill,ver)`, `NextTokenId` | `InvalidInput`, `NotVerified`, `NotSafeVerdict`, `AlreadyMinted` | `license_minted` |
 | `has_license(agent, skill_id, version) -> bool` | none | — | never errors | — |
@@ -588,9 +775,19 @@ owner_of       set_auditor_role  set_minter_role  total_supply
 | `total_supply() -> u32` | none | — | never errors | — |
 | `set_auditor_role` / `set_minter_role` | `Admin` | the role | `NotInitialized` | — |
 | `get_admin` / `get_registry` / `get_auditor_role` / `get_minter_role` | none | — | `NotInitialized` | — |
+| `propose_upgrade(wasm_hash) -> u64` **v2** | `Admin` | `PendingUpgrade` | `UpgradeabilityRenounced`(7), `UpgradeAlreadyPending`(9), `NotInitialized`(1) | `upgrade_proposed` |
+| `execute_upgrade()` **v2** | `Admin` | clears `PendingUpgrade`, then replaces the contract wasm | `UpgradeabilityRenounced`(7), `NoPendingUpgrade`(8), `UpgradeNotReady`(10) | `upgrade_executed` |
+| `cancel_upgrade()` **v2** | `Admin` | clears `PendingUpgrade` | `UpgradeabilityRenounced`(7), `NoPendingUpgrade`(8) | `upgrade_cancelled` |
+| `renounce_upgradeability()` **v2** | `Admin` | `UpgradeRenounced=true`, clears any `PendingUpgrade` | `UpgradeabilityRenounced`(7) if already renounced | `upgrade_cancelled` (only if one was open) **then** `upgradeability_renounced` |
+| `get_pending_upgrade` / `get_upgrade_delay` / `is_upgradeable` **v2** | none | — | never error | — |
 
-`TokenError` codes are public ABI from here on: `NotInitialized = 1`, `TokenNotFound = 2`,
-`AlreadyMinted = 3`, `NotSafeVerdict = 4`, `NotVerified = 5`, `InvalidInput = 6`.
+`TokenError` codes are public ABI and are appended, never renumbered: `NotInitialized = 1`,
+`TokenNotFound = 2`, `AlreadyMinted = 3`, `NotSafeVerdict = 4`, `NotVerified = 5`,
+`InvalidInput = 6`, and from v2 `UpgradeabilityRenounced = 7`, `NoPendingUpgrade = 8`,
+`UpgradeAlreadyPending = 9`, `UpgradeNotReady = 10`.
+
+Storage keys added in v2, appended to the existing `DataKey`: `UpgradeDelay` (instance, `u64`),
+`PendingUpgrade` (instance), `UpgradeRenounced` (instance, `bool`).
 
 ### 5.4 Frozen invariants (enforced by code, covered by tests)
 
@@ -601,8 +798,11 @@ owner_of       set_auditor_role  set_minter_role  total_supply
 | T3 | A licence requires the badge to exist **and** the Registry to still say `Safe` at the moment of sale. A version re-audited away from `Safe` can sell no further licences (`NotSafeVerdict`), while licences already sold stay valid. |
 | T4 | Licences are bound to `(agent, skill_id, version)`. A new version does **not** inherit an old licence — the agent pays again. |
 | T5 | `Registry` is immutable: set at construction, no setter. Roles are rotatable by `Admin` only. |
+| T5b **v2** | `Registry` still has no setter, and an upgrade is the only thing that could add one. That is the sharpest cost of making this contract upgradeable, and it is bounded rather than denied: a proposal is public for the whole timelock, so a `set_registry` that was not there before is visible in the proposed wasm's interface before it takes effect — and `renounce_upgradeability` closes the question permanently. See `SYSTEM_DESIGN.md` §4.4. |
 | T6 | No token can ever move: no transfer/approve/burn entrypoint exists (§5.1). |
 | T7 | The badge is a **snapshot at mint time**. Because nothing can be burned, `is_verified_token` can stay `true` after a version is re-audited `Dangerous`. Consumers needing the live answer MUST read `SkillRegistry::is_verified`. This is deliberate and covered by `test_badge_survives_a_later_dangerous_reaudit_but_registry_disagrees`. |
+| T8 **v2** | Upgrade authorization is `Admin` and nothing else — never `AuditorRole` or `MinterRole`. Rotating a mint role must not come with power over the code. |
+| T9 **v2** | R11–R16 of §2.3 apply here identically; the machinery is the same. |
 
 ### 5.5 Decisions taken in STE-11 (differ from the ticket text — rationale)
 
