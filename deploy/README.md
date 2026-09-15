@@ -129,6 +129,23 @@ uv run sterish intake publish-artifacts --corpus corpus --out ../deploy/artifact
 Then check the result from outside: `verify.sh` fails if any SAFE row is priced
 without being deliverable.
 
+## Demo buyer (STE-43)
+
+Lets the dashboard run a real x402 purchase without a wallet: the backend creates a fresh agent,
+funds it from a demo treasury with exactly the price, and buys through `/use` like any outside
+agent. Off by default. To turn it on, add to `deploy/.env`:
+
+```bash
+DEMO_BUYER_ENABLED=1
+DEMO_TREASURY_SECRET=S...        # testnet account holding USDC + XLM; nothing else
+```
+
+Each purchase costs the treasury the price in USDC (it comes back to `X402_PAY_TO`) plus 2 XLM of
+agent reserve and a small fee. Guard rails: one purchase at a time, `DEMO_PER_CLIENT_PER_HOUR`
+(default 5) and `DEMO_DAILY_LIMIT` (default 50), and a balance check before any agent is funded.
+`GET /demo/status` shows whether it is on, the treasury address and today's usage — never the
+secret.
+
 ## Publishing on a public hostname
 
 Two paths are wired, and they can run together:

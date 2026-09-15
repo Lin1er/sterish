@@ -42,6 +42,7 @@ testnet deployment. Every section here is implemented.
 | 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19); hardened in STE-42 — nothing undeliverable is priced, payer comes from verify, settled-but-unminted payments are recoverable |
 | 3.8 `GET /license/{skill_id}/{version}` | implemented (STE-35) |
 | 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35; test namespaces filtered in STE-18 |
+| 3.10 demo buyer (`/demo/*`) | implemented (STE-43) — off unless `DEMO_BUYER_ENABLED=1` |
 
 What the scaffold had, and what replaced it:
 
@@ -610,6 +611,66 @@ in 3.4 — a feed dominated by 47 scaffolding skills shows activity nobody perfo
 
 ---
 
+### 3.10 Demo buyer — `POST /demo/purchases`, `GET /demo/purchases/{job_id}`, `GET /demo/status` (STE-43)
+
+The fallback STE-22 names for running the x402 loop from the dashboard without a wallet: the
+backend buys a licence with a **demo signer** and reports every step. Disabled unless
+`DEMO_BUYER_ENABLED=1` and `DEMO_TREASURY_SECRET` is set.
+
+**Not a shortcut.** Each run creates a fresh agent account, funds it from the demo treasury with
+exactly the price, and then buys through **the public `/use` over HTTP** — the same 402, the same
+facilitator verify and settle, the same mint and content-pinned bytes an outside agent gets (§3.7).
+The payment is built by `x402_client.py`, a port of the `@x402/stellar` exact client: the agent
+signs a Soroban authorization entry for `transfer(agent, payTo, amount)`, and the facilitator pays
+the fee. It sends no `X-AGENT-ADDRESS` on the paid request, so the payer is learned from verify.
+
+**Start.** `POST /demo/purchases` with `{"skill_id": "...", "version": "..."}` → `202` with the job
+body and `Location: /demo/purchases/{job_id}`. Before a job is created — and before any account
+or USDC moves — the version is refused exactly as `/use` would refuse it: `403 NOT_VERIFIED`,
+`404 ARTIFACT_NOT_FOUND`, `404 SKILL_NOT_FOUND` / `VERSION_NOT_FOUND`.
+
+**Poll.** `GET /demo/purchases/{job_id}` returns the job as it progresses:
+
+```json
+{
+  "job_id": "…", "skill_id": "…", "version": "…",
+  "status": "running",                    // queued | running | succeeded | failed
+  "agent": "G…",
+  "error": null,                          // {code, detail, step} when failed
+  "steps": [
+    {"key": "fund_agent", "title": "…", "status": "ok", "detail": "…",
+     "tx_hash": "…", "tx_url": "https://stellar.expert/…", "data": {"agent": "G…", "usdc": "0.1"},
+     "started_at": "…", "finished_at": "…"},
+    {"key": "challenge", "status": "ok", "data": {"status": 402, "amount_usdc": "0.1", "asset": "C…", "pay_to": "G…"}},
+    {"key": "sign_payment", "status": "running"},
+    {"key": "pay", "status": "pending"},          // data: settlement_tx(_url), mint_tx(_url)
+    {"key": "verify_bytes", "status": "pending"}, // data: content_hash
+    {"key": "licence_on_chain", "status": "pending"},
+    {"key": "repeat_free", "status": "pending"}   // data: {status: 200, licence: "held"}
+  ],
+  "signer": {"kind": "demo", "treasury": "G…",
+             "notice": "This purchase is signed by a Sterish demo account on Stellar testnet, not by your wallet. …"},
+  "network": "testnet"
+}
+```
+
+Step `status` is `pending | running | ok | failed | skipped`; after a failure every later step is
+`skipped`. A UI must show `signer.notice` — the purchase is not the viewer's.
+
+**Failure codes** (in `error.code`): `TREASURY_UNREADABLE`, `TREASURY_LOW`, `FUNDING_FAILED`,
+`CHALLENGE_UNEXPECTED`, `PAYMENT_BUILD_FAILED`, any `/use` error from the paid request
+(`PAYMENT_REJECTED`, `FACILITATOR_UNAVAILABLE`, `LICENSE_MINT_PENDING`, …), `PAYMENT_UNEXPECTED`,
+`BYTES_MISMATCH`, `LICENCE_NOT_FOUND`, `REPEAT_NOT_FREE`, `INTERNAL`.
+
+**Guard rails.** One purchase at a time (`409 DEMO_BUSY`, with `running_job_id`); a per-client
+hourly limit (`429 DEMO_RATE_LIMITED`, default 5, client = `CF-Connecting-IP`, then the first
+`X-Forwarded-For`, then the socket); a daily limit across the process (`429 DEMO_DAILY_LIMIT`,
+default 50); the treasury balance is checked before funding. Jobs are kept in memory (last 100) —
+a progress view, not a record; the record is the ledger.
+
+`GET /demo/status` → `{enabled, network, treasury, busy, running_job_id, daily_limit, used_today,
+per_client_hourly_limit, notice}`.
+
 ## 4. Errors
 
 All error responses share one shape:
@@ -636,6 +697,10 @@ All error responses share one shape:
 | 502 | `LICENSE_READ_FAILED` | `has_license` returned a contract error | — |
 | 502 | `LICENSE_MINT_PENDING` | paid and settled, mint failed; retry finishes it without charging | — |
 | 503 | `FACILITATOR_UNAVAILABLE` | the x402 facilitator is unreachable | — |
+| 404 | `DEMO_JOB_NOT_FOUND` | unknown demo purchase id | — |
+| 409 | `DEMO_BUSY` | a demo purchase is already running | — |
+| 429 | `DEMO_RATE_LIMITED` / `DEMO_DAILY_LIMIT` | demo buyer per-client or daily limit reached | — |
+| 503 | `DEMO_DISABLED` | demo buyer is off, or has no treasury configured | — |
 | 503 | `NOT_CONFIGURED` | `REGISTRY_CONTRACT_ID` unset | `NotInitialized` (1) |
 | 500 | `INTERNAL` | anything else | — |
 

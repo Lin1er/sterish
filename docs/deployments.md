@@ -420,6 +420,46 @@ the command above is idempotent and leaves matching artifacts untouched.)
 `Python-urllib/3.x` agent with `403 error code: 1010`, an HTML page that is not an answer about
 `/use` at all.
 
+## On-chain evidence — the demo buyer a dashboard can drive (STE-43)
+
+STE-22 needs the x402 loop to run from the dashboard with no CLI. Its documented fallback is a
+backend buyer that signs with a demo account; that now exists (`POST /demo/purchases`, api-spec
+§3.10). Each run creates a fresh agent and buys through the public `/use` over HTTP, so a demo that
+works is proof the real path works.
+
+The payment is signed in Python (`api/src/sterish_api/x402_client.py`, a port of the `@x402/stellar`
+exact client), because the API image has no Node. **Before wiring it in, the port was checked
+against the live OZ Channels facilitator on its own:** a fresh agent's payment built by it was sent
+to `/verify` and came back `isValid: true` with `payer` equal to that agent — verify only, nothing
+settled.
+
+**Demo treasury.** `GA6WWQKPRA7C2GU47GRN44R7DEJTKH2CDXSG5Q7V3YDG55S4M7KZNLMZ`, created for this and
+nothing else, funded by friendbot plus 3 USDC from the auditor account
+([`d85715e810741522…`](https://stellar.expert/explorer/testnet/tx/d85715e810741522b2b9cabb41108a2129f015220ba114efdd2e8fb7b18a94af)).
+Secret in the repo `.env` only.
+
+**Run on testnet, 15 September 2026**, API local against the deployed contracts and the live
+facilitator, driven by `api/scripts/e2e_demo_buyer.py`, checked from outside the API. Record:
+[`evidence/ste-43-e2e-demo-buyer-2026-09-15.json`](evidence/ste-43-e2e-demo-buyer-2026-09-15.json).
+
+| | |
+|---|---|
+| Refused with no job created | DANGEROUS `token-drainer` 403 · SAFE-but-no-artifact 404 · unregistered 404 |
+| Purchase started while one runs | 409 `DEMO_BUSY` |
+| Skill | `org.stellar.skills.dapp.react@2026.8.31` |
+| Agent | `GDV7NV7EIEYAWWNFNBNPDT7TCMYHGYOEDBJRCAA2SI2O5Q73U7MEK35Q` |
+| Funding (create + trustline + 0.1 USDC) | [`2cea5e32612349a0…`](https://stellar.expert/explorer/testnet/tx/2cea5e32612349a0d7540f1752c09a828504dc4e9d0cd8df9cf03f8646f3233b) |
+| Settlement | [`073d91adb4ba507c…`](https://stellar.expert/explorer/testnet/tx/073d91adb4ba507c4db2abe2e1f449c1c811b02933eebd650afa78e5450cbde0) |
+| Licence mint | [`9ca2737da75b421e…`](https://stellar.expert/explorer/testnet/tx/9ca2737da75b421e2d0916eab4d0d4cf6425ac5dc1310a70b6cd41294fb0f305) |
+
+All seven steps `ok`, progress visible while polling. Verified from outside: all three
+transactions `successful` on Horizon, the agent's USDC went from the funded 0.1 to **0**,
+`has_license` true, and the served bytes hash to the registry's `content_hash`.
+
+**To enable on CT 204** (after merge): add `DEMO_BUYER_ENABLED=1` and `DEMO_TREASURY_SECRET` to
+`/opt/sterish/deploy/.env` (mode 600), redeploy, and check `GET /demo/status` reports
+`enabled: true` with the treasury address above.
+
 ## Backend deployment (STE-25)
 
 A Docker Compose stack in `deploy/`: the API (with the indexer running inside its process) plus

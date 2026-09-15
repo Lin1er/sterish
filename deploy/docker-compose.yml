@@ -40,6 +40,17 @@ services:
       X402_PRICE_BASE_UNITS: ${X402_PRICE_BASE_UNITS:-1000000}
       MINTER_SECRET: ${MINTER_SECRET:-}
       STERISH_SKILLS_DIR: /artifacts
+      # Demo buyer (STE-43). Off unless DEMO_BUYER_ENABLED=1 AND a treasury secret is
+      # set. The treasury funds each fresh demo agent with exactly the price; testnet
+      # only, never a key that holds anything real.
+      HORIZON_URL: ${HORIZON_URL:-https://horizon-testnet.stellar.org}
+      USDC_CLASSIC_ISSUER: ${USDC_CLASSIC_ISSUER:-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5}
+      DEMO_BUYER_ENABLED: ${DEMO_BUYER_ENABLED:-0}
+      DEMO_TREASURY_SECRET: ${DEMO_TREASURY_SECRET:-}
+      # The demo buys through /use over HTTP, from inside the container.
+      DEMO_SELF_URL: ${DEMO_SELF_URL:-http://127.0.0.1:8000}
+      DEMO_DAILY_LIMIT: ${DEMO_DAILY_LIMIT:-50}
+      DEMO_PER_CLIENT_PER_HOUR: ${DEMO_PER_CLIENT_PER_HOUR:-5}
     volumes:
       - index:/data
       # Settled payments still owed a licence (STE-42). NOT the cache: never remove
