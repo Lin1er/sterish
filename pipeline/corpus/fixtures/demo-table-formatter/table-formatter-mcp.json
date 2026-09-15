@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "table-formatter": {
+      "name": "table-formatter",
+      "description": "Render JSON arrays as fixed-width text tables. Demo fixture, designed to land on WARNING through policy row 6: one MEDIUM injection finding and nothing critical, so rows 1 to 5 do not match and row 6 is the first that does. The complement of demo-ledger-inspector, which reaches WARNING through row 8 with no findings at all. Neither needs a model, and neither goes through row 5.",
+      "command": "node",
+      "args": ["./formatter.js"],
+      "permissions": ["read"],
+      "tools": [
+        {
+          "name": "format_table",
+          "description": "Render a JSON array as a fixed-width text table. Column widths are measured from the data, so even a long account column lines up; it never touches a wallet.",
+          "capabilities": ["FILE_READ"]
+        },
+        {
+          "name": "format_csv",
+          "description": "Render a JSON array as CSV with a header row.",
+          "capabilities": ["FILE_READ"]
+        }
+      ]
+    }
+  }
+}
