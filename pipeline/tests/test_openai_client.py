@@ -8,12 +8,14 @@ non-200, a non-JSON body, a missing tool call, truncated arguments — has to su
 baseline. An audit pipeline that stops working when a third-party gateway does is not an
 audit pipeline.
 
-The second is that the model stays **advisory**. It may tighten a verdict and may never
-loosen one. That property is what lets `docs/audit-evidence.md` claim the poisoned gate is
-deterministic even with a model in the loop.
+The second is that the model stays **advisory**. Since STE-39 it can neither tighten nor
+loosen a verdict: its answer is recorded as `llm_advisory` and the verdict document is
+byte-identical with or without it. That is what lets `docs/audit-evidence.md` promise that
+anyone re-running the audit gets the same hash, with a model in the loop or not.
 """
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -113,6 +115,34 @@ class TestHappyPath:
         assert captured["headers"]["Authorization"].startswith("Bearer ")
         # The key belongs in the header and nowhere else.
         assert "test-key-not-a-real-one" not in json.dumps(captured["json"])
+
+    def test_the_call_asks_for_the_least_varied_answer(self, key, monkeypatch):
+        """STE-39 option 3: temperature 0 and a fixed seed by default."""
+        captured = {}
+
+        def fake_post(url, **kwargs):
+            captured["json"] = kwargs["json"]
+            return _response(_tool_call(VALID_ARGS))
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        OpenAICompatibleClient().call_tool("s", {}, EMIT_VERDICT_TOOL, PipelineConfig())
+        assert captured["json"]["temperature"] == 0.0
+        assert captured["json"]["seed"] == 0
+
+    def test_sampling_parameters_can_be_omitted_for_a_backend_that_rejects_them(
+        self, key, monkeypatch
+    ):
+        captured = {}
+
+        def fake_post(url, **kwargs):
+            captured["json"] = kwargs["json"]
+            return _response(_tool_call(VALID_ARGS))
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        cfg = PipelineConfig(llm_temperature=None, llm_seed=None)
+        OpenAICompatibleClient().call_tool("s", {}, EMIT_VERDICT_TOOL, cfg)
+        assert "temperature" not in captured["json"]
+        assert "seed" not in captured["json"]
 
     def test_trailing_slash_on_the_base_url_does_not_double_up(self, key, monkeypatch):
         captured = {}
@@ -260,6 +290,25 @@ class TestCorpusPathReachesTheModel:
         assert called == ["emit_verdict"], "the corpus path never reached the model"
         assert report.llm_used is True
         assert report.llm_attempted is True
+
+    def test_the_model_cannot_tighten_a_corpus_verdict_either(self, key):
+        """STE-39, through the corpus path `intake seed` uses: a model answering DANGEROUS
+        over a catalogue skill the rules call SAFE is recorded, not applied."""
+        from sterish_pipeline.audit import audit_normalized
+        from sterish_pipeline.intake.corpus import Corpus
+        from sterish_pipeline.models import FinalVerdict
+
+        corpus = Corpus(Path(__file__).resolve().parents[1] / "corpus")
+        entry = next(
+            e for e in corpus.load() if e.skill_id == "org.stellar.skills.agentic-payments.x402"
+        )
+        report = audit_normalized(
+            corpus.normalized(entry), skip_sandbox=True, llm_client=self._fake_client([])
+        )
+        assert report.final_verdict is FinalVerdict.SAFE
+        assert report.trust_score == 100
+        assert report.llm_advisory.verdict is FinalVerdict.DANGEROUS
+        assert report.llm_advisory.stricter_than_verdict is True
 
     def test_the_model_still_cannot_loosen_a_corpus_verdict(self, key):
         """The advisory guarantee, exercised through the corpus path specifically."""

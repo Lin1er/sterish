@@ -9,9 +9,8 @@ The order is fixed and each step is a pure function of the one before it:
     stage 2  run_sandbox_check     runs the entrypoint under strace; not applicable when
                                    the skill has none (STE-40)
     stage 3  synthesize_verdict    weighted score, then the policy decision table
-             synthesize_with_llm   optional advisory second opinion (fail-soft)
-             policy.tighten        merge -- the model may only tighten
-             policy.enforce_critical  re-assert the critical override
+             synthesize_with_llm   optional second opinion, recorded as llm_advisory only
+                                   (STE-39: it never moves the verdict)
              build_verdict_document   assemble the frozen v1 document
 
 ``content_hash`` comes from the frozen reference implementation via ``specs.hash_dir``; the
@@ -39,6 +38,7 @@ from sterish_pipeline.llm import (
 )
 from sterish_pipeline.models import (
     AuditReport,
+    LLMAdvisory,
     SkillManifest,
     Stage1Result,
     Stage2Result,
@@ -142,12 +142,7 @@ def load_skill(path: Path | str) -> tuple[SkillManifest, Path]:
 
 
 def _llm_will_be_attempted(config: PipelineConfig, client: StructuredClient | None) -> bool:
-    """Whether stage 3 is going to ask a model at all.
-
-    The distinction drives policy row 5: *asking and failing* is inconclusive evidence and
-    biases the verdict to WARNING, while *not asking* (no key configured) is a deterministic
-    mode that leaves the verdict alone.
-    """
+    """Whether stage 3 is going to ask a model at all. Recorded, never acted on."""
     if not config.use_llm:
         return False
     return client is not None or api_key_present()
@@ -161,17 +156,19 @@ def apply_llm(
     cfg: PipelineConfig,
     llm_client: StructuredClient | None,
 ) -> tuple[AuditReport, LLMOpinion | None]:
-    """Ask the model for a second opinion and merge it, one way only.
+    """Ask the model for a second opinion and record it beside the verdict (STE-39).
 
-    Shared by `run_audit` and `audit_normalized` rather than written twice. It was written
-    once, in `run_audit`, and `audit_normalized` took an `llm_client` argument it silently
-    dropped — so every corpus audit and every `intake seed` ran deterministic-only no matter
-    what key was configured, while the signature said otherwise.
+    Shared by `run_audit` and `audit_normalized`. Until STE-39 the opinion was merged with
+    `policy.tighten` — the model could raise the verdict and lower the score — and a model
+    that was asked but failed forced WARNING. Both are gone. The same skill, same bytes and
+    same config returned three different model answers in five runs, so a model-moved
+    verdict could not be reproduced by the third party `docs/audit-evidence.md` invites to
+    re-run the audit, and a gateway outage would have changed a verdict about bytes that
+    had not changed.
 
-    The merge is `policy.tighten` followed by `policy.enforce_critical`: the model may raise
-    the verdict, raise the risk, harden the recommendation and lower the score, and can do
-    none of the reverse. Asked-but-inconclusive is not the same as not-asked — the first
-    biases to WARNING (policy row 5), the second leaves the baseline alone.
+    What stays: the model is still asked, its answer is still validated, and it is recorded
+    as `report.llm_advisory` with whether it is stricter than or disagrees with the verdict.
+    None of that, nor the notes, reaches the verdict document or `evidence_hash`.
     """
     attempted = _llm_will_be_attempted(cfg, llm_client)
     opinion: LLMOpinion | None = None
@@ -190,40 +187,19 @@ def apply_llm(
             client=llm_client,
         )
 
-    if attempted and opinion is None:
-        # Row 5: asked, no usable answer -> ambiguity biases to WARNING, never to SAFE.
-        report = synthesize_verdict(report, stage1, stage2, cfg, llm_inconclusive=True)
-    elif opinion is not None:
-        baseline = policy.PolicyDecision(
-            verdict=report.final_verdict,
-            risk=report.risk,
-            recommendation=report.recommendation_code,
-            score=report.trust_score,
-            reasons=list(report.policy_reasons),
-            critical_patterns=sorted(
-                {f.pattern_id for f in policy.critical_findings(stage1.injection_findings)}
-            ),
-        )
-        advisory = policy.PolicyDecision(
+    report.llm_advisory = None
+    if opinion is not None:
+        rank = policy.verdict_rank
+        report.llm_advisory = LLMAdvisory(
             verdict=opinion.verdict,
             risk=opinion.risk,
-            recommendation=opinion.recommendation,
             score=opinion.score,
-            reasons=[
-                f"{policy.LLM_REASON_PREFIX}{opinion.model}): {opinion.rationale}"
-            ],
+            recommendation=opinion.recommendation,
+            rationale=opinion.rationale,
+            model=opinion.model,
+            stricter_than_verdict=rank(opinion.verdict) > rank(report.final_verdict),
+            disagrees_with_verdict=opinion.verdict is not report.final_verdict,
         )
-        merged = policy.enforce_critical(policy.tighten(baseline, advisory), stage1, cfg)
-        report.final_verdict = merged.verdict
-        report.risk = merged.risk
-        report.recommendation_code = merged.recommendation
-        report.trust_score = merged.score
-        report.policy_reasons = merged.reasons
-
-    report.llm_attempted = attempted
-    report.llm_used = opinion is not None
-    report.llm_model = cfg.llm_model if opinion is not None else ""
-    report.llm_notes = notes
 
     report.llm_attempted = attempted
     report.llm_used = opinion is not None
@@ -252,58 +228,10 @@ def run_audit(
 
     report = AuditReport(skill_id=manifest.skill_id, version=manifest.version)
     report = synthesize_verdict(report, stage1, stage2, cfg)
-
-    attempted = _llm_will_be_attempted(cfg, llm_client)
-    opinion: LLMOpinion | None = None
-    notes: list[str] = []
-
-    if cfg.use_llm:
-        opinion, notes = synthesize_with_llm(
-            manifest,
-            stage1,
-            stage2,
-            baseline_verdict=report.final_verdict.value,
-            baseline_risk=report.risk.value,
-            baseline_score=report.trust_score,
-            baseline_recommendation=report.recommendation_code.value,
-            config=cfg,
-            client=llm_client,
-        )
-
-    if attempted and opinion is None:
-        # Row 5: asked, no usable answer -> ambiguity biases to WARNING, never to SAFE.
-        report = synthesize_verdict(report, stage1, stage2, cfg, llm_inconclusive=True)
-    elif opinion is not None:
-        baseline = policy.PolicyDecision(
-            verdict=report.final_verdict,
-            risk=report.risk,
-            recommendation=report.recommendation_code,
-            score=report.trust_score,
-            reasons=list(report.policy_reasons),
-            critical_patterns=sorted(
-                {f.pattern_id for f in policy.critical_findings(stage1.injection_findings)}
-            ),
-        )
-        advisory = policy.PolicyDecision(
-            verdict=opinion.verdict,
-            risk=opinion.risk,
-            recommendation=opinion.recommendation,
-            score=opinion.score,
-            reasons=[
-                f"{policy.LLM_REASON_PREFIX}{opinion.model}): {opinion.rationale}"
-            ],
-        )
-        merged = policy.enforce_critical(policy.tighten(baseline, advisory), stage1, cfg)
-        report.final_verdict = merged.verdict
-        report.risk = merged.risk
-        report.recommendation_code = merged.recommendation
-        report.trust_score = merged.score
-        report.policy_reasons = merged.reasons
-
-    report.llm_attempted = attempted
-    report.llm_used = opinion is not None
-    report.llm_model = cfg.llm_model if opinion is not None else ""
-    report.llm_notes = notes
+    # One implementation of the model step for both entry points. This was a second copy,
+    # which is how the two drifted apart once before (STE-38).
+    report, opinion = apply_llm(report, manifest, stage1, stage2, cfg, llm_client)
+    notes = report.llm_notes
 
     document = build_verdict_document(report, manifest, content_hash, cfg)
 

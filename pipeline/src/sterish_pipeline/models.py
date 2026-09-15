@@ -275,6 +275,27 @@ def to_verdict_json(document: VerdictDocument) -> dict:
     return document.model_dump(mode="json", exclude_none=True)
 
 
+class LLMAdvisory(BaseModel):
+    """What the model concluded, kept beside the verdict and never merged into it (STE-39).
+
+    The same skill audited five times returned three different model answers, so a verdict
+    the model can move is a verdict nobody can reproduce. The opinion is still worth keeping:
+    it is recorded here, marked as advisory, and a reviewer can read where it disagrees.
+    """
+
+    verdict: FinalVerdict
+    risk: Risk
+    score: int = Field(ge=0, le=100)
+    recommendation: Recommendation
+    rationale: str
+    model: str
+    #: The model's verdict is stricter than the deterministic one. A prompt for human review,
+    #: not a change to the verdict.
+    stricter_than_verdict: bool = False
+    #: The model's verdict differs from the deterministic one in either direction.
+    disagrees_with_verdict: bool = False
+
+
 class AuditReport(BaseModel):
     """Internal, off-chain audit report.
 
@@ -301,3 +322,5 @@ class AuditReport(BaseModel):
     llm_attempted: bool = False
     llm_model: str = ""
     llm_notes: list[str] = Field(default_factory=list)
+    #: STE-39: the model's opinion, advisory only. Excluded from ``evidence_hash``.
+    llm_advisory: LLMAdvisory | None = None

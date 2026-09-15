@@ -2,14 +2,15 @@
 
 Two layers, in this order and never the other way round:
 
-1. **Deterministic baseline.** Weighted stage1/stage2 score, then the hard rules in
-   ``policy.py``. This runs on every audit, with or without a model, and it is what the
-   emitted document is built from.
-2. **Optional LLM synthesis** (``llm.py``), which may only *tighten* the baseline. A model
-   that answers SAFE over a deterministic DANGEROUS changes nothing; a model that answers
-   DANGEROUS over a deterministic SAFE wins. Any failure -- no key, timeout, malformed JSON,
-   schema rejection -- is fail-soft: the baseline stands and the reason is recorded in the
-   internal report (never in the verdict document, whose schema forbids extra properties).
+1. **Deterministic verdict.** Weighted stage1/stage2 score, then the hard rules in
+   ``policy.py``. This runs on every audit, with or without a model, and it is the only
+   thing the emitted document — and so the ledger — is built from.
+2. **Optional LLM opinion** (``llm.py``), **advisory only** since STE-39. It is recorded in
+   the internal report as ``llm_advisory`` and changes no verdict field in either direction.
+   The same skill, same bytes, same config returned three different model answers in five
+   runs; a verdict the model can move would give a third party re-running the audit a
+   different number, a different report and a different hash. A model failure is recorded
+   the same way and changes nothing either.
 """
 
 from __future__ import annotations
@@ -35,13 +36,17 @@ from sterish_pipeline.stages import policy
 
 logger = logging.getLogger(__name__)
 
+#: Internal-report fields that describe the model call, not the skill. Never hashed.
+LLM_TRAIL_FIELDS: frozenset[str] = frozenset(
+    {"llm_used", "llm_attempted", "llm_model", "llm_notes", "llm_advisory"}
+)
+
 
 def synthesize_verdict(
     report: AuditReport,
     stage1: Stage1Result,
     stage2: Stage2Result,
     config: PipelineConfig | None = None,
-    llm_inconclusive: bool = False,
 ) -> AuditReport:
     """Combine stage 1 and stage 2 into a final verdict, trust score and policy decision."""
     cfg = config or PipelineConfig()
@@ -51,7 +56,7 @@ def synthesize_verdict(
     ) // 100
     trust_score = max(0, min(100, raw_score))
 
-    decision = policy.decide(stage1, stage2, trust_score, cfg, llm_inconclusive=llm_inconclusive)
+    decision = policy.decide(stage1, stage2, trust_score, cfg)
 
     report.stage1 = stage1
     report.stage2 = stage2
@@ -73,8 +78,14 @@ def compute_evidence_hash(report: AuditReport) -> str:
     actually needs to trust (``verdict-json.md`` gap P8). Here the whole report is serialized
     canonically (sorted keys, no whitespace) with ``evidence_hash`` blanked, so the value is
     reproducible by anyone holding the served report.
+
+    The model's trail is left out (STE-39). ``llm_advisory`` and ``llm_notes`` change from run
+    to run for the same bytes, and whether a model was reachable at all depends on the
+    auditor's key and network, not on the skill. Hashing them would make the document this
+    hash sits in — and therefore the ``evidence_hash`` on chain — differ between two honest
+    re-runs of the same audit.
     """
-    payload = report.model_dump(mode="json")
+    payload = report.model_dump(mode="json", exclude=LLM_TRAIL_FIELDS)
     payload["evidence_hash"] = ""
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
