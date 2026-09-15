@@ -23,7 +23,7 @@
 # only against the rows for the host it runs on. A host with no row here cannot
 # verify these artifacts — it can only produce its own, equally valid, build.
 #
-# generated:   2026-09-15T14:55:51Z
+# generated:   2026-09-15T15:46:52Z
 # rustc:       rustc 1.93.0 (254b59607 2026-01-19)
 # cargo:       cargo 1.93.0 (083ac5135 2025-12-15)
 # soroban-sdk: 27.0.6 (contracts/Cargo.lock)
@@ -39,10 +39,10 @@
 #
 # columns: <file> <size_bytes> <sha256> <exported_entrypoints> <host_triple>
 
-# --- aarch64-apple-darwin --- recorded 2026-09-03T11:29:09Z --- LIVE ON TESTNET (STE-13)
-sterish_registry.wasm     35658  8c438004591f65d84f8087738c4ff327bc016b38e443b2661bb36f6cd3852489  15  aarch64-apple-darwin
+# --- aarch64-apple-darwin --- recorded 2026-09-15T15:46:52Z --- LIVE ON TESTNET (STE-13)
+sterish_registry.wasm     47506  ba740db865b23834b795a8a985cc22ae996605c06e776f46780575e52f56839f  22  aarch64-apple-darwin
 sterish_escrow.wasm       29754  cb241f74d20146b9d4895160e68d0c337f68317c3b6c1f272b0505cdb84d0ad0  10  aarch64-apple-darwin
-sterish_tokens.wasm       28566  318f44583ae3144a65c3992b163f91795b8f28a95d4bc59b4c2147ad00b83206  14  aarch64-apple-darwin
+sterish_tokens.wasm       40500  719f93beab52ace8d1cecf9b5ef1a1c987798fd2c6230f83a0e3d258490d5825  21  aarch64-apple-darwin
 
 # --- x86_64-unknown-linux-gnu --- recorded 2026-09-15T14:52:45Z --- GitHub Actions ubuntu-latest
 sterish_registry.wasm     35658  48305dba3c4e6c185b754fac642f6d5b749eb1120017c37978743e88d8c48877  15  x86_64-unknown-linux-gnu
