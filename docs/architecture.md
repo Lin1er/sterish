@@ -526,8 +526,9 @@ Those are real, they are enforced on chain, and they are covered by tests. See
 
 ### What it does not close: plagiarism
 
-Change one byte and `content_hash` changes completely. The copy then registers as a new skill and
-nothing refuses it. Canonical bytes v1 deliberately does no whitespace trimming and no Unicode
+Change one byte and `content_hash` changes completely — test vector `one-byte-flip` proves it in
+Python, TypeScript and Rust on every run of `make verify-content-hash`. The copy then registers as
+a new skill and nothing refuses it. Canonical bytes v1 deliberately does no whitespace trimming and no Unicode
 normalisation ([`specs/content-hash.md`](specs/content-hash.md) §4), so a renamed file, an added
 space, or a rewritten description is enough. There is no similarity detection anywhere in
 `pipeline/` or `api/` — no simhash, no minhash, no embedding comparison — and v1 does not add one.

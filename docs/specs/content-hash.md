@@ -192,7 +192,8 @@ An error **never** means "hash it anyway". There is no silent fallback.
 6. **`content_hash` identifies the bytes, not the work.** A byte-identical copy cannot be
    registered twice — invariant R3 refuses the second one with `HashAlreadyRegistered`(6) — but
    change a single byte and the hash changes completely, and the copy registers cleanly as a new
-   skill. §4 is the reason: canonical bytes v1 deliberately does no whitespace trimming and no
+   skill. Vector `one-byte-flip` (§6) is exactly that proof, run in all three languages on every
+   CI pass. §4 is the reason: canonical bytes v1 deliberately does no whitespace trimming and no
    Unicode normalisation, so renaming a file, adding a space, or rewriting a description is
    enough to defeat it. **On v1 this is the intended behaviour, not a bug.** `content_hash`
    answers *"have these exact bytes been audited"*, and it answers that correctly. It does not
