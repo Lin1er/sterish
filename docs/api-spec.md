@@ -39,7 +39,7 @@ testnet deployment. Every section here is implemented.
 | 3.4 `GET /skills` | implemented — hides test namespaces by default and reports the hidden count (STE-18) |
 | 3.5 `GET /health` | implemented |
 | 3.6 `GET /reports/{skill_id}/{version}` | implemented (STE-32) — `report_uri` is advertised only when a base URL is set **and** the report exists |
-| 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19) |
+| 3.7 `GET /use/{skill_id}/{version}` | implemented (STE-19); hardened in STE-42 — nothing undeliverable is priced, payer comes from verify, settled-but-unminted payments are recoverable |
 | 3.8 `GET /license/{skill_id}/{version}` | implemented (STE-35) |
 | 3.9 `GET /feed` | implemented (STE-17) — was live but undocumented until STE-35; test namespaces filtered in STE-18 |
 
@@ -366,21 +366,52 @@ there is nothing to verify against), `500 REPORT_HASH_MISMATCH`, `503 NOT_CONFIG
 Implemented. `GET`, not `POST`: the request is a read of a licensed artifact, and x402 clients
 negotiate on the same verb they retry with.
 
-Three outcomes, checked in this order:
+**The rule (STE-42): never take money for something that cannot be handed over, and never take
+it twice.** Checked in this order — each step runs only if every step above it passed:
 
-| Condition | Response |
-|---|---|
-| caller holds a licence for this exact version | `200` + artifact, `X-STERISH-LICENSE: held` |
-| no licence, no payment | `402` + `PAYMENT-REQUIRED` header, empty body |
-| no licence, `X-PAYMENT` attached | verify → settle → mint → `200`, `X-STERISH-LICENSE: minted` |
+| # | Condition | Response |
+|---|---|---|
+| 1 | version is not `SAFE` on chain | `403 NOT_VERIFIED`, no challenge |
+| 2 | no artifact on disk for this version | `404 ARTIFACT_NOT_FOUND`, no challenge |
+| 2 | artifact bytes do not hash to the on-chain `content_hash` | `500 ARTIFACT_HASH_MISMATCH`, no challenge |
+| 3 | `X-AGENT-ADDRESS` holds a licence for this exact version | `200` + artifact, `X-STERISH-LICENSE: held` |
+| 4 | `X-AGENT-ADDRESS` has a settled payment still owed a licence | mint → `200`, `X-STERISH-LICENSE: minted` + `X-STERISH-SETTLEMENT-TX` |
+| 5 | no `X-PAYMENT` | `402` + `PAYMENT-REQUIRED` header, empty body |
+| 6 | `X-PAYMENT` attached | verify → (payer holds or is owed? serve, **no settle**) → settle → record → mint → `200`, `X-STERISH-LICENSE: minted` |
 
-A version the registry did not call `SAFE` returns `403 NOT_VERIFIED` and is never offered for
-sale. The tokens contract enforces this too (`mint_license` is gated on the VERIFIED badge), so
-the check is defence in depth and a clearer error than a contract revert.
+Steps 1 and 2 run before any challenge, verify or settle. Until STE-42 the artifact was read
+**after** settle and mint, so every SAFE version without a published artifact took the payment,
+minted a licence, and then answered `404` — which at the time was 12 of the 13 SAFE catalogue
+skills. A version is for sale exactly when step 2 passes; `intake publish-artifacts` decides that
+(see `deploy/README.md`).
 
-**Identifying the caller.** Before a payment exists there is nothing to derive an address from,
-so a client that wants the "already licensed" shortcut sends `X-AGENT-ADDRESS: G…` (or `?agent=`).
-After payment the payer is taken from the payment payload itself.
+A version the registry did not call `SAFE` is never offered. The tokens contract enforces this too
+(`mint_license` is gated on the VERIFIED badge and re-checks the registry), so the check is
+defence in depth and a clearer error than a contract revert.
+
+**Identifying the caller.** Before a payment exists there is nothing to derive an address from, so
+a client that wants the "already licensed" shortcut sends `X-AGENT-ADDRESS: G…` (or `?agent=`). A
+malformed value is `400 INVALID_AGENT`.
+
+**Identifying the payer.** After payment the payer is **the account the facilitator's `/verify`
+names** — the `from` of the signed SAC `transfer` — and nothing else. `X-AGENT-ADDRESS` is ignored
+for this. Before STE-42 the payer was read from the payment payload and then the header; the
+Stellar exact payload has no `payer` field, so the header was the only source: a client that
+omitted it had its payment settled and then got `400 UNKNOWN_PAYER` with no licence, and one that
+sent someone else's address had the licence minted to that address. A verify response with no valid
+`G…` payer is refused as `502 FACILITATOR_BAD_RESPONSE` **before** settling.
+
+**Settled but not minted.** Settle and mint are two transactions, and the second can fail after the
+first landed. The settlement is recorded first (payer, skill, version, settlement tx) in a ledger
+that is **not** the index cache (`STERISH_PAYMENTS_DB_PATH`). A failed mint answers
+`502 LICENSE_MINT_PENDING` carrying `settlement_tx` and `settlement_tx_url`. The payer's next
+request — with `X-AGENT-ADDRESS`, or with a fresh payment — finishes the mint **without settling
+again**. Before minting, the licence is read from chain: a mint whose confirmation timed out but
+landed is closed out rather than minted twice (the contract would refuse it with `AlreadyMinted`
+anyway, and that refusal is also treated as fulfilled).
+
+**Concurrency.** One purchase per `(payer, skill_id, version)` at a time, so two payments signed in
+parallel settle once. The lock is in-process; the API runs as a single worker.
 
 **The 402 body.** Requirements travel in the `PAYMENT-REQUIRED` header as base64 JSON, with an
 empty body. This shape was captured from the reference `@x402/express` server against the same
@@ -411,9 +442,18 @@ unaffected, and `/health` reports `facilitator_reachable` separately from `rpc_r
 Verify runs before settle deliberately: settling first would move money for a request that is
 about to be refused.
 
-**Errors:** `403 NOT_VERIFIED`, `400 INVALID_PAYMENT`, `402 PAYMENT_REJECTED` (carries the
-facilitator's own reason), `503 FACILITATOR_UNAVAILABLE`, `404 ARTIFACT_NOT_FOUND`,
-`500 ARTIFACT_HASH_MISMATCH`.
+**Response headers on a sale:** `X-STERISH-LICENSE` (`held` | `minted`), `X-STERISH-LICENSE-TX`
+(mint), `X-STERISH-SETTLEMENT-TX` (settlement), `X-PAYMENT-RESPONSE` (facilitator receipt). All are
+listed in CORS `expose_headers`, so a browser client can read them.
+
+**Errors:** `403 NOT_VERIFIED`, `404 ARTIFACT_NOT_FOUND`, `500 ARTIFACT_HASH_MISMATCH`,
+`400 INVALID_AGENT`, `400 INVALID_PAYMENT`, `402 PAYMENT_REJECTED` (carries the facilitator's own
+reason), `503 FACILITATOR_UNAVAILABLE`, `502 FACILITATOR_BAD_RESPONSE`, `502 LICENSE_READ_FAILED`,
+`502 LICENSE_MINT_PENDING`.
+
+**Known limit.** If the version is re-audited away from `SAFE` between settlement and mint, the mint
+is refused (`NotSafeVerdict`) and the version now answers `403`. The settlement stays recorded as
+owed; that buyer is owed a refund, which is an operator action (`deploy/README.md`).
 
 ### 3.8 `GET /license/{skill_id}/{version}` — licence status without the artifact (STE-35)
 
@@ -533,7 +573,17 @@ All error responses share one shape:
 | 404 | `NOT_FOUND` | `content_hash` not in the hash index | `lookup_by_hash` → `None` |
 | 404 | `SKILL_NOT_FOUND` | unknown `skill_id` | `SkillNotFound` (3) |
 | 404 | `VERSION_NOT_FOUND` | known skill, unknown version | `VersionNotFound` (4) |
+| 400 | `INVALID_AGENT` | `X-AGENT-ADDRESS` / `?agent=` is not a `G…` account | — |
+| 400 | `INVALID_PAYMENT` | `X-PAYMENT` is not base64 JSON | — |
+| 402 | `PAYMENT_REJECTED` | the facilitator refused to verify or settle the payment | — |
+| 403 | `NOT_VERIFIED` | `/use` on a version that is not `SAFE` | — |
+| 404 | `ARTIFACT_NOT_FOUND` | `/use` on a version with no published artifact — not for sale | — |
+| 500 | `ARTIFACT_HASH_MISMATCH` | artifact bytes do not hash to the on-chain `content_hash` | — |
 | 502 | `RPC_UNAVAILABLE` | Stellar RPC unreachable or returned an error | — |
+| 502 | `FACILITATOR_BAD_RESPONSE` | verify named no valid payer, or settle succeeded without a tx | — |
+| 502 | `LICENSE_READ_FAILED` | `has_license` returned a contract error | — |
+| 502 | `LICENSE_MINT_PENDING` | paid and settled, mint failed; retry finishes it without charging | — |
+| 503 | `FACILITATOR_UNAVAILABLE` | the x402 facilitator is unreachable | — |
 | 503 | `NOT_CONFIGURED` | `REGISTRY_CONTRACT_ID` unset | `NotInitialized` (1) |
 | 500 | `INTERNAL` | anything else | — |
 
@@ -590,6 +640,10 @@ storage; only `evidence_hash` is on the ledger.
   `indexer.rebuild()`); the next poll refills from chain. Covered by
   `api/tests/test_cache_is_not_source_of_truth.py` and the live
   `test_rebuild_from_chain_is_consistent`.
+- **The payments ledger is NOT a cache (STE-42).** `STERISH_PAYMENTS_DB_PATH` records x402
+  settlements still owed a licence; it cannot be rebuilt from anything, because a settlement the
+  API never minted for leaves no licence on chain to find. It lives on its own volume
+  (`/payments`) and the index rebuild procedure above must never touch it.
 
 ## 7. Change process
 

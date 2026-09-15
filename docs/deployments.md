@@ -348,6 +348,61 @@ gate.
 - **`/supported` reports `areFeesSponsored: true`**, which means the buying agent needs no XLM at
   all — it signs an auth entry and the facilitator assembles and pays for the transaction.
 
+## On-chain evidence — nothing undeliverable is sold (STE-42)
+
+**The bug.** `/use` settled the USDC and minted the licence *before* it looked for the artifact.
+Only `com.sterish.weather-lookup@1.0.0` had one, so every other SAFE version — including all
+12 catalogue skills seeded in STE-18 — offered a 402, took 0.10 USDC, minted, and then answered
+`404 ARTIFACT_NOT_FOUND`. The STE-19 proof passed only because it happened to buy that one skill.
+A second hole in the same path: the payer was read from `X-AGENT-ADDRESS`, because the Stellar
+exact payload carries no payer, so a client that omitted the header was settled and then told
+`400 UNKNOWN_PAYER` with no licence.
+
+**Fixed and proven on testnet, 15 September 2026**, API running locally against the deployed
+contracts and the live OZ Channels facilitator, driven by `api/scripts/e2e_paid_path.py` with the
+real x402 client (`demo/x402-buyer/buy.js`). Every claim was checked against the ledger, not
+against what the API answered. Full record: [`evidence/ste-42-e2e-paid-path-2026-09-15.json`](evidence/ste-42-e2e-paid-path-2026-09-15.json).
+
+| | |
+|---|---|
+| Artifacts published | 14 by `intake publish-artifacts` (12 catalogue + 2 safe fixtures), each written only after bytes, corpus index and on-chain `content_hash` agreed and the on-chain verdict was SAFE |
+| Every SAFE row in the registry | **15 for sale (402), 33 not offered (404, no challenge), 0 anything else** |
+| DANGEROUS `com.fixtures.poisoned.token-drainer@1.0.0` | 403, no challenge |
+| Agent (fresh, no history) | `GAUJNTTBOZ4YONBUHLMKQOJGQNIHBN423ID26AKQ62BVK3HKKTJDMD4V` |
+| Funding (create + trustline + 0.2 USDC, one tx) | [`18cf690533f75618…`](https://stellar.expert/explorer/testnet/tx/18cf690533f756183fe7fcfc8af9cec6a54734a8b23b154ffe936aca613d5777) |
+| Bought `org.stellar.skills.agentic-payments.x402@2026.8.31` **with no `X-AGENT-ADDRESS`** | settlement [`73a5124de3b85434…`](https://stellar.expert/explorer/testnet/tx/73a5124de3b854341f3bbeacf45ff6304ee6b59fa8072d16c43c3a16d6320221) · mint [`858c136e206a3a03…`](https://stellar.expert/explorer/testnet/tx/858c136e206a3a037baa81dd68c54e3a6ab6b619adca392e0337f5ef6173fdb2) |
+
+Verified from outside the API:
+
+- the agent's USDC balance dropped by **exactly 0.1**, and `payTo` received at least 0.1
+- `has_license(agent, skill, version)` read **true** from the tokens contract
+- `content_hash` of the served bytes = the on-chain `a1728e0400eb3bc9…`
+- the same agent then **signed a second payment** for the licence it already held, again without
+  the header: served `held`, **no settlement**, balance unchanged
+
+The failure paths that cannot be forced on a live network — a mint that fails after settlement, a
+mint whose confirmation times out but lands, concurrent payments from one payer, a facilitator
+that verifies without naming a payer — are covered offline in `api/tests/test_use_x402.py`, each
+asserting how many times settle ran.
+
+`deploy/artifacts/` is operator-supplied and gitignored (STE-25), so merging does not put these
+14 artifacts on the server. **The redeploy for this ticket must run, on CT 204:**
+
+```bash
+cd /opt/sterish/deploy
+docker compose --env-file .env --profile tools run --rm publish-artifacts
+```
+
+**Production is still on the old code** until this merges and CT 204 is redeployed. `verify.sh`
+now checks the property itself: every SAFE row must be 402-with-challenge or 404-without. Run
+against `https://api-sterish.jameshub.fun` before the redeploy it reads **48 for sale, 0 not
+offered** — the bug in one line, since only 15 of those 48 have bytes to hand over. After the
+redeploy it must read 15 and 33.
+
+`verify.sh` sends its own User-Agent for that check. Cloudflare answers the default
+`Python-urllib/3.x` agent with `403 error code: 1010`, an HTML page that is not an answer about
+`/use` at all.
+
 ## Backend deployment (STE-25)
 
 A Docker Compose stack in `deploy/`: the API (with the indexer running inside its process) plus
