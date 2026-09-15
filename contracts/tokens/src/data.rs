@@ -1,5 +1,5 @@
 use soroban_sdk::{
-    contractclient, contracterror, contractevent, contracttype, Address, Env, String,
+    contractclient, contracterror, contractevent, contracttype, Address, BytesN, Env, String,
 };
 
 /// Approximate number of ledgers closed in a day (5s close time).
@@ -85,6 +85,16 @@ pub enum DataKey {
     /// Keyed by version on purpose: a new version does NOT inherit the license
     /// bought for the old one (see SYSTEM_DESIGN §3, `VTOK -.gates.-> LTOK`).
     LicenseOf(Address, String, String),
+    // --- STE-44, appended. Storage is append-only: an upgrade reinterprets the
+    // old bytes with new code, so an existing variant may never be removed,
+    // renamed or retyped. New variants go at the end.
+    /// instance -> u64, the upgrade timelock in SECONDS. Written once by the
+    /// constructor; deliberately no setter.
+    UpgradeDelay,
+    /// instance -> PendingUpgrade, present only while a proposal is open.
+    PendingUpgrade,
+    /// instance -> bool, `true` once upgradeability has been renounced. One-way.
+    UpgradeRenounced,
 }
 
 /// Typed contract errors. The numbers are part of the public ABI — never renumber.
@@ -105,6 +115,16 @@ pub enum TokenError {
     NotVerified = 5,
     /// Empty `skill_id` or `version`.
     InvalidInput = 6,
+    /// STE-44: `renounce_upgradeability` has been called. Permanent.
+    UpgradeabilityRenounced = 7,
+    /// `execute_upgrade` / `cancel_upgrade` with nothing proposed.
+    NoPendingUpgrade = 8,
+    /// `propose_upgrade` while another proposal is still open. Cancel it first,
+    /// so that replacing a proposal always costs a visible `UpgradeCancelled`
+    /// event and a fresh full delay.
+    UpgradeAlreadyPending = 9,
+    /// `execute_upgrade` before `ready_at`.
+    UpgradeNotReady = 10,
 }
 
 /// Emitted when a VERIFIED badge is minted for one audited-`Safe` version.
@@ -129,4 +149,77 @@ pub struct LicenseMinted {
     #[topic]
     pub version: String,
     pub agent: Address,
+}
+
+// ---------------------------------------------------------------------------
+// STE-44 — upgradeability
+// ---------------------------------------------------------------------------
+//
+// These declarations mirror `contracts/registry/src/data.rs` byte for byte in
+// meaning. They are duplicated rather than shared through a common crate on
+// purpose: a shared crate would make the two contracts upgrade in lockstep,
+// which is exactly the coupling this ticket is removing, and each contract's
+// storage keys belong in its own key space where they can be read next to the
+// keys they must never collide with. The same reasoning already applies to
+// `BUMP_THRESHOLD` and `bump_instance`, which are likewise duplicated.
+
+/// Fallback timelock, in seconds, used only when `DataKey::UpgradeDelay` is
+/// absent. Deliberately longer than any delay we would configure, so a storage
+/// miss can only ever make the timelock stricter — never turn it off.
+pub const FALLBACK_UPGRADE_DELAY: u64 = 86_400;
+
+/// An upgrade that has been announced but not yet performed.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingUpgrade {
+    /// sha256 of the replacement wasm, i.e. the Soroban wasm hash it was
+    /// uploaded under.
+    pub wasm_hash: BytesN<32>,
+    /// Ledger timestamp at which `propose_upgrade` ran.
+    pub proposed_at: u64,
+    /// Earliest ledger timestamp at which `execute_upgrade` will be accepted.
+    pub ready_at: u64,
+}
+
+/// Emitted by `propose_upgrade`.
+/// topics: ("upgrade_proposed", wasm_hash)
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpgradeProposed {
+    #[topic]
+    pub wasm_hash: BytesN<32>,
+    pub proposed_at: u64,
+    pub ready_at: u64,
+}
+
+/// Emitted by `execute_upgrade`, immediately before the wasm is replaced.
+/// topics: ("upgrade_executed", wasm_hash)
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpgradeExecuted {
+    #[topic]
+    pub wasm_hash: BytesN<32>,
+    pub executed_at: u64,
+}
+
+/// Emitted by `cancel_upgrade`, and by `renounce_upgradeability` when it clears
+/// a proposal that was still open.
+/// topics: ("upgrade_cancelled", wasm_hash)
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpgradeCancelled {
+    #[topic]
+    pub wasm_hash: BytesN<32>,
+    pub cancelled_at: u64,
+}
+
+/// Emitted by `renounce_upgradeability`. There is no counterpart event, because
+/// there is no way back.
+/// topics: ("upgradeability_renounced",)
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpgradeabilityRenounced {
+    pub renounced_at: u64,
+    /// The admin that gave the power up, recorded so the act is attributable.
+    pub admin: Address,
 }

@@ -15,6 +15,10 @@ use soroban_sdk::{
     Address, BytesN, Env, Event, IntoVal, String, Symbol,
 };
 
+/// Upgrade timelock every test deploys with, in seconds. Matches what testnet is
+/// deployed at (STE-44), so the tests exercise the real configuration.
+const UPGRADE_DELAY: u64 = 300;
+
 /// Assert that a `try_*` call returned our typed contract error.
 macro_rules! assert_registry_err {
     ($res:expr, $want:expr) => {
@@ -52,7 +56,10 @@ fn setup_no_auth() -> Ctx {
     let admin = Address::generate(&env);
     let auditor = Address::generate(&env);
     let owner = Address::generate(&env);
-    let contract_id = env.register(SkillRegistry, (admin.clone(), auditor.clone()));
+    let contract_id = env.register(
+        SkillRegistry,
+        (admin.clone(), auditor.clone(), UPGRADE_DELAY),
+    );
     Ctx {
         env,
         contract_id,

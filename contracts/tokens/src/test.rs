@@ -16,6 +16,10 @@ use soroban_sdk::{
 };
 use sterish_registry::{AuditVerdict, SkillRegistry, SkillRegistryClient};
 
+/// Upgrade timelock every test deploys with, in seconds. Matches what testnet is
+/// deployed at (STE-44), so the tests exercise the real configuration.
+const UPGRADE_DELAY: u64 = 300;
+
 /// Assert that a `try_*` call returned our typed contract error.
 macro_rules! assert_token_err {
     ($res:expr, $want:expr) => {
@@ -99,7 +103,10 @@ fn setup() -> Ctx {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    let registry_id = env.register(SkillRegistry, (admin.clone(), auditor.clone()));
+    let registry_id = env.register(
+        SkillRegistry,
+        (admin.clone(), auditor.clone(), UPGRADE_DELAY),
+    );
     let tokens_id = env.register(
         SterishTokens,
         (
@@ -107,6 +114,7 @@ fn setup() -> Ctx {
             registry_id.clone(),
             auditor.clone(),
             minter.clone(),
+            UPGRADE_DELAY,
         ),
     );
     env.mock_all_auths();
