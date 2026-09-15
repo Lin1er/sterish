@@ -32,25 +32,19 @@ uv run python -m sterish_pipeline.cli intake audit-corpus --corpus corpus --stri
 `--strict`, a **poisoned fixture that audits as SAFE is always a hard failure** —
 that is the guarantee the corpus exists to defend.
 
-### `--strict` currently exits non-zero, on purpose
+### `--strict` exits zero since STE-37
 
-You will see exactly one mismatch:
+Until STE-37 it failed on exactly one mismatch, `com.fixtures.safe.price-checker:
+expected SAFE, got DANGEROUS`. That was a real false positive, left visible rather
+than hidden: `wallet_op` was negation-blind, so *"it never touches a wallet, never
+signs anything, never moves funds"* graded the skill DANGEROUS. The fixture and its
+expected verdict were never edited to make the run green; the scanner was fixed
+instead (`wallet_op` now reads whether a sentence directs a move — see
+`stages/injection_rules.py`, "wallet_op reads context"). `tests/test_corpus.py`
+still asserts the mismatch set exactly, and it is now empty.
 
-```
-! com.fixtures.safe.price-checker: expected SAFE, got DANGEROUS
-```
-
-That is a real false positive and it is left visible rather than hidden. The
-`wallet_op` detector is deliberately negation-blind (documented in
-`stages/injection_rules.py`), so the sentence *"it never touches a wallet, never
-signs anything, never moves funds"* grades the skill DANGEROUS. Editing the
-fixture or relaxing its expected verdict would make the run green and the
-scanner no better, so neither was done. `tests/test_corpus.py` asserts this set
-**exactly**, which means fixing the scanner breaks that test and forces the entry
-to be removed.
-
-`org.stellar.skills.cross-chain.cctp` fails for the same reason but does not show
-up here, because catalog entries carry no `expected_verdict` to miss. See below.
+Measured on the whole corpus after the fix: **0 false positives out of 16 benign
+entries, 0 false negatives out of 4 poisoned ones** (`tests/test_wallet_op_context.py`).
 
 ## Rebuild it
 
@@ -91,23 +85,29 @@ citing `docs.axelar.dev` in a markdown link. Both detectors are now gated on the
 manifest having a declaration surface at all; the directive detectors are
 untouched, which is why all four poisoned fixtures are still caught.
 
-After the fix, 12 of 13 catalog entries audit `SAFE`. The exception:
+After STE-36, 12 of 13 catalog entries audited `SAFE`. The exception was
+`org.stellar.skills.cross-chain.cctp`: its prose explains that CCTP burns USDC on
+one chain and mints it on another, and a negation- and context-blind `wallet_op`
+read that as an instruction to move assets. It was held out of the on-chain seed
+run rather than published as a false accusation.
 
-* **`org.stellar.skills.cross-chain.cctp` is still `DANGEROUS`, and it is still
-  wrong.** Its prose explains that CCTP burns USDC on one chain and mints it on
-  another; `wallet_op` reads that as an instruction to move assets. Same family as
-  the `com.fixtures.safe.price-checker` false positive below. `wallet_op` is a
-  critical-class detector protecting `token-drainer` and `invoice-helper`, so
-  relaxing it to turn one entry green is the papering-over this file warns about
-  further down. Tracked separately; **`cctp` is held out of the on-chain seed run
-  rather than published as a false accusation.**
+**Fixed in STE-37: all 13 catalog entries audit `SAFE`.** `wallet_op` now fires only
+on a sentence that *directs* a move — an instruction aimed at the agent, or assets
+moved to a party or out of someone else's hands — and not on a denial, a protocol
+name, or a description of what a protocol does. It was not simply loosened: every
+phrasing in the poisoned fixtures still fires, including attempts to hide an
+instruction next to a denial, and `token-drainer` and `invoice-helper` are still
+caught by `wallet_op` itself (`tests/test_wallet_op_context.py`).
+
+Publishing `cctp` on chain, and correcting the `DANGEROUS` verdict
+`com.fixtures.safe.price-checker` already carries on testnet, is a seed-run
+decision (STE-18), not part of the scanner fix.
 
 `expected_verdict` stays `null` for catalog entries in `index.json`, because the
 corpus should not hard-code a claim about bytes it does not own. The assertions
 that do exist live in `tests/test_declaration_surface.py`, which pins that the
 poisoned fixtures stay `DANGEROUS`, that no catalog entry is flagged by a gated
-detector any more, and that `cctp` is still flagged — so fixing `wallet_op`
-properly makes that last test fail and forces this note to be revisited.
+detector any more, and that `cctp` audits `SAFE`.
 
 The fixtures under `corpus/fixtures/` carry real `expected_verdict` values,
 because they are authored here and their bytes are ours.

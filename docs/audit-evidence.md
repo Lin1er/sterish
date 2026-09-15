@@ -165,10 +165,18 @@ one of them
 | `com.fixtures.safe.weather-lookup` | 1.2.0 | **SAFE** | 90 | [`4f5632c3e1e805ee…`](https://stellar.expert/explorer/testnet/tx/4f5632c3e1e805ee7ac4ae595e8c237d43ea2fac807c5f81fcc322eb3814a030) | [`e0c587e1f4363958…`](https://stellar.expert/explorer/testnet/tx/e0c587e1f43639582b0774bc584b288e00cc791288a164d969e1752030bdce81) | [`fbc4c297ca5f3ad1…`](https://stellar.expert/explorer/testnet/tx/fbc4c297ca5f3ad1f117a8073a8c1cfdc86bf01eb27554f9667353b8c3f07670) |
 
 `com.fixtures.safe.price-checker` landed as `DANGEROUS`, and **that is wrong**. The `wallet_op`
-detector is negation-blind, so the sentence *"it never touches a wallet, never signs anything,
+detector was negation-blind, so the sentence *"it never touches a wallet, never signs anything,
 never moves funds"* is what condemned it. It was left visible on chain rather than quietly
 dropped from the batch: this is our own fixture, not an accusation against anyone else, and a
-false-positive rate that gets hidden helps no one. Tracked in STE-37.
+false-positive rate that gets hidden helps no one.
+
+**Update, STE-37 (15 September 2026): the scanner is fixed; the row above is not.** `wallet_op`
+now fires only on a sentence that directs a move of assets, so `price-checker` audits `SAFE`
+(score 90) offline, while all four poisoned fixtures stay `DANGEROUS`. Measured over the corpus:
+0 false positives among 16 benign entries, 0 false negatives among 4 poisoned ones. The verdict
+**on chain** is still the `DANGEROUS` written on 10 September — ledger history is not edited,
+and correcting it takes a re-audit transaction (`verdict_flipped`), which belongs to the next
+seed run (STE-18) rather than to a scanner change.
 
 ## `content_hash` and `evidence_hash`
 
@@ -422,6 +430,11 @@ exists to prevent.
 The 47 `com.sterish.it-*` / `e2e-*` / `canon-*` test entries were **not** migrated. The 24 real
 skills and their 26 versions were, in the old registry's registration order, so
 `query_all_skills` pages identically.
+
+**Update, STE-37 (15 September 2026):** with `wallet_op` reading whether a sentence directs a
+move, cctp audits `SAFE` (score 100) and all 13 catalogue entries do. It is still **not on
+chain**; publishing it is a seed-run step (STE-18), and holding it back was the right call for
+as long as the scanner would have written a false accusation.
 
 ## Limits worth stating
 
