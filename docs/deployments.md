@@ -879,6 +879,23 @@ body: Caddy's active health check (`health_interval 30s`) marks the API down whi
 restarts and does not look again until the next interval. It clears on its own; run `verify.sh`
 after it has.
 
+
+### Redeploy 2026-09-17 — corrected verdicts and re-anchored reports served (STE-37)
+
+After the on-chain correction ([PR #44](https://github.com/Lin1er/sterish/pull/44); run record in
+[`audit-evidence.md`](audit-evidence.md#executed-17-september-2026)), CT 204 was redeployed so
+`/reports` serves the new `reports/` bytes, and `publish-artifacts` ran again:
+**18 for sale (2 newly published: `cctp` and `price-checker`, now SAFE), 4 not SAFE, 0 failed.**
+
+Checked through `https://api-sterish.jameshub.fun`, for every audited version:
+
+| | |
+|---|---|
+| `/check` verdict, score, `audit_tx` equal the run log · `sha256(/reports bytes) == evidence_hash` | **25 / 25** |
+| `/use` unpaid on `cctp` and `price-checker` | `402` with a challenge (they were `403` while DANGEROUS) |
+| `deploy/verify.sh` | all checks pass; 17 SAFE rows for sale, 0 undeliverable priced |
+
+Record: [`evidence/ste-37-public-reports-check-2026-09-17.json`](evidence/ste-37-public-reports-check-2026-09-17.json).
 ## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
 
 The first run of the whole loop against Registry v2 + Tokens v2 + the unchanged Escrow — the
