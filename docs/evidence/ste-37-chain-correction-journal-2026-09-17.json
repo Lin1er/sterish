@@ -1,0 +1,214 @@
+{
+  "com.fixtures.demo.changelog-writer@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "21dfe988fe20550bbe85b4a4043c5d393d0377bd4137b6883d2b4b17716d8a9e"
+    }
+  },
+  "com.fixtures.demo.ledger-inspector@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "0f00199c1d69be6b3f99c25ec91ce3b3542793bae8e5155104990d68c0d230bd"
+    }
+  },
+  "com.fixtures.demo.release-notes@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "820c4a6f81a97988b2018d3a045f036cb302d22f5311b5e326cf68aa2cfdd61c"
+    }
+  },
+  "com.fixtures.demo.release-notes@2.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "e6326778586faa23bfd353da56a36a59a41d6157ed599bb76255582405d8bdf3"
+    }
+  },
+  "com.fixtures.demo.table-formatter@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "f6a55da7d8abc590b8ac126c05ed5ab42867cdcbf25cb127096f702e78ab2d52"
+    }
+  },
+  "com.fixtures.poisoned.invoice-helper@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "bdbaa1f65224b3abcc6f94cf620e9e77a69eccfed25610f5496d049da11d9557"
+    }
+  },
+  "com.fixtures.poisoned.markdown-linter@2.0.1": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "fff2d307e5e77b645176e012ee46940beec1fffb950f81fb8dffa26136fbf533"
+    }
+  },
+  "com.fixtures.poisoned.pdf-summarizer@1.4.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "5da9e2d938b9873218ae2c0a32ef374a08d7e8bc55467da23625343b3545eb68"
+    }
+  },
+  "com.fixtures.poisoned.token-drainer@1.0.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "c23780e0a58476d109a0ad560f06aec5c87379a5ef66f4f06054c2d45c657d5f"
+    }
+  },
+  "com.fixtures.safe.premium-pdf-suite@3.1.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "960f2ca7a508d86421fb2a519a6e39c2783da26ba13ffffca05a335bc537d40a"
+    }
+  },
+  "com.fixtures.safe.price-checker@0.9.0": {
+    "mint_verified": {
+      "detail": "",
+      "status": "done",
+      "step": "mint_verified",
+      "tx_hash": "279a038847189dd2c5b3635724393a877c801f3dbf06a57a812729e19fe48faf"
+    },
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "3bd64c68d2231c8fb887bc3fc4b0196b49c680688e03dc71a86c4e4f170ab3a3"
+    }
+  },
+  "com.fixtures.safe.weather-lookup@1.2.0": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "914a5a9706002dd805cf0d33c6fc435d1077c518b44ba22b76b20e42ffeb2163"
+    }
+  },
+  "org.stellar.skills.agentic-payments.mpp@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "1d620bee8ef5cf77fe7f7a48f7ba3222edd5548c56af56e9c571507312ae1af8"
+    }
+  },
+  "org.stellar.skills.agentic-payments.x402@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "0724147d2a102f0e11f251e01c3d707d5072cb54b0d0cb02ce1656fc2d67a195"
+    }
+  },
+  "org.stellar.skills.cross-chain.axelar@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "00aa73a61fa4021748ca342c11258f25bb61784511fc0480412f4435cb66b686"
+    }
+  },
+  "org.stellar.skills.cross-chain.cctp@2026.8.31": {
+    "mint_verified": {
+      "detail": "",
+      "status": "done",
+      "step": "mint_verified",
+      "tx_hash": "9ecc990a69df512c272d0cd896952be2f2269416dd3dced2783666f019caec61"
+    },
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "3490559a37fa8c2b54e5acbb48064a5172fce4a1e315f924fae0c1abf767df22"
+    }
+  },
+  "org.stellar.skills.dapp.data-fetching@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "ebfa1f9d1a5763bd408db013effec25e74c1248857151ef80018cd1aeb3d4bb9"
+    }
+  },
+  "org.stellar.skills.dapp.react@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "7e077b38d80323785dc43dbcf1f2273871b636707acdba01693d0397d2b6fc77"
+    }
+  },
+  "org.stellar.skills.dapp.smart-accounts@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "7080b3432880718d556ddd5b23c8cce77b546d459a4fbd60456ab866b5a9fa09"
+    }
+  },
+  "org.stellar.skills.data.horizon@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "c400fc4d1148cabd0620f96f19875325921a80208d98e3715dc33d6aeef71efd"
+    }
+  },
+  "org.stellar.skills.smart-contracts.development@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "1aa984acbb37a2756cfe5352f6f7500137508fe8dfe051f9ae24abebc2071b2f"
+    }
+  },
+  "org.stellar.skills.smart-contracts.security@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "17188f4d017d21c9020354c8192a1f94bb0e2cc659197a5d381a5c448f9a15e9"
+    }
+  },
+  "org.stellar.skills.smart-contracts.testing@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "5af4b0df44b7e7d5a28b69be5e5aa96da797fa61dd9ae730928262fa2d1feeae"
+    }
+  },
+  "org.stellar.skills.standards.ecosystem@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "ced195be6bbfede779399491248ee1085037d3b0f9452e58b60a716a731b2dc9"
+    }
+  },
+  "org.stellar.skills.standards.resources@2026.8.31": {
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "e96a6a352beae9190b0078f24be00f029c9a09fb0f33dac72562e253cf056cd0"
+    }
+  }
+}

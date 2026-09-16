@@ -636,3 +636,32 @@ the previous `evidence_hash` stays readable in the history of each `submit_verdi
 the report that hashes to it is the `reports/` file at the commit before this run. Only
 `price-checker` and `cctp` change verdict. The rewritten `reports/` files are committed with the run log, and the API
 redeployed so `/reports` serves the bytes the chain now anchors.
+
+### Executed, 17 September 2026
+
+Run from `main` at `5a938f5` (PR #43 merged), against Registry v2 and Tokens v2, with the command
+above. Record: [`evidence/ste-37-chain-correction-2026-09-17.json`](evidence/ste-37-chain-correction-2026-09-17.json)
+(journal alongside it). **26 on chain, 0 held back, 0 skipped, 0 failed.**
+
+| skill_id | version | before (15 Sep) | after | `submit_verdict` | `mint_verified` |
+|---|---|---|---|---|---|
+| `com.fixtures.safe.price-checker` | 0.9.0 | DANGEROUS 10 ([`75055115…`](https://stellar.expert/explorer/testnet/tx/75055115da6c6e4ea4aba67a51589ff6dc741ed62c84ebefcf854f214ad4d8b1)) | **SAFE 90** | [`3bd64c68d2231c8f…`](https://stellar.expert/explorer/testnet/tx/3bd64c68d2231c8fb887bc3fc4b0196b49c680688e03dc71a86c4e4f170ab3a3) | [`279a038847189dd2…`](https://stellar.expert/explorer/testnet/tx/279a038847189dd2c5b3635724393a877c801f3dbf06a57a812729e19fe48faf) |
+| `org.stellar.skills.cross-chain.cctp` | 2026.8.31 | DANGEROUS 10 ([`542468dc…`](https://stellar.expert/explorer/testnet/tx/542468dcf909f46111f0a41b207819ef01f1abad6501b270f9879a9ba96368db)) | **SAFE 100** | [`3490559a37fa8c2b…`](https://stellar.expert/explorer/testnet/tx/3490559a37fa8c2b54e5acbb48064a5172fce4a1e315f924fae0c1abf767df22) | [`9ecc990a69df512c…`](https://stellar.expert/explorer/testnet/tx/9ecc990a69df512c272d0cd896952be2f2269416dd3dced2783666f019caec61) |
+
+- **23 hash-only re-anchors**, as the dry run said: same verdict, same score, new `evidence_hash`
+  (the STE-39 byte shift described above). Each one's `submit_verdict` hash is in the record.
+- **5 rows DANGEROUS on purpose**, each marked `dangerous_intended` in the run log: the four
+  `com.fixtures.poisoned.*` fixtures and `com.fixtures.demo.release-notes` 2.0.0 (the rug pull).
+  All are ours and all carry `expected_verdict: DANGEROUS` in the corpus.
+- `com.fixtures.demo.changelog-writer` 2.0.0 stays register-only and `UNAUDITED`; nothing was sent.
+
+**Checked afterwards by reading the chain, not the run log:** all 25 audited versions read back
+from Registry v2 with the verdict and score in the record and an `evidence_hash` equal to
+`sha256` of the committed `reports/` file; both corrected versions answer `is_verified: true`.
+Every anchored hash is also **identical to the dry run's**, byte for byte.
+
+One thing that differed from the dry run and is worth stating: the environment of the real run
+had a model key set, so stage 3 called the model for each entry. Since STE-39 the model is
+advisory and its trail is excluded from the hashed report, and the identical hashes are the
+evidence that this now holds in practice, not only in the unit tests.
+

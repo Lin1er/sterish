@@ -1,0 +1,1046 @@
+[
+  {
+    "skill_id": "com.fixtures.demo.changelog-writer",
+    "version": "1.0.0",
+    "content_hash": "56b259a35fb9fec2ca778b391672252a502e9554ccf8c2c7d5f37d0c99d49032",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "f6cafc56937619cddd5d4d24e4016330f95c28b008c59683339b95b056ecd9cb",
+    "report_uri": "file:///<repo>/reports/com.fixtures.demo.changelog-writer/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.changelog-writer@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.demo.changelog-writer/1.0.0.json (659 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "21dfe988fe20550bbe85b4a4043c5d393d0377bd4137b6883d2b4b17716d8a9e",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 12.5,
+    "tx": {
+      "submit_verdict": "21dfe988fe20550bbe85b4a4043c5d393d0377bd4137b6883d2b4b17716d8a9e"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.demo.changelog-writer",
+    "version": "2.0.0",
+    "content_hash": "fdab7be1890cf453c69b53fe86832370989e8fcf1aa205299c1633b8d780d01c",
+    "verdict": "UNAUDITED",
+    "score": 0,
+    "evidence_hash": "",
+    "report_uri": "",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.changelog-writer@2.0.0"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "register-only: no verdict submitted, the version stays UNAUDITED"
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is UNAUDITED, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 0.4,
+    "tx": {}
+  },
+  {
+    "skill_id": "com.fixtures.demo.ledger-inspector",
+    "version": "1.0.0",
+    "content_hash": "6ef134c428a4edf61a2a4f0d62d30f2c66c430e134ee12df6af1e8520fd3fbb3",
+    "verdict": "WARNING",
+    "score": 60,
+    "evidence_hash": "e37561b331ff69f6ee789ae056c08a777069b0e4d4ef4b9abb8dc94ee71ead1d",
+    "report_uri": "file:///<repo>/reports/com.fixtures.demo.ledger-inspector/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.ledger-inspector@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.demo.ledger-inspector/1.0.0.json (2512 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "0f00199c1d69be6b3f99c25ec91ce3b3542793bae8e5155104990d68c0d230bd",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is WARNING, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 14.1,
+    "tx": {
+      "submit_verdict": "0f00199c1d69be6b3f99c25ec91ce3b3542793bae8e5155104990d68c0d230bd"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.demo.release-notes",
+    "version": "1.0.0",
+    "content_hash": "e5da489eb751e96fb30bb622602b8ab471de4898f333028aeeb7a36211d341f5",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "5c2a02f07cd3be09382b42f5a41c1892bfcaefc7c9fd778df3942e2e44b8b59e",
+    "report_uri": "file:///<repo>/reports/com.fixtures.demo.release-notes/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.release-notes@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.demo.release-notes/1.0.0.json (656 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "820c4a6f81a97988b2018d3a045f036cb302d22f5311b5e326cf68aa2cfdd61c",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.0,
+    "tx": {
+      "submit_verdict": "820c4a6f81a97988b2018d3a045f036cb302d22f5311b5e326cf68aa2cfdd61c"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.demo.release-notes",
+    "version": "2.0.0",
+    "content_hash": "befb592d3cb1afa4c471a7c4ddf2666f1c6ebd0364e76977ecd294be7c01653d",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "evidence_hash": "7b6c09fd6bc7241d537cfdd4c7b23ce21bd26f57308527f217e86320a8151777",
+    "report_uri": "file:///<repo>/reports/com.fixtures.demo.release-notes/2.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.release-notes@2.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.demo.release-notes/2.0.0.json (2674 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "e6326778586faa23bfd353da56a36a59a41d6157ed599bb76255582405d8bdf3",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 10.5,
+    "tx": {
+      "submit_verdict": "e6326778586faa23bfd353da56a36a59a41d6157ed599bb76255582405d8bdf3"
+    },
+    "dangerous_intended": true,
+    "dangerous_reason": "label demo, corpus expected_verdict DANGEROUS"
+  },
+  {
+    "skill_id": "com.fixtures.demo.table-formatter",
+    "version": "1.0.0",
+    "content_hash": "94fcd1273701e1e949fc99a5f537a028dce1072b6899d035622eb9eba0446bf0",
+    "verdict": "WARNING",
+    "score": 78,
+    "evidence_hash": "143a05c445a22fcf2b672b74e547fd3a2c93c1b4a363291b40a56dac24ad9df2",
+    "report_uri": "file:///<repo>/reports/com.fixtures.demo.table-formatter/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.demo.table-formatter@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.demo.table-formatter/1.0.0.json (1961 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "f6a55da7d8abc590b8ac126c05ed5ab42867cdcbf25cb127096f702e78ab2d52",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is WARNING, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 14.5,
+    "tx": {
+      "submit_verdict": "f6a55da7d8abc590b8ac126c05ed5ab42867cdcbf25cb127096f702e78ab2d52"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.poisoned.invoice-helper",
+    "version": "1.0.0",
+    "content_hash": "4eb62911d152ca847ae48cc311f05b49c41de8435a9eb726e96ded8815e54799",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "evidence_hash": "54614c6386ae6b8956a8d3087b00190446366aa3f0f20d0bf27a31c7c0acfd85",
+    "report_uri": "file:///<repo>/reports/com.fixtures.poisoned.invoice-helper/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.poisoned.invoice-helper@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.poisoned.invoice-helper/1.0.0.json (2530 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "bdbaa1f65224b3abcc6f94cf620e9e77a69eccfed25610f5496d049da11d9557",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 10.6,
+    "tx": {
+      "submit_verdict": "bdbaa1f65224b3abcc6f94cf620e9e77a69eccfed25610f5496d049da11d9557"
+    },
+    "dangerous_intended": true,
+    "dangerous_reason": "label poisoned, corpus expected_verdict DANGEROUS"
+  },
+  {
+    "skill_id": "com.fixtures.poisoned.markdown-linter",
+    "version": "2.0.1",
+    "content_hash": "4e21fb01389acb3f8db5e76aad984f124d48988eb8bf5519a7b6f2b8fd6d1a23",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "evidence_hash": "d8f4fdf5357966d17a592598b076f3c7e93b556677514783e9fb9f49812f62d8",
+    "report_uri": "file:///<repo>/reports/com.fixtures.poisoned.markdown-linter/2.0.1.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.poisoned.markdown-linter@2.0.1"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.poisoned.markdown-linter/2.0.1.json (1436 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "fff2d307e5e77b645176e012ee46940beec1fffb950f81fb8dffa26136fbf533",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 9.9,
+    "tx": {
+      "submit_verdict": "fff2d307e5e77b645176e012ee46940beec1fffb950f81fb8dffa26136fbf533"
+    },
+    "dangerous_intended": true,
+    "dangerous_reason": "label poisoned, corpus expected_verdict DANGEROUS"
+  },
+  {
+    "skill_id": "com.fixtures.poisoned.pdf-summarizer",
+    "version": "1.4.0",
+    "content_hash": "c2f67997100ed75ba8eb36bebcbc7d2697049fcf4ed6f71e92d92bd5f984692c",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "evidence_hash": "e0a6942fa9d074371625b9b191a3a61e47ba6e80b5fdbadad525a473cf6f92c5",
+    "report_uri": "file:///<repo>/reports/com.fixtures.poisoned.pdf-summarizer/1.4.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.poisoned.pdf-summarizer@1.4.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.poisoned.pdf-summarizer/1.4.0.json (1945 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "5da9e2d938b9873218ae2c0a32ef374a08d7e8bc55467da23625343b3545eb68",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 10.0,
+    "tx": {
+      "submit_verdict": "5da9e2d938b9873218ae2c0a32ef374a08d7e8bc55467da23625343b3545eb68"
+    },
+    "dangerous_intended": true,
+    "dangerous_reason": "label poisoned, corpus expected_verdict DANGEROUS"
+  },
+  {
+    "skill_id": "com.fixtures.poisoned.token-drainer",
+    "version": "1.0.0",
+    "content_hash": "adb942765c751b62c22d582c3d3fd08473d4da5c9a0ce9dd5a0862239ed0e068",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "evidence_hash": "4b89d4cb531b37b1a4a856be7c3e4ecd1bf72390cd3485af2b0f1038a9d03613",
+    "report_uri": "file:///<repo>/reports/com.fixtures.poisoned.token-drainer/1.0.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.poisoned.token-drainer@1.0.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.poisoned.token-drainer/1.0.0.json (3198 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "c23780e0a58476d109a0ad560f06aec5c87379a5ef66f4f06054c2d45c657d5f",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+      }
+    ],
+    "seconds": 9.7,
+    "tx": {
+      "submit_verdict": "c23780e0a58476d109a0ad560f06aec5c87379a5ef66f4f06054c2d45c657d5f"
+    },
+    "dangerous_intended": true,
+    "dangerous_reason": "label poisoned, corpus expected_verdict DANGEROUS"
+  },
+  {
+    "skill_id": "com.fixtures.safe.premium-pdf-suite",
+    "version": "3.1.0",
+    "content_hash": "e6a7423c88ffe0031fec3af98bc9d3bf5b258b7b9f8849b9a78101c20d049458",
+    "verdict": "SAFE",
+    "score": 94,
+    "evidence_hash": "b346dda994628dc9b3dc9b016ce391126da10da200158f2192563f2ac5144020",
+    "report_uri": "file:///<repo>/reports/com.fixtures.safe.premium-pdf-suite/3.1.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.safe.premium-pdf-suite@3.1.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.safe.premium-pdf-suite/3.1.0.json (1233 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "960f2ca7a508d86421fb2a519a6e39c2783da26ba13ffffca05a335bc537d40a",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.6,
+    "tx": {
+      "submit_verdict": "960f2ca7a508d86421fb2a519a6e39c2783da26ba13ffffca05a335bc537d40a"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.safe.price-checker",
+    "version": "0.9.0",
+    "content_hash": "d159b461426a5bcfd0a9b36fdad54236e4b2642033037c718ff572a37a2e85ff",
+    "verdict": "SAFE",
+    "score": 90,
+    "evidence_hash": "14d8ba4758c0b5b93bb92c723a770e6e8a6248475d43a9afaae67be844fc23e6",
+    "report_uri": "file:///<repo>/reports/com.fixtures.safe.price-checker/0.9.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.safe.price-checker@0.9.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.safe.price-checker/0.9.0.json (987 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "3bd64c68d2231c8fb887bc3fc4b0196b49c680688e03dc71a86c4e4f170ab3a3",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "done",
+        "tx_hash": "279a038847189dd2c5b3635724393a877c801f3dbf06a57a812729e19fe48faf",
+        "detail": ""
+      }
+    ],
+    "seconds": 14.2,
+    "tx": {
+      "submit_verdict": "3bd64c68d2231c8fb887bc3fc4b0196b49c680688e03dc71a86c4e4f170ab3a3",
+      "mint_verified": "279a038847189dd2c5b3635724393a877c801f3dbf06a57a812729e19fe48faf"
+    }
+  },
+  {
+    "skill_id": "com.fixtures.safe.weather-lookup",
+    "version": "1.2.0",
+    "content_hash": "6308b6e80fd6fbd25d81a8cb11d789ce9db45a8624c37f82aea2b46b97b3c196",
+    "verdict": "SAFE",
+    "score": 90,
+    "evidence_hash": "dc1f24952059d5247a14058fe19946396007f6f5015eb58153cc80d2edd76cf0",
+    "report_uri": "file:///<repo>/reports/com.fixtures.safe.weather-lookup/1.2.0.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as com.fixtures.safe.weather-lookup@1.2.0"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/com.fixtures.safe.weather-lookup/1.2.0.json (982 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "914a5a9706002dd805cf0d33c6fc435d1077c518b44ba22b76b20e42ffeb2163",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.6,
+    "tx": {
+      "submit_verdict": "914a5a9706002dd805cf0d33c6fc435d1077c518b44ba22b76b20e42ffeb2163"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.agentic-payments.mpp",
+    "version": "2026.8.31",
+    "content_hash": "35b7b57b9230f972f6ae6cfea72dd76855a9e27b356e90091d33b3d974e0c0c6",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "2da9cf3ed1c7b0fd10a8e0a23be53124feeeb55160aaa77a6d7b8361d1062316",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.agentic-payments.mpp/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.agentic-payments.mpp@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.agentic-payments.mpp/2026.8.31.json (668 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "1d620bee8ef5cf77fe7f7a48f7ba3222edd5548c56af56e9c571507312ae1af8",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.1,
+    "tx": {
+      "submit_verdict": "1d620bee8ef5cf77fe7f7a48f7ba3222edd5548c56af56e9c571507312ae1af8"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.agentic-payments.x402",
+    "version": "2026.8.31",
+    "content_hash": "a1728e0400eb3bc979b66d8eef41d55c229662b5a74e25cecf8b9c7db1136e51",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "857306844ae2e1efa583c7461bda41b7586d4d72a8e04d8451e9b6b368558303",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.agentic-payments.x402/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.agentic-payments.x402@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.agentic-payments.x402/2026.8.31.json (669 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "0724147d2a102f0e11f251e01c3d707d5072cb54b0d0cb02ce1656fc2d67a195",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 9.7,
+    "tx": {
+      "submit_verdict": "0724147d2a102f0e11f251e01c3d707d5072cb54b0d0cb02ce1656fc2d67a195"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.cross-chain.axelar",
+    "version": "2026.8.31",
+    "content_hash": "7d10aa0de318ff6a6126e463f45f4abc0e63dcf053a09c03db76a2a1cda9af08",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "d47504d41e3a6d4ce230fab9d8655aa49597a6eb4f7b49e5936ddd1e9b449c64",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.cross-chain.axelar/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.cross-chain.axelar@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.cross-chain.axelar/2026.8.31.json (666 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "00aa73a61fa4021748ca342c11258f25bb61784511fc0480412f4435cb66b686",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.7,
+    "tx": {
+      "submit_verdict": "00aa73a61fa4021748ca342c11258f25bb61784511fc0480412f4435cb66b686"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.cross-chain.cctp",
+    "version": "2026.8.31",
+    "content_hash": "f6fcdb2907ded30e75bcd61ac13263f41ad45f9921923784f77305734e69cf2b",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "6513a8c7d3b84b11b9530e73b5a3f5589d6b11cf01ce5348b8717301373379f7",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.cross-chain.cctp/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.cross-chain.cctp@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.cross-chain.cctp/2026.8.31.json (664 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "3490559a37fa8c2b54e5acbb48064a5172fce4a1e315f924fae0c1abf767df22",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "done",
+        "tx_hash": "9ecc990a69df512c272d0cd896952be2f2269416dd3dced2783666f019caec61",
+        "detail": ""
+      }
+    ],
+    "seconds": 14.2,
+    "tx": {
+      "submit_verdict": "3490559a37fa8c2b54e5acbb48064a5172fce4a1e315f924fae0c1abf767df22",
+      "mint_verified": "9ecc990a69df512c272d0cd896952be2f2269416dd3dced2783666f019caec61"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.dapp.data-fetching",
+    "version": "2026.8.31",
+    "content_hash": "5c9d232fba6c6be661f2d09a58062a177ce9cbff1e61b41053f7a2c14649f5fd",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "6169aa460f61a791b3009a4870683bbd22505051a02ec6c8c55d2f997b37d33c",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.dapp.data-fetching/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.dapp.data-fetching@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.dapp.data-fetching/2026.8.31.json (666 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "ebfa1f9d1a5763bd408db013effec25e74c1248857151ef80018cd1aeb3d4bb9",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.9,
+    "tx": {
+      "submit_verdict": "ebfa1f9d1a5763bd408db013effec25e74c1248857151ef80018cd1aeb3d4bb9"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.dapp.react",
+    "version": "2026.8.31",
+    "content_hash": "528ad44c3b6e9f78a70415e60a41a4e4a4226c488e9833a7ab8790f006a8f22b",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "fa501ad7605a40639101405070340606d322bf39d184cf4974b4079af7e73db5",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.dapp.react/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.dapp.react@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.dapp.react/2026.8.31.json (658 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "7e077b38d80323785dc43dbcf1f2273871b636707acdba01693d0397d2b6fc77",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 9.5,
+    "tx": {
+      "submit_verdict": "7e077b38d80323785dc43dbcf1f2273871b636707acdba01693d0397d2b6fc77"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.dapp.smart-accounts",
+    "version": "2026.8.31",
+    "content_hash": "829ecc1308efb93d68c3aedb48d9036d8b850dcb86fad15315925873d34d9c5d",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "81430b01ff965d7f225658c5c6034316091b50c4092139b92ba346671259b320",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.dapp.smart-accounts/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.dapp.smart-accounts@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.dapp.smart-accounts/2026.8.31.json (667 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "7080b3432880718d556ddd5b23c8cce77b546d459a4fbd60456ab866b5a9fa09",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.4,
+    "tx": {
+      "submit_verdict": "7080b3432880718d556ddd5b23c8cce77b546d459a4fbd60456ab866b5a9fa09"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.data.horizon",
+    "version": "2026.8.31",
+    "content_hash": "56b6ca1b464d02b6a4a60de6b94f4577ccf20535305cda5afda0b2fb33dd7fb8",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "f33518443f7ff0c1192c5ea5c70c005aef7f3420b761d32314498a7e44483e90",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.data.horizon/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.data.horizon@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.data.horizon/2026.8.31.json (660 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "c400fc4d1148cabd0620f96f19875325921a80208d98e3715dc33d6aeef71efd",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.2,
+    "tx": {
+      "submit_verdict": "c400fc4d1148cabd0620f96f19875325921a80208d98e3715dc33d6aeef71efd"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.smart-contracts.development",
+    "version": "2026.8.31",
+    "content_hash": "2c9804b92d6d23c1588ed0f5c838a804b6cfada210190215b1941b7da0727075",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "03fc421f7572cbada4a29f5c42420c7d2cb75b723f1dcc2ca2788b6797cc1c11",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.smart-contracts.development/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.smart-contracts.development@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.smart-contracts.development/2026.8.31.json (675 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "1aa984acbb37a2756cfe5352f6f7500137508fe8dfe051f9ae24abebc2071b2f",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 9.5,
+    "tx": {
+      "submit_verdict": "1aa984acbb37a2756cfe5352f6f7500137508fe8dfe051f9ae24abebc2071b2f"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.smart-contracts.security",
+    "version": "2026.8.31",
+    "content_hash": "9efb0273924fe35b79f180655508de81653af20afead91dee6848a60aac92e32",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "bf5d2c8d58d6ce7715e6834c751b14eddf7386daa1f17da2a99cfc3a4d8c6bd9",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.smart-contracts.security/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.smart-contracts.security@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.smart-contracts.security/2026.8.31.json (672 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "17188f4d017d21c9020354c8192a1f94bb0e2cc659197a5d381a5c448f9a15e9",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 9.6,
+    "tx": {
+      "submit_verdict": "17188f4d017d21c9020354c8192a1f94bb0e2cc659197a5d381a5c448f9a15e9"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.smart-contracts.testing",
+    "version": "2026.8.31",
+    "content_hash": "c51ed00a8801cc2691e5180e6f530171933e06e9ddd9d78b1fb66e96952b522b",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "e9cedd836fddeda466e6a9b823fee2a476dd1ada64de2a95b2ff3ae91c16528b",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.smart-contracts.testing/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.smart-contracts.testing@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.smart-contracts.testing/2026.8.31.json (671 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "5af4b0df44b7e7d5a28b69be5e5aa96da797fa61dd9ae730928262fa2d1feeae",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.1,
+    "tx": {
+      "submit_verdict": "5af4b0df44b7e7d5a28b69be5e5aa96da797fa61dd9ae730928262fa2d1feeae"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.standards.ecosystem",
+    "version": "2026.8.31",
+    "content_hash": "b316e820aa088d5f7ff64a3a1bb8752bb2760f015427891cbc28c99538981339",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "02d533d6632e10a5dfd0b7c8b93088b11c5b516b9479a91519c39c16ce475264",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.standards.ecosystem/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.standards.ecosystem@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.standards.ecosystem/2026.8.31.json (667 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "ced195be6bbfede779399491248ee1085037d3b0f9452e58b60a716a731b2dc9",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.1,
+    "tx": {
+      "submit_verdict": "ced195be6bbfede779399491248ee1085037d3b0f9452e58b60a716a731b2dc9"
+    }
+  },
+  {
+    "skill_id": "org.stellar.skills.standards.resources",
+    "version": "2026.8.31",
+    "content_hash": "cfe431919761b98f7849d31c0460d1ed913dcbc361084bc376dbadfe6a859355",
+    "verdict": "SAFE",
+    "score": 100,
+    "evidence_hash": "c5dde8f1623f03ec35a42241cb461828a4c8195cabd1e5f5437f7fa9116cbb15",
+    "report_uri": "file:///<repo>/reports/org.stellar.skills.standards.resources/2026.8.31.json",
+    "ok": true,
+    "steps": [
+      {
+        "step": "register_skill",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "content_hash already registered as org.stellar.skills.standards.resources@2026.8.31"
+      },
+      {
+        "step": "publish_report",
+        "status": "done",
+        "tx_hash": null,
+        "detail": "../reports/org.stellar.skills.standards.resources/2026.8.31.json (667 bytes)"
+      },
+      {
+        "step": "submit_verdict",
+        "status": "done",
+        "tx_hash": "e96a6a352beae9190b0078f24be00f029c9a09fb0f33dac72562e253cf056cd0",
+        "detail": ""
+      },
+      {
+        "step": "mint_verified",
+        "status": "skipped",
+        "tx_hash": null,
+        "detail": "badge already minted"
+      }
+    ],
+    "seconds": 10.4,
+    "tx": {
+      "submit_verdict": "e96a6a352beae9190b0078f24be00f029c9a09fb0f33dac72562e253cf056cd0"
+    }
+  }
+]

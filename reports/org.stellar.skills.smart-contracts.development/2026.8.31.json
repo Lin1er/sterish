@@ -1,7 +1,7 @@
 {
   "capabilities": [],
   "content_hash": "2c9804b92d6d23c1588ed0f5c838a804b6cfada210190215b1941b7da0727075",
-  "evidence_hash": "7476335fb73c5082f9e6d69ed439f9ec6ada32d18e442098ab17417019c365fe",
+  "evidence_hash": "0f867da1e56e55d124914b918ba7c45b15256677c910745d23ff6060dd478db4",
   "findings": [
     {
       "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
