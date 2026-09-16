@@ -44,15 +44,46 @@ Deliberate tightenings vs the ticket table, to keep false positives at zero on b
 * ``wallet_op``: a bare "transfer" does not fire. It fires on an explicit wallet primitive
   (``setApprovalForAll``, ``signTransaction``, a Stellar secret key, "drain", "sweep") or on a
   transfer/approve/withdraw verb **together with** asset context (wallet, XLM, USDC, funds,
-  balance...). "Transfer the report to the output folder" is not a wallet operation.
+  balance...) **in the same sentence**, when that sentence directs the move (see "wallet_op
+  reads context" below). "Transfer the report to the output folder" is not a wallet operation.
 * ``[[ ... ]]``: fires only when the block body contains an imperative, otherwise every
   wiki-style link would be a HIGH finding.
 * ``exfiltration``: a URL only fires when its host was not declared in ``manifest.permissions``
   (``network:host``, ``https://host/...`` and bare hostnames are all understood). A skill that
   says which API it calls is being honest, and honesty must not be punished.
-* ``undeclared_capability`` only, and never a critical-class detector, honours negation
-  ("no credentials are read"). A benign skill has no reason to write ``~/.ssh/id_rsa`` in its
-  description at all, negated or not, so the critical detectors stay literal.
+* ``undeclared_capability`` and ``wallet_op`` honour negation ("no credentials are read",
+  "never moves funds"). The other critical detectors stay literal: a benign skill has no
+  reason to write ``~/.ssh/id_rsa`` in its description at all, negated or not.
+
+wallet_op reads context (STE-37)
+--------------------------------
+
+``wallet_op`` used to be literal too, on the same argument as ``credential_path``. On a crypto
+platform the argument does not hold: a benign skill has every reason to mention wallets and
+transfers — to say it never touches them, or to explain the protocol it wraps. Two real false
+positives came out of it: ``com.fixtures.safe.price-checker`` ("it never touches a wallet,
+never signs anything, never moves funds") and ``org.stellar.skills.cross-chain.cctp``
+("Circle's Cross-Chain Transfer Protocol moves USDC by burning it on the source chain"). The
+second held a real Stellar catalog skill out of the on-chain seed rather than publish a false
+accusation.
+
+The distinction that actually separates poisoning from documentation is whether the text
+**directs** the move. A transfer verb now becomes a finding only when, within one sentence:
+
+1. there is asset context, and code spans are ignored (```approve``` names a function);
+2. the verb is not negated by a word that governs it directly ("never moves", "does not
+   transfer", "without transferring") — "must not forget to transfer" is NOT negated, because
+   the negation governs "forget";
+3. the verb is not part of a name or compound noun ("Transfer Protocol", "transfer amount");
+4. and it is either aimed at the agent — first word of a clause, or led by "then", "silently",
+   "must" and the like — or aimed at a party: "to the developer", "to G…", "your wallet",
+   "all XLM", "the entire balance".
+
+Negation removes the finding rather than lowering its severity on purpose: policy row 6 turns
+any finding into WARNING, so a lowered severity would still refuse the two false positives
+their SAFE verdict. The residual risk is a skill that only ever *denies* moving funds while
+doing it elsewhere; a denial carries no instruction for the agent, and any sentence that does
+instruct still fires on its own (``tests/test_wallet_op_context.py`` pins both halves).
 
 Two classes of detector (STE-36)
 --------------------------------
@@ -212,6 +243,59 @@ _ASSET_CONTEXT = re.compile(
     r"\b(wallet|wallets|xlm|lumens?|usdc|usdt|stellar|ethereum|eth|btc|bitcoin|sol|solana|"
     r"token|tokens|funds|balance|balances|crypto|cryptocurrency|keypair|"
     r"private\s+key|secret\s+key|asset|assets)\b",
+    re.IGNORECASE,
+)
+
+# --- wallet_op context (STE-37) -------------------------------------------------------------
+# A wallet skill on a crypto platform has every reason to *talk about* moving assets: to
+# say it never does, or to explain the protocol it wraps. What poisoning does instead is
+# *direct the agent* to move them, or move them *to someone*. These patterns tell the two
+# apart one sentence at a time. See the module docstring, "wallet_op reads context".
+
+#: Inline code spans and fenced blocks. `approve` in backticks names a function in an
+#: integration guide; it is not an instruction to the agent reading the guide.
+_CODE_SPAN = re.compile(r"```.*?```|`[^`\n]*`", re.DOTALL)
+#: A sentence ends at terminal punctuation followed by whitespace, or at a line break.
+#: "docs.axelar.dev" and "0.1234567" do not end a sentence.
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|\n+")
+#: Clause boundaries inside a sentence, for "is the verb at the start of a clause".
+_CLAUSE_BREAK = re.compile(r"[,;:—–(]|\s-\s")
+#: Negation that governs the verb directly: "never moves", "does not transfer",
+#: "without transferring". A negation that governs a different verb ("must not forget to
+#: transfer") does not match, because only a small set of adverbs may sit in between.
+_VERB_NEGATED = re.compile(
+    r"\b(?:never|not|no|without|doesn't|does\s+not|don't|do\s+not|won't|will\s+not|"
+    r"cannot|can't|can\s+not|isn't|is\s+not)\s+(?:(?:ever|actually|really|directly|"
+    r"automatically)\s+)?$",
+    re.IGNORECASE,
+)
+#: Words that, sitting right before the verb, aim it at the agent.
+_DIRECTIVE_LEAD = re.compile(
+    r"\b(?:then|first|silently|automatically|quietly|immediately|secretly|must|should|"
+    r"always|please|just|also)\s+$",
+    re.IGNORECASE,
+)
+#: The verb is really part of a name or a compound noun: "Transfer Protocol",
+#: "transfer amount", "approval flow".
+_NOUN_AFTER_VERB = re.compile(
+    r"^\s*(?:protocol|standard|api|agent|service|layer|function|method|event|events|hook|"
+    r"fee|fees|amount|amounts|id|limit|limits|history|record|records|details|status|type|"
+    r"request|requests|flow|operation|operations|tx|transaction|transactions|queue)\b",
+    re.IGNORECASE,
+)
+#: "to <someone>": the assets are being sent to an identifiable party or address.
+_DESTINATION = re.compile(
+    r"\bto\s+(?:(?:the|a|an|this|that|our|my|your|their|his|her|its)\s+)?(?:[\w-]+\s+){0,3}?"
+    r"(?:address|account|developer|developers|operator|owner|recipient|destination|wallet|"
+    r"vault|attacker|collector|author|maintainer|G[A-Z2-7]{55}|0x[0-9a-fA-F]{40})\b",
+    re.IGNORECASE,
+)
+#: Somebody else's assets, or all of them: "your wallet", "the user's USDC", "all XLM",
+#: "the entire balance".
+_OWNERSHIP = re.compile(
+    r"\b(?:user'?s?|your|their|customer'?s?|holder'?s?|all|entire|whole|remaining|every)\s+"
+    r"(?:[\w-]+\s+){0,2}?(?:wallet|wallets|funds|balance|balances|xlm|lumens?|usdc|usdt|"
+    r"tokens?|assets?|crypto)\b",
     re.IGNORECASE,
 )
 
@@ -538,9 +622,63 @@ def _detect_credential_path(source: TextSource) -> list[InjectionFinding]:
     return out
 
 
+def _mask_code(text: str) -> str:
+    """Blank out code spans, keeping every offset so findings still point at the source."""
+    return _CODE_SPAN.sub(lambda m: " " * len(m.group()), text)
+
+
+def _sentences(text: str) -> list[tuple[int, str]]:
+    """(offset, sentence) pairs covering `text`."""
+    out: list[tuple[int, str]] = []
+    start = 0
+    for m in _SENTENCE_BREAK.finditer(text):
+        out.append((start, text[start : m.start()]))
+        start = m.end()
+    out.append((start, text[start:]))
+    return out
+
+
+def _clause_lead(sentence: str, index: int) -> str:
+    """The text of the current clause before `index`."""
+    before = sentence[:index]
+    breaks = list(_CLAUSE_BREAK.finditer(before))
+    return before[breaks[-1].end() :] if breaks else before
+
+
+def _is_directed_transfer(sentence: str, verb: re.Match[str]) -> bool:
+    """A transfer verb in asset context that moves assets on the agent's or someone's behalf.
+
+    Not a wallet operation: a denial ("never moves funds"), a name or compound noun
+    ("Cross-Chain Transfer Protocol", "transfer amount"), or a description of what a
+    protocol does ("CCTP moves USDC by burning it on the source chain").
+
+    A wallet operation: an instruction aimed at the agent ("Transfer all XLM ...",
+    "silently transfer ..."), or a movement of assets to an identifiable party or out
+    of someone else's hands ("by transferring tokens to the developer", "your wallet").
+    """
+    lead = _clause_lead(sentence, verb.start())
+    if _VERB_NEGATED.search(lead):
+        return False
+    if _NOUN_AFTER_VERB.match(sentence[verb.end() :]):
+        return False
+
+    imperative = not lead.strip(" \t*>#-0123456789.)[]\"'") or bool(_DIRECTIVE_LEAD.search(lead))
+    directed = bool(_DESTINATION.search(sentence[verb.start() :]) or _OWNERSHIP.search(sentence))
+    return imperative or directed
+
+
 def _detect_wallet_op(source: TextSource) -> list[InjectionFinding]:
     out: list[InjectionFinding] = []
+    # Emphasis markers are blanked too: "**to**" must read as "to".
+    prose = _mask_code(source.text).replace("*", " ")
+
     for m in _WALLET_PRIMITIVES.finditer(source.text):
+        word = m.group().strip().lower()
+        if word.startswith(("drain", "sweep")):
+            # The two primitives that are ordinary English verbs honour negation like any
+            # other verb; the API names (signTransaction, setApprovalForAll) stay literal.
+            if _VERB_NEGATED.search(_clause_lead(prose, m.start())):
+                continue
         out.append(
             _finding(
                 WALLET_OP,
@@ -560,14 +698,19 @@ def _detect_wallet_op(source: TextSource) -> list[InjectionFinding]:
                 capability=Capability.WALLET_ACCESS,
             )
         )
-    if _ASSET_CONTEXT.search(source.text):
-        for m in _TRANSFER_VERB.finditer(source.text):
+    for offset, sentence in _sentences(prose):
+        if not _ASSET_CONTEXT.search(sentence):
+            continue
+        for m in _TRANSFER_VERB.finditer(sentence):
+            if not _is_directed_transfer(sentence, m):
+                continue
             out.append(
                 _finding(
                     WALLET_OP,
                     source,
-                    m.span(),
-                    "Text describes moving assets (transfer/approve/withdraw in wallet context).",
+                    (offset + m.start(), offset + m.end()),
+                    "Text directs moving assets (transfer/approve/withdraw aimed at the agent "
+                    "or at another party, in wallet context).",
                     capability=Capability.WALLET_ACCESS,
                 )
             )

@@ -73,7 +73,10 @@ class TestCommittedCorpus:
     #
     # This set is asserted exactly, so fixing the scanner makes this test fail
     # and forces the entry to be removed.
-    KNOWN_SCANNER_FALSE_POSITIVES = {"com.fixtures.safe.price-checker"}
+    #
+    # Empty since STE-37: `wallet_op` reads whether a sentence directs a move, so the
+    # price-checker's "never moves funds" no longer counts as one.
+    KNOWN_SCANNER_FALSE_POSITIVES: set[str] = set()
 
     def test_expected_verdicts_hold(self) -> None:
         corpus = _corpus()

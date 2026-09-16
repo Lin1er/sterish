@@ -238,9 +238,10 @@ def audit_corpus(
 @click.option(
     "--allow-dangerous",
     is_flag=True,
-    help="Also seed entries that audit DANGEROUS. Off by default: publishing a DANGEROUS "
-    "verdict against a third party's skill is an accusation, and an unreviewed batch is "
-    "not the place to make one.",
+    help="Also seed entries that audit DANGEROUS, but only where the corpus itself expects "
+    "DANGEROUS (expected_verdict). Off by default: publishing a DANGEROUS verdict against a "
+    "third party's skill is an accusation, and an unreviewed batch is not the place to make "
+    "one. Every DANGEROUS row published is marked dangerous_intended in the run log.",
 )
 def seed(
     corpus_dir: str,
@@ -270,6 +271,7 @@ def seed(
 
     from sterish_pipeline.audit import to_verdict_json
     from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate, register_only
+    from sterish_pipeline.reports import evidence_hash_of
     from sterish_pipeline.stages.stage3_verdict_synthesis import build_verdict_document
 
     cfg = PipelineConfig.load(config)
@@ -331,11 +333,12 @@ def seed(
             # `orchestrator.register_only` for why this is the only route to an
             # UNAUDITED record.
             if dry_run:
+                plan = _dry_run_plan(cfg, entry, None, None, None)
                 table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
-                              "[cyan]dry-run[/cyan]")
+                              f"[cyan]dry-run: {plan['action']}[/cyan]")
                 log.append({"skill_id": entry.skill_id, "version": entry.version,
                             "status": "dry_run", "verdict": "UNAUDITED",
-                            "content_hash": entry.content_hash})
+                            "content_hash": entry.content_hash, **plan})
                 continue
             try:
                 result = register_only(
@@ -372,17 +375,33 @@ def seed(
         verdict = payload["verdict"]
         score = payload["score"]
 
-        if verdict == FinalVerdict.DANGEROUS.value and not allow_dangerous:
+        # STE-37: --allow-dangerous is not a blanket. A DANGEROUS verdict is published only
+        # where the corpus declares it (our poisoned fixtures and the demo rug pull), and
+        # each such row says so in the run log, so a reader can see the flag was used on
+        # purpose. A DANGEROUS the corpus did not expect is exactly the unreviewed
+        # accusation the flag's default guards against, so it stays held either way.
+        intended = entry.expected_verdict == FinalVerdict.DANGEROUS.value
+        if verdict == FinalVerdict.DANGEROUS.value and not (allow_dangerous and intended):
             elapsed = time.monotonic() - started
+            reason = (
+                "--allow-dangerous not given" if not allow_dangerous
+                else f"corpus expects {entry.expected_verdict or 'no verdict'}, not DANGEROUS"
+            )
             table.add_row(
                 entry.skill_id, entry.version, _verdict_markup(FinalVerdict.DANGEROUS),
                 str(score), f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
             )
             log.append(
                 {"skill_id": entry.skill_id, "version": entry.version,
-                 "status": "skipped_dangerous", "verdict": verdict, "score": score}
+                 "status": "skipped_dangerous", "verdict": verdict, "score": score,
+                 "reason": reason}
             )
             continue
+        dangerous_note = (
+            {"dangerous_intended": True,
+             "dangerous_reason": f"label {entry.label}, corpus expected_verdict DANGEROUS"}
+            if verdict == FinalVerdict.DANGEROUS.value else {}
+        )
 
         try:
             specs.validate_verdict_document(payload, submittable=True)
@@ -396,14 +415,19 @@ def seed(
 
         if dry_run:
             elapsed = time.monotonic() - started
+            # The hash a real run would anchor: the same canonical bytes reports.publish
+            # writes, computed without writing them.
+            evidence_hash = evidence_hash_of(payload)
+            plan = _dry_run_plan(cfg, entry, verdict, score, evidence_hash)
             table.add_row(
                 entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
-                "[cyan]dry-run[/cyan]",
+                f"[cyan]dry-run: {plan['action']}[/cyan]",
             )
             log.append(
                 {"skill_id": entry.skill_id, "version": entry.version, "status": "dry_run",
                  "verdict": verdict, "score": score,
-                 "content_hash": payload["content_hash"], "seconds": round(elapsed, 1)}
+                 "content_hash": payload["content_hash"], "evidence_hash": evidence_hash,
+                 **plan, **dangerous_note, "seconds": round(elapsed, 1)}
             )
             continue
 
@@ -421,6 +445,7 @@ def seed(
         row = result.to_dict()
         row["seconds"] = round(elapsed, 1)
         row["tx"] = result.tx_hashes()
+        row.update(dangerous_note)
         log.append(row)
 
         if not result.ok:
@@ -439,6 +464,11 @@ def seed(
         f"{sum(1 for r in log if r.get('status') == 'skipped_dangerous')} skipped DANGEROUS, "
         f"{len(failures)} failed."
     )
+    intended = [r for r in log if r.get("dangerous_intended")]
+    if intended:
+        console.print(f"{len(intended)} DANGEROUS on purpose (corpus expects it):")
+        for r in intended:
+            console.print(f"  {r['skill_id']} {r['version']} — {r['dangerous_reason']}")
     slow = [r for r in log if (r.get("seconds") or 0) > 300]
     if slow:
         # delivery-plan criterion: under five minutes per skill.
@@ -667,6 +697,68 @@ def _onchain_verdict(raw: object) -> str:
         raw = raw.decode("utf-8", "replace")
     name = str(raw).upper()
     return name if name in {"SAFE", "DANGEROUS", "WARNING", "UNAUDITED"} else "UNAUDITED"
+
+
+def _dry_run_plan(
+    cfg: PipelineConfig,
+    entry: CorpusEntry,
+    verdict: str | None,
+    score: int | None,
+    evidence_hash: str | None,
+) -> dict:
+    """What a real run would write for this entry, read from chain without signing.
+
+    `action` is one of:
+
+    * `register+verdict` — the version is not on chain yet;
+    * `verdict` — it is, but verdict, score or evidence_hash differ (`changes` says which;
+      `submit_verdict` overwrites the record for that version);
+    * `noop` — the chain already holds exactly this, and a real run skips it;
+    * `register` — a register-only entry (`verdict` None) that is not on chain yet;
+    * `unknown` — no registry configured, or the read failed (`chain_error`).
+
+    A dry run that cannot say what it would change is not much of a rehearsal for a
+    batch of permanent writes, so this is part of the dry run rather than a separate tool.
+    """
+    from sterish_pipeline import onchain
+
+    if not cfg.registry_contract_id:
+        return {"action": "unknown", "chain_error": "no registry configured (REGISTRY_CA)"}
+    try:
+        record = onchain.get_version(cfg, cfg.registry_contract_id, entry.skill_id, entry.version)
+    except onchain.ContractCallError:
+        missing = "register" if verdict is None else "register+verdict"
+        return {"action": missing, "chain": None, "changes": []}
+    except onchain.OnChainError as exc:
+        return {"action": "unknown", "chain_error": str(exc)}
+    if not isinstance(record, dict):
+        missing = "register" if verdict is None else "register+verdict"
+        return {"action": missing, "chain": None, "changes": []}
+
+    on_chain_verdict = record.get("verdict")
+    if isinstance(on_chain_verdict, (list, tuple)) and on_chain_verdict:
+        on_chain_verdict = on_chain_verdict[0]
+    stored_hash = record.get("evidence_hash")
+    if isinstance(stored_hash, (bytes, bytearray)):
+        stored_hash = stored_hash.hex()
+    chain = {
+        "verdict": str(on_chain_verdict).upper(),
+        "score": int(record.get("trust_score") or 0),
+        "evidence_hash": stored_hash,
+    }
+    if verdict is None:
+        # Register-only: the version being on chain is all a real run would do.
+        return {"action": "noop", "chain": chain, "changes": []}
+    changes = [
+        name
+        for name, ours in (
+            ("verdict", str(verdict).upper()),
+            ("score", int(score)),
+            ("evidence_hash", evidence_hash),
+        )
+        if chain[name] != ours
+    ]
+    return {"action": "verdict" if changes else "noop", "chain": chain, "changes": changes}
 
 
 def _load_existing(corpus: Corpus) -> dict[tuple[str, str], CorpusEntry]:

@@ -1,0 +1,514 @@
+{
+  "ticket": "STE-37",
+  "date": "2026-09-16",
+  "registry": "CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2 (v2)",
+  "branch_head_base": "fix/37-wallet-op-negation rebased on dc0a0c6",
+  "signed": false,
+  "llm_key_in_env": false,
+  "command": "sterish intake seed --corpus corpus --label catalog --label safe --label poisoned --label demo --allow-dangerous --dry-run",
+  "committed_reports_matching_chain_before_run": "25/25",
+  "summary": {
+    "entries": 26,
+    "verdict_changes": [
+      "com.fixtures.safe.price-checker 0.9.0: DANGEROUS 10 -> SAFE 90",
+      "org.stellar.skills.cross-chain.cctp 2026.8.31: DANGEROUS 10 -> SAFE 100"
+    ],
+    "hash_only_updates": 23,
+    "noop": 1
+  },
+  "rows": [
+    {
+      "skill_id": "com.fixtures.demo.changelog-writer",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "56b259a35fb9fec2ca778b391672252a502e9554ccf8c2c7d5f37d0c99d49032",
+      "evidence_hash": "f6cafc56937619cddd5d4d24e4016330f95c28b008c59683339b95b056ecd9cb",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "9397cc06cbd9684ff2fb8d2fd711e35044a54d5e28a20c829f8cd8f38ec4d861"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.demo.changelog-writer",
+      "version": "2.0.0",
+      "status": "dry_run",
+      "verdict": "UNAUDITED",
+      "content_hash": "fdab7be1890cf453c69b53fe86832370989e8fcf1aa205299c1633b8d780d01c",
+      "action": "noop",
+      "chain": {
+        "verdict": "UNAUDITED",
+        "score": 0,
+        "evidence_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "changes": []
+    },
+    {
+      "skill_id": "com.fixtures.demo.ledger-inspector",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "WARNING",
+      "score": 60,
+      "content_hash": "6ef134c428a4edf61a2a4f0d62d30f2c66c430e134ee12df6af1e8520fd3fbb3",
+      "evidence_hash": "e37561b331ff69f6ee789ae056c08a777069b0e4d4ef4b9abb8dc94ee71ead1d",
+      "action": "verdict",
+      "chain": {
+        "verdict": "WARNING",
+        "score": 60,
+        "evidence_hash": "b87ac5e3130e38753bfb598db02c51774466355598ab7a9a6cf98454586b8495"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "e5da489eb751e96fb30bb622602b8ab471de4898f333028aeeb7a36211d341f5",
+      "evidence_hash": "5c2a02f07cd3be09382b42f5a41c1892bfcaefc7c9fd778df3942e2e44b8b59e",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "159d880d49746c71ef09c885b4fdbe0f10a1bcec0d652d3a77b946d9308ce404"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "2.0.0",
+      "status": "dry_run",
+      "verdict": "DANGEROUS",
+      "score": 10,
+      "content_hash": "befb592d3cb1afa4c471a7c4ddf2666f1c6ebd0364e76977ecd294be7c01653d",
+      "evidence_hash": "7b6c09fd6bc7241d537cfdd4c7b23ce21bd26f57308527f217e86320a8151777",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "5c1f97b126e767ea52a4dd347b58778cf1e63917145a144b6817860d451c4e0a"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.demo.table-formatter",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "WARNING",
+      "score": 78,
+      "content_hash": "94fcd1273701e1e949fc99a5f537a028dce1072b6899d035622eb9eba0446bf0",
+      "evidence_hash": "143a05c445a22fcf2b672b74e547fd3a2c93c1b4a363291b40a56dac24ad9df2",
+      "action": "verdict",
+      "chain": {
+        "verdict": "WARNING",
+        "score": 78,
+        "evidence_hash": "71da50123eac0356a3b1fb305b2dc8896249597632259df8d85ff6c9ddb79d25"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.invoice-helper",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "DANGEROUS",
+      "score": 10,
+      "content_hash": "4eb62911d152ca847ae48cc311f05b49c41de8435a9eb726e96ded8815e54799",
+      "evidence_hash": "54614c6386ae6b8956a8d3087b00190446366aa3f0f20d0bf27a31c7c0acfd85",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "ff3387bb951440500fda412cd2f0770a5cf6a28ee3d6db48bffb821070a11c8a"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.markdown-linter",
+      "version": "2.0.1",
+      "status": "dry_run",
+      "verdict": "DANGEROUS",
+      "score": 10,
+      "content_hash": "4e21fb01389acb3f8db5e76aad984f124d48988eb8bf5519a7b6f2b8fd6d1a23",
+      "evidence_hash": "d8f4fdf5357966d17a592598b076f3c7e93b556677514783e9fb9f49812f62d8",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "4bfe8d0de967a7fc6156f9f38416de265cbc7a3dfc2671ade3f38abb78ed548e"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.pdf-summarizer",
+      "version": "1.4.0",
+      "status": "dry_run",
+      "verdict": "DANGEROUS",
+      "score": 10,
+      "content_hash": "c2f67997100ed75ba8eb36bebcbc7d2697049fcf4ed6f71e92d92bd5f984692c",
+      "evidence_hash": "e0a6942fa9d074371625b9b191a3a61e47ba6e80b5fdbadad525a473cf6f92c5",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "05b59b7e60725c2cc23369855c80f62811356282c21d6d44dc37b8959568dcf4"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.token-drainer",
+      "version": "1.0.0",
+      "status": "dry_run",
+      "verdict": "DANGEROUS",
+      "score": 10,
+      "content_hash": "adb942765c751b62c22d582c3d3fd08473d4da5c9a0ce9dd5a0862239ed0e068",
+      "evidence_hash": "4b89d4cb531b37b1a4a856be7c3e4ecd1bf72390cd3485af2b0f1038a9d03613",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "0a979b0c926dff2739c73f998af66a26bea8b5749c1bcc4b919603fceacbedfd"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.safe.premium-pdf-suite",
+      "version": "3.1.0",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 94,
+      "content_hash": "e6a7423c88ffe0031fec3af98bc9d3bf5b258b7b9f8849b9a78101c20d049458",
+      "evidence_hash": "b346dda994628dc9b3dc9b016ce391126da10da200158f2192563f2ac5144020",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 94,
+        "evidence_hash": "47aa6dd9e8ac2d791c1f5550ab5fc9b137c751468b0cca8fd2df4557daf1f5fa"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.safe.price-checker",
+      "version": "0.9.0",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 90,
+      "content_hash": "d159b461426a5bcfd0a9b36fdad54236e4b2642033037c718ff572a37a2e85ff",
+      "evidence_hash": "14d8ba4758c0b5b93bb92c723a770e6e8a6248475d43a9afaae67be844fc23e6",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "4bbac3fbc028bed235b3db1b7435db13a43d248b664d31ad95ee275454140e3a"
+      },
+      "changes": [
+        "verdict",
+        "score",
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "com.fixtures.safe.weather-lookup",
+      "version": "1.2.0",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 90,
+      "content_hash": "6308b6e80fd6fbd25d81a8cb11d789ce9db45a8624c37f82aea2b46b97b3c196",
+      "evidence_hash": "dc1f24952059d5247a14058fe19946396007f6f5015eb58153cc80d2edd76cf0",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 90,
+        "evidence_hash": "576194be9a7394440c19a89e7620f81a9b4b9c28b5911d7725a7b164f558eb2a"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.mpp",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "35b7b57b9230f972f6ae6cfea72dd76855a9e27b356e90091d33b3d974e0c0c6",
+      "evidence_hash": "2da9cf3ed1c7b0fd10a8e0a23be53124feeeb55160aaa77a6d7b8361d1062316",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "f1df83b5a99724862f115d109d72f0fbd074c8d5029fac3fd958bd04a3c06fea"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.x402",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "a1728e0400eb3bc979b66d8eef41d55c229662b5a74e25cecf8b9c7db1136e51",
+      "evidence_hash": "857306844ae2e1efa583c7461bda41b7586d4d72a8e04d8451e9b6b368558303",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "ce0c1789388e628300f69a2e1396974ed1265a758a3bb435f89e3354221a97e5"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.axelar",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "7d10aa0de318ff6a6126e463f45f4abc0e63dcf053a09c03db76a2a1cda9af08",
+      "evidence_hash": "d47504d41e3a6d4ce230fab9d8655aa49597a6eb4f7b49e5936ddd1e9b449c64",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "ba6a37cdd49284fd4b39e37831dda929e1bd8825444b606b27ecff6be2b4fa70"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.cctp",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "f6fcdb2907ded30e75bcd61ac13263f41ad45f9921923784f77305734e69cf2b",
+      "evidence_hash": "6513a8c7d3b84b11b9530e73b5a3f5589d6b11cf01ce5348b8717301373379f7",
+      "action": "verdict",
+      "chain": {
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "5c0ec68f29397e0ef14bcf17253b9c94bd92f060819b897f4d2cce4d141e2a36"
+      },
+      "changes": [
+        "verdict",
+        "score",
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.data-fetching",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "5c9d232fba6c6be661f2d09a58062a177ce9cbff1e61b41053f7a2c14649f5fd",
+      "evidence_hash": "6169aa460f61a791b3009a4870683bbd22505051a02ec6c8c55d2f997b37d33c",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "335fe15be3f364af146b4825dfba93b44f9e3fc46b1d6c17304767560d722e93"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.react",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "528ad44c3b6e9f78a70415e60a41a4e4a4226c488e9833a7ab8790f006a8f22b",
+      "evidence_hash": "fa501ad7605a40639101405070340606d322bf39d184cf4974b4079af7e73db5",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "fd01425b24e451a572c3998b3643d91d83ae2699f91d88ec88bbfb00f54fda21"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.smart-accounts",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "829ecc1308efb93d68c3aedb48d9036d8b850dcb86fad15315925873d34d9c5d",
+      "evidence_hash": "81430b01ff965d7f225658c5c6034316091b50c4092139b92ba346671259b320",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "759b799af39c0e83196fd7ac4c721e39af3d6dd1b0c33515b5b972c41a0e5948"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.data.horizon",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "56b6ca1b464d02b6a4a60de6b94f4577ccf20535305cda5afda0b2fb33dd7fb8",
+      "evidence_hash": "f33518443f7ff0c1192c5ea5c70c005aef7f3420b761d32314498a7e44483e90",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "867fc1e9af460fa1ce428a7b6b8fe3c1337699e97c592f0059f1aa82f3de5919"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.development",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "2c9804b92d6d23c1588ed0f5c838a804b6cfada210190215b1941b7da0727075",
+      "evidence_hash": "03fc421f7572cbada4a29f5c42420c7d2cb75b723f1dcc2ca2788b6797cc1c11",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "dbfdb6cc58c75c4343e287583140698eb9bc88b0b97445ac6e4e9863cc948842"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.security",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "9efb0273924fe35b79f180655508de81653af20afead91dee6848a60aac92e32",
+      "evidence_hash": "bf5d2c8d58d6ce7715e6834c751b14eddf7386daa1f17da2a99cfc3a4d8c6bd9",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "417eb7fe436f6c2f3ce13511f9b1d17e1c8fceecab95519dcf6437b2ee80f6db"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.testing",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "c51ed00a8801cc2691e5180e6f530171933e06e9ddd9d78b1fb66e96952b522b",
+      "evidence_hash": "e9cedd836fddeda466e6a9b823fee2a476dd1ada64de2a95b2ff3ae91c16528b",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "a24f4e15f647718ec530b4a5966abd2db22ee634c3311cdc773bf793f9d52a06"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.ecosystem",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "b316e820aa088d5f7ff64a3a1bb8752bb2760f015427891cbc28c99538981339",
+      "evidence_hash": "02d533d6632e10a5dfd0b7c8b93088b11c5b516b9479a91519c39c16ce475264",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "9de770f66655fc6e01d652ad8f003da717f3bd869f4c75f3df088ddd1f96c1f4"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.resources",
+      "version": "2026.8.31",
+      "status": "dry_run",
+      "verdict": "SAFE",
+      "score": 100,
+      "content_hash": "cfe431919761b98f7849d31c0460d1ed913dcbc361084bc376dbadfe6a859355",
+      "evidence_hash": "c5dde8f1623f03ec35a42241cb461828a4c8195cabd1e5f5437f7fa9116cbb15",
+      "action": "verdict",
+      "chain": {
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "4c6533b648003a9769152b31ef7c8ba567bfebd17f9d6c7f9d1711926e67e984"
+      },
+      "changes": [
+        "evidence_hash"
+      ],
+      "seconds": 0.0
+    }
+  ]
+}

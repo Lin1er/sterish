@@ -194,19 +194,13 @@ class TestCatalogAfterTheFix:
     def test_at_least_twelve_catalog_skills_are_safe(self, verdicts):
         """SOW D2 wants 10+ real catalog skills; this is the pool STE-18 can seed."""
         safe = [k for k, v in verdicts.items() if v == FinalVerdict.SAFE]
-        assert len(safe) >= 12, sorted(k for k, v in verdicts.items() if v != FinalVerdict.SAFE)
+        assert len(safe) >= 13, sorted(k for k, v in verdicts.items() if v != FinalVerdict.SAFE)
 
-    def test_cctp_is_still_flagged_and_that_is_known(self, verdicts):
-        """Not fixed here on purpose.
-
-        cctp's prose describes a protocol that burns and mints USDC, and `wallet_op`
-        reads that as an instruction to move assets. Same family as the
-        `com.fixtures.safe.price-checker` false positive. `wallet_op` is a critical-class
-        detector protecting `token-drainer` and `invoice-helper`, so relaxing it to make
-        one entry green is exactly what corpus/README.md warns against. Pinned so that
-        fixing it properly makes this test fail and forces the entry to be removed.
-        """
-        assert verdicts["org.stellar.skills.cross-chain.cctp"] == FinalVerdict.DANGEROUS
+    def test_cctp_is_safe_since_wallet_op_reads_context(self, verdicts):
+        """STE-37. cctp's prose describes a protocol that burns and mints USDC; it never
+        directs the agent to move anyone's assets. It used to come back DANGEROUS and was
+        held out of the on-chain seed rather than published as a false accusation."""
+        assert verdicts["org.stellar.skills.cross-chain.cctp"] == FinalVerdict.SAFE
 
     def test_no_catalog_entry_is_flagged_by_a_gated_detector_alone(self):
         """The remaining flag must be a real directive finding, not a category error."""
