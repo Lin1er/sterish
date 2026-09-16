@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Wallet } from "lucide-react";
+import { KeyRound, LogOut, Wallet } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,12 +32,17 @@ export function WalletButton() {
   if (status === "connected" && address) {
     return (
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <span
-          className="numeric rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs whitespace-nowrap text-text"
-          title={address}
+        {/* The address is also the way to "my licences": it is the identity
+            those licences are minted to, so it is where a holder looks. */}
+        <Link
+          href={`/licences/${address}`}
+          className="numeric inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs whitespace-nowrap text-text transition-colors hover:border-hairline-strong hover:text-keyword"
+          title={`${address}: your licences`}
+          aria-label={`Your licences, for wallet ${address}`}
         >
+          <KeyRound className="size-3.5 shrink-0" aria-hidden />
           {shortAddress(address)}
-        </span>
+        </Link>
         <Button
           variant="ghost"
           size="sm"
