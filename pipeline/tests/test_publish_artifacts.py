@@ -239,22 +239,23 @@ def test_an_already_published_artifact_with_private_modes_is_repaired(
     assert (target / "SKILL.md").stat().st_mode & 0o777 == 0o644
 
 
-def test_the_real_corpus_publishes_every_catalog_and_safe_entry(tmp_path, monkeypatch):
+def test_the_real_corpus_publishes_every_entry_the_default_labels_cover(tmp_path, monkeypatch):
     """Offline, against the repo's own corpus: with a chain that agrees with the index,
-    every catalog and safe entry is written and hashes back to its corpus hash.
+    every catalog, safe and demo entry is written and hashes back to its corpus hash.
 
     deploy/artifacts is gitignored (operator-supplied, STE-25), so this is what CI can
-    check instead: the corpus in git produces artifacts /use will accept.
+    check instead: the corpus in git produces artifacts /use will accept. Keyed on
+    (skill_id, version), since the demo set holds two versions of one skill.
     """
     corpus = Corpus(Path(__file__).resolve().parents[1] / "corpus")
-    entries = [e for e in corpus.load() if e.label in ("catalog", "safe")]
-    by_id = {e.skill_id: e for e in entries}
+    entries = [e for e in corpus.load() if e.label in ("catalog", "safe", "demo")]
+    by_key = {(e.skill_id, e.version): e for e in entries}
     monkeypatch.setattr(
         onchain,
         "get_version",
         lambda cfg, reg, skill_id, version: {
             "verdict": ["Safe"],
-            "content_hash": bytes.fromhex(by_id[skill_id].content_hash),
+            "content_hash": bytes.fromhex(by_key[(skill_id, version)].content_hash),
         },
     )
     monkeypatch.setenv("REGISTRY_CA", REGISTRY)
@@ -264,6 +265,16 @@ def test_the_real_corpus_publishes_every_catalog_and_safe_entry(tmp_path, monkey
     assert result.exit_code == 0, result.output
 
     assert len(entries) >= 10
+    assert any(e.label == "demo" for e in entries)
     for entry in entries:
         target = out / entry.skill_id / entry.version
         assert content_hash(read_skill_files(target)) == entry.content_hash, entry.skill_id
+
+
+def test_the_default_labels_include_the_demo_set():
+    """STE-18 added SAFE demo versions (release-notes v1, changelog-writer v1). Left out of
+    the default, the compose publish step would skip them and /use would not sell them."""
+    from sterish_pipeline.intake.cli import publish_artifacts
+
+    labels = next(p for p in publish_artifacts.params if p.name == "labels")
+    assert set(labels.default) == {"catalog", "safe", "demo"}

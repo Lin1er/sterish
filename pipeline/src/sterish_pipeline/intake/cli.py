@@ -468,8 +468,11 @@ def seed(
     "--label",
     "labels",
     multiple=True,
-    default=("catalog", "safe"),
-    help="Corpus labels to consider. Repeatable. Default: catalog, safe.",
+    # `demo` since STE-18: the demo set includes SAFE versions that are for sale too.
+    # Anything not SAFE on chain is skipped whatever its label, so a wider default
+    # cannot put an unsold skill up for sale.
+    default=("catalog", "safe", "demo"),
+    help="Corpus labels to consider. Repeatable. Default: catalog, safe, demo.",
 )
 @click.option("--json-out", type=click.Path(), default=None, help="Write the result as JSON")
 def publish_artifacts(
