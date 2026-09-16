@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ErrorNotice } from "@/components/elements/ErrorNotice";
+import { VerdictBanner } from "@/components/elements/VerdictBanner";
 import { ApiError, getSkill } from "@/lib/api";
 import type { AuditedVersion, SkillDetail as Skill, Verdict } from "@/lib/types";
 import { formatLedgerTime } from "@/utils/format";
 import { AuditTrail } from "./component/AuditTrail";
 import { TrustScorePanel } from "./component/TrustScorePanel";
-import { VerdictBanner } from "./component/VerdictBanner";
 import { VersionCard } from "./component/VersionCard";
 
 /**

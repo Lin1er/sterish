@@ -1,8 +1,8 @@
+import { CopyHash } from "@/components/elements/CopyHash";
+import { EvidenceLinks } from "@/components/elements/EvidenceLinks";
 import { VerdictBadge } from "@/components/elements/VerdictBadge";
 import type { AuditedVersion, Verdict } from "@/lib/types";
 import { formatLedgerTime } from "@/utils/format";
-import { CopyHash } from "./CopyHash";
-import { EvidenceLinks } from "./EvidenceLinks";
 
 export function VersionCard({
   version,
