@@ -1,10 +1,20 @@
-import { ArrowRight, FileWarning, ShieldQuestion } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  FileWarning,
+  ShieldQuestion,
+} from "lucide-react";
 import Link from "next/link";
 
 import { CopyHash } from "@/components/elements/CopyHash";
 import { ErrorNotice } from "@/components/elements/ErrorNotice";
 import { EvidenceLinks } from "@/components/elements/EvidenceLinks";
 import { VerdictBanner } from "@/components/elements/VerdictBanner";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiError } from "@/lib/api";
 import type { ContentHashError } from "@/lib/contentHash";
@@ -27,28 +37,36 @@ export type CheckState =
 
 function FileList({ query }: { query: Extract<CheckQuery, { by: "files" }> }) {
   return (
-    <details className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm">
-      <summary className="cursor-pointer text-text-secondary">
-        Hashed {query.files.length} file{query.files.length === 1 ? "" : "s"}
-        {query.excluded.length > 0
-          ? `, left out ${query.excluded.length} the packager excludes`
-          : null}
-      </summary>
-      <ul className="numeric mt-2 space-y-0.5 font-mono text-xs break-all text-text">
-        {query.files.map((path) => (
-          <li key={path}>{path}</li>
-        ))}
-      </ul>
-      {query.excluded.length > 0 ? (
-        <ul className="numeric mt-2 space-y-0.5 font-mono text-xs break-all text-text-tertiary">
-          {query.excluded.map((path) => (
-            <li key={path}>
-              <s>{path}</s>
-            </li>
+    <Collapsible className="rounded-lg border border-border text-sm">
+      <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-lg px-4 py-3 text-left text-text-secondary transition-colors hover:text-text focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+        <span>
+          Hashed {query.files.length} file{query.files.length === 1 ? "" : "s"}
+          {query.excluded.length > 0
+            ? `, left out ${query.excluded.length} the packager excludes`
+            : null}
+        </span>
+        <ChevronDown
+          className="size-4 shrink-0 transition-transform group-data-panel-open:rotate-180"
+          aria-hidden
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border px-4 py-3">
+        <ul className="numeric space-y-1 font-mono text-xs break-all text-text">
+          {query.files.map((path) => (
+            <li key={path}>{path}</li>
           ))}
         </ul>
-      ) : null}
-    </details>
+        {query.excluded.length > 0 ? (
+          <ul className="numeric mt-3 space-y-1 font-mono text-xs break-all text-text-tertiary">
+            {query.excluded.map((path) => (
+              <li key={path}>
+                <s>{path}</s>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
