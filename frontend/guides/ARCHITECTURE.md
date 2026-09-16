@@ -69,7 +69,8 @@ frontend/
     │   │   ├── Check.tsx                 rendered by app/check/page.tsx
     │   │   ├── readFiles.ts              picker and drop to the hashed file set
     │   │   └── component/
-    │   │       └── CheckResult.tsx
+    │   │       ├── CheckResult.tsx
+    │   │       └── SkillVersionPicker.tsx  registered skills, then their versions
     │   └── skill-detail/
     │       ├── SkillDetail.tsx           rendered by app/skills/[skillId]/page.tsx
     │       └── component/
