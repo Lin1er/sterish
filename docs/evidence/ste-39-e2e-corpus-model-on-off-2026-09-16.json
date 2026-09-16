@@ -1,0 +1,236 @@
+[
+  {
+    "skill": "com.fixtures.demo.changelog-writer@1.0.0",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.demo.changelog-writer@2.0.0",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.demo.ledger-inspector@1.0.0",
+    "verdict": "WARNING",
+    "score": 60,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "WARNING/35",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.demo.release-notes@1.0.0",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.demo.release-notes@2.0.0",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "DANGEROUS/0",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.demo.table-formatter@1.0.0",
+    "verdict": "WARNING",
+    "score": 78,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "WARNING/35",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.poisoned.invoice-helper@1.0.0",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "DANGEROUS/0",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.poisoned.markdown-linter@2.0.1",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "DANGEROUS/0",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.poisoned.pdf-summarizer@1.4.0",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "DANGEROUS/0",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.poisoned.token-drainer@1.0.0",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "DANGEROUS/0",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.safe.premium-pdf-suite@3.1.0",
+    "verdict": "SAFE",
+    "score": 94,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/88",
+    "disagrees": false
+  },
+  {
+    "skill": "com.fixtures.safe.price-checker@0.9.0",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/90",
+    "disagrees": true
+  },
+  {
+    "skill": "com.fixtures.safe.weather-lookup@1.2.0",
+    "verdict": "SAFE",
+    "score": 90,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/90",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.agentic-payments.mpp@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.agentic-payments.x402@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.cross-chain.axelar@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.cross-chain.cctp@2026.8.31",
+    "verdict": "DANGEROUS",
+    "score": 10,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/97",
+    "disagrees": true
+  },
+  {
+    "skill": "org.stellar.skills.dapp.data-fetching@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.dapp.react@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.dapp.smart-accounts@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.data.horizon@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.smart-contracts.development@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.smart-contracts.security@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.smart-contracts.testing@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.standards.ecosystem@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  },
+  {
+    "skill": "org.stellar.skills.standards.resources@2026.8.31",
+    "verdict": "SAFE",
+    "score": 100,
+    "identical_bytes": true,
+    "llm_used": true,
+    "advisory": "SAFE/100",
+    "disagrees": false
+  }
+]
