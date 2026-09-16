@@ -1,0 +1,33 @@
+{
+  "api": "http://127.0.0.1:8765",
+  "started_at": 1789548280,
+  "skill": "org.stellar.skills.agentic-payments.x402",
+  "version": "2026.8.31",
+  "for_sale": [
+    "org.stellar.skills.agentic-payments.mpp@2026.8.31",
+    "org.stellar.skills.agentic-payments.x402@2026.8.31",
+    "org.stellar.skills.cross-chain.axelar@2026.8.31",
+    "org.stellar.skills.dapp.data-fetching@2026.8.31",
+    "org.stellar.skills.dapp.react@2026.8.31",
+    "org.stellar.skills.dapp.smart-accounts@2026.8.31",
+    "org.stellar.skills.data.horizon@2026.8.31",
+    "org.stellar.skills.smart-contracts.development@2026.8.31",
+    "org.stellar.skills.smart-contracts.security@2026.8.31",
+    "org.stellar.skills.smart-contracts.testing@2026.8.31",
+    "org.stellar.skills.standards.ecosystem@2026.8.31",
+    "org.stellar.skills.standards.resources@2026.8.31",
+    "com.fixtures.safe.premium-pdf-suite@3.1.0",
+    "com.fixtures.safe.weather-lookup@1.2.0",
+    "com.fixtures.demo.changelog-writer@1.0.0"
+  ],
+  "not_offered": [],
+  "agent": "GCF76SG6QUBTJHK6AEFPS22TOB6JO5TKXXR5FW3QSDFOFLNXNLCJTXSC",
+  "funding_tx": "f9f6c8f9f4ef79797e8f942523f6b42a68c91ff54388550bcbf7bae6fa7824c9",
+  "price_usdc": "0.1",
+  "pay_to": "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU",
+  "settle_tx": "ea78a0348640629ae8e96a4de8afdf6fab57b8f4414e240064995ab07b43bea4",
+  "mint_tx": "f73dfdfc46b35d6235294736b51004a946d740b2ead0b29d5a6fe244036bd126",
+  "content_hash": "a1728e0400eb3bc979b66d8eef41d55c229662b5a74e25cecf8b9c7db1136e51",
+  "finished_at": 1789548342,
+  "result": "pass"
+}

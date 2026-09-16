@@ -385,19 +385,36 @@ mint whose confirmation times out but lands, concurrent payments from one payer,
 that verifies without naming a payer — are covered offline in `api/tests/test_use_x402.py`, each
 asserting how many times settle ran.
 
-`deploy/artifacts/` is operator-supplied and gitignored (STE-25), so merging does not put these
-14 artifacts on the server. **The redeploy for this ticket must run, on CT 204:**
+### Re-verified against Registry v2 (16 September 2026)
+
+STE-44 moved the Registry and Tokens to new addresses, and STE-18 added demo skills. After rebasing
+onto that `main`, the same e2e was run again with the API pointed at **Registry v2**
+`CCZJN366…` and **Tokens v2** `CB6VK4EX…`. Record:
+[`evidence/ste-42-e2e-paid-path-v2-2026-09-16.json`](evidence/ste-42-e2e-paid-path-v2-2026-09-16.json).
+
+| | |
+|---|---|
+| Artifacts published against v2 | 16 skill versions: 12 catalogue (`cctp` is DANGEROUS on chain), 2 safe fixtures, and the SAFE demo versions `release-notes` 1.0.0 and `changelog-writer` 1.0.0. 6 refused as not SAFE on chain |
+| SAFE rows in `/skills` | **15 for sale, 0 not offered**, nothing else |
+| Agent (no `X-AGENT-ADDRESS`) | `GCF76SG6QUBTJHK6AEFPS22TOB6JO5TKXXR5FW3QSDFOFLNXNLCJTXSC` |
+| Settlement · mint | [`ea78a0348640629a…`](https://stellar.expert/explorer/testnet/tx/ea78a0348640629ae8e96a4de8afdf6fab57b8f4414e240064995ab07b43bea4) · [`f73dfdfc46b35d62…`](https://stellar.expert/explorer/testnet/tx/f73dfdfc46b35d6235294736b51004a946d740b2ead0b29d5a6fe244036bd126) |
+
+Same results as on v1: exactly 0.1 USDC paid, `has_license` true on Tokens v2, served bytes hash to
+the on-chain `content_hash`, and a second signed payment for the held licence settles nothing.
+
+`publish-artifacts` now includes the `demo` label by default, because the demo set contains SAFE
+versions that are for sale too.
+
+`deploy/artifacts/` is operator-supplied and gitignored (STE-25), so merging does not put artifacts
+on the server. **The redeploy for this ticket must run, on CT 204:**
 
 ```bash
 cd /opt/sterish/deploy
 docker compose --env-file .env --profile tools run --rm publish-artifacts
 ```
 
-**Production is still on the old code** until this merges and CT 204 is redeployed. `verify.sh`
-now checks the property itself: every SAFE row must be 402-with-challenge or 404-without. Run
-against `https://api-sterish.jameshub.fun` before the redeploy it reads **48 for sale, 0 not
-offered** — the bug in one line, since only 15 of those 48 have bytes to hand over. After the
-redeploy it must read 15 and 33.
+(On 16 September the v2-verified artifacts were already copied to CT 204 as a mitigation, STE-45;
+the command above is idempotent and leaves matching artifacts untouched.)
 
 `verify.sh` sends its own User-Agent for that check. Cloudflare answers the default
 `Python-urllib/3.x` agent with `403 error code: 1010`, an HTML page that is not an answer about
