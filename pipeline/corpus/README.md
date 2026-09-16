@@ -88,8 +88,10 @@ untouched, which is why all four poisoned fixtures are still caught.
 After STE-36, 12 of 13 catalog entries audited `SAFE`. The exception was
 `org.stellar.skills.cross-chain.cctp`: its prose explains that CCTP burns USDC on
 one chain and mints it on another, and a negation- and context-blind `wallet_op`
-read that as an instruction to move assets. It was held out of the on-chain seed
-run rather than published as a false accusation.
+read that as an instruction to move assets. It was first held out of the on-chain
+seed run, then published on 15 September (STE-18) as `DANGEROUS`, with our own
+reading that the verdict was probably wrong recorded beside it in
+`docs/audit-evidence.md`.
 
 **Fixed in STE-37: all 13 catalog entries audit `SAFE`.** `wallet_op` now fires only
 on a sentence that *directs* a move — an instruction aimed at the agent, or assets
@@ -99,9 +101,11 @@ phrasing in the poisoned fixtures still fires, including attempts to hide an
 instruction next to a denial, and `token-drainer` and `invoice-helper` are still
 caught by `wallet_op` itself (`tests/test_wallet_op_context.py`).
 
-Publishing `cctp` on chain, and correcting the `DANGEROUS` verdict
-`com.fixtures.safe.price-checker` already carries on testnet, is a seed-run
-decision (STE-18), not part of the scanner fix.
+Correcting the `DANGEROUS` verdicts `cctp` and `com.fixtures.safe.price-checker`
+carry on chain is part of STE-37 too: a fix in code with the wrong answer left on
+the ledger is not a fix. It is one seed run after the merge, rehearsed with
+`intake seed --dry-run` — see "Correcting the chain after STE-37 and STE-39" in
+`docs/audit-evidence.md`.
 
 `expected_verdict` stays `null` for catalog entries in `index.json`, because the
 corpus should not hard-code a claim about bytes it does not own. The assertions

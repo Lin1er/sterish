@@ -270,6 +270,7 @@ def seed(
 
     from sterish_pipeline.audit import to_verdict_json
     from sterish_pipeline.orchestrator import OrchestratorConfig, orchestrate, register_only
+    from sterish_pipeline.reports import evidence_hash_of
     from sterish_pipeline.stages.stage3_verdict_synthesis import build_verdict_document
 
     cfg = PipelineConfig.load(config)
@@ -331,11 +332,12 @@ def seed(
             # `orchestrator.register_only` for why this is the only route to an
             # UNAUDITED record.
             if dry_run:
+                plan = _dry_run_plan(cfg, entry, None, None, None)
                 table.add_row(entry.skill_id, entry.version, "UNAUDITED", "—", "—",
-                              "[cyan]dry-run[/cyan]")
+                              f"[cyan]dry-run: {plan['action']}[/cyan]")
                 log.append({"skill_id": entry.skill_id, "version": entry.version,
                             "status": "dry_run", "verdict": "UNAUDITED",
-                            "content_hash": entry.content_hash})
+                            "content_hash": entry.content_hash, **plan})
                 continue
             try:
                 result = register_only(
@@ -396,14 +398,19 @@ def seed(
 
         if dry_run:
             elapsed = time.monotonic() - started
+            # The hash a real run would anchor: the same canonical bytes reports.publish
+            # writes, computed without writing them.
+            evidence_hash = evidence_hash_of(payload)
+            plan = _dry_run_plan(cfg, entry, verdict, score, evidence_hash)
             table.add_row(
                 entry.skill_id, entry.version, verdict, str(score), f"{elapsed:.1f}",
-                "[cyan]dry-run[/cyan]",
+                f"[cyan]dry-run: {plan['action']}[/cyan]",
             )
             log.append(
                 {"skill_id": entry.skill_id, "version": entry.version, "status": "dry_run",
                  "verdict": verdict, "score": score,
-                 "content_hash": payload["content_hash"], "seconds": round(elapsed, 1)}
+                 "content_hash": payload["content_hash"], "evidence_hash": evidence_hash,
+                 **plan, "seconds": round(elapsed, 1)}
             )
             continue
 
@@ -667,6 +674,68 @@ def _onchain_verdict(raw: object) -> str:
         raw = raw.decode("utf-8", "replace")
     name = str(raw).upper()
     return name if name in {"SAFE", "DANGEROUS", "WARNING", "UNAUDITED"} else "UNAUDITED"
+
+
+def _dry_run_plan(
+    cfg: PipelineConfig,
+    entry: CorpusEntry,
+    verdict: str | None,
+    score: int | None,
+    evidence_hash: str | None,
+) -> dict:
+    """What a real run would write for this entry, read from chain without signing.
+
+    `action` is one of:
+
+    * `register+verdict` — the version is not on chain yet;
+    * `verdict` — it is, but verdict, score or evidence_hash differ (`changes` says which;
+      `submit_verdict` overwrites the record for that version);
+    * `noop` — the chain already holds exactly this, and a real run skips it;
+    * `register` — a register-only entry (`verdict` None) that is not on chain yet;
+    * `unknown` — no registry configured, or the read failed (`chain_error`).
+
+    A dry run that cannot say what it would change is not much of a rehearsal for a
+    batch of permanent writes, so this is part of the dry run rather than a separate tool.
+    """
+    from sterish_pipeline import onchain
+
+    if not cfg.registry_contract_id:
+        return {"action": "unknown", "chain_error": "no registry configured (REGISTRY_CA)"}
+    try:
+        record = onchain.get_version(cfg, cfg.registry_contract_id, entry.skill_id, entry.version)
+    except onchain.ContractCallError:
+        missing = "register" if verdict is None else "register+verdict"
+        return {"action": missing, "chain": None, "changes": []}
+    except onchain.OnChainError as exc:
+        return {"action": "unknown", "chain_error": str(exc)}
+    if not isinstance(record, dict):
+        missing = "register" if verdict is None else "register+verdict"
+        return {"action": missing, "chain": None, "changes": []}
+
+    on_chain_verdict = record.get("verdict")
+    if isinstance(on_chain_verdict, (list, tuple)) and on_chain_verdict:
+        on_chain_verdict = on_chain_verdict[0]
+    stored_hash = record.get("evidence_hash")
+    if isinstance(stored_hash, (bytes, bytearray)):
+        stored_hash = stored_hash.hex()
+    chain = {
+        "verdict": str(on_chain_verdict).upper(),
+        "score": int(record.get("trust_score") or 0),
+        "evidence_hash": stored_hash,
+    }
+    if verdict is None:
+        # Register-only: the version being on chain is all a real run would do.
+        return {"action": "noop", "chain": chain, "changes": []}
+    changes = [
+        name
+        for name, ours in (
+            ("verdict", str(verdict).upper()),
+            ("score", int(score)),
+            ("evidence_hash", evidence_hash),
+        )
+        if chain[name] != ours
+    ]
+    return {"action": "verdict" if changes else "noop", "chain": chain, "changes": changes}
 
 
 def _load_existing(corpus: Corpus) -> dict[tuple[str, str], CorpusEntry]:

@@ -174,9 +174,10 @@ false-positive rate that gets hidden helps no one.
 now fires only on a sentence that directs a move of assets, so `price-checker` audits `SAFE`
 (score 90) offline, while all four poisoned fixtures stay `DANGEROUS`. Measured over the corpus:
 0 false positives among 16 benign entries, 0 false negatives among 4 poisoned ones. The verdict
-**on chain** is still the `DANGEROUS` written on 10 September — ledger history is not edited,
-and correcting it takes a re-audit transaction (`verdict_flipped`), which belongs to the next
-seed run (STE-18) rather than to a scanner change.
+**on chain** is still `DANGEROUS` until the correction below lands. `submit_verdict` overwrites
+the record for a `(skill_id, version)`, so the fix is one re-audit transaction; the original
+`75055115…` stays in history as the record of what was published and when. The correction is in
+STE-37's own scope (see [Correcting the chain after STE-37](#correcting-the-chain-after-ste-37-and-ste-39)).
 
 ## `content_hash` and `evidence_hash`
 
@@ -267,6 +268,14 @@ convenient version of the principle rather than the principle.
 
 Consequence: the catalogue is 13 of 13, with **zero exclusions**, and the SOW D2 threshold of
 "10+ real catalogue skills" is met with 13.
+
+**Update, STE-37 (16 September 2026): the reading above was right, and the verdict is being
+corrected.** With `wallet_op` reading whether a sentence directs a move of assets rather than
+whether transfer vocabulary appears anywhere, cctp audits `SAFE` (score 100) — both findings
+disappear, and all four poisoned fixtures stay `DANGEROUS`. The on-chain `DANGEROUS` is replaced
+by a re-audit transaction, not left standing beside a fix we already made in code; the
+`542468dc…` transaction above stays in history as what we published on 15 September. See
+[Correcting the chain after STE-37](#correcting-the-chain-after-ste-37-and-ste-39).
 
 ## The demo set: four skills, four states
 
@@ -431,11 +440,6 @@ The 47 `com.sterish.it-*` / `e2e-*` / `canon-*` test entries were **not** migrat
 skills and their 26 versions were, in the old registry's registration order, so
 `query_all_skills` pages identically.
 
-**Update, STE-37 (15 September 2026):** with `wallet_op` reading whether a sentence directs a
-move, cctp audits `SAFE` (score 100) and all 13 catalogue entries do. It is still **not on
-chain**; publishing it is a seed-run step (STE-18), and holding it back was the right call for
-as long as the scanner would have written a false accusation.
-
 ## Limits worth stating
 
 * **Stage 2 did not run for the 25 entries above, and that is correct.** The seed run passed
@@ -560,3 +564,38 @@ notes, so the same audit produced different bytes depending on whether a key was
 which ends the config dependence for good — and shifts the bytes one last time, so at the commit
 that merges STE-39 all 25 reports need re-anchoring once more. That re-anchor rides on the
 re-submission STE-37 already requires for `cctp` and `price-checker`.
+
+### Correcting the chain after STE-37 and STE-39
+
+One seed run does both jobs, because `submit_verdict` overwrites the record for a version and the
+orchestrator re-submits whenever verdict, score **or** `evidence_hash` differ. It is rehearsed first
+with `intake seed --dry-run`, which since STE-37 reads each version back from the registry and
+names the write a real run would make, together with the hash it would anchor — the same bytes
+`reports.publish` writes, computed without writing them.
+
+Dry run against Registry v2 `CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2`, 16 September
+2026, on `fix/37-wallet-op-negation` rebased on `dc0a0c6` (STE-39 merged), no LLM key, nothing
+signed ([`evidence/ste-37-dry-run-reanchor-v2-2026-09-16.json`](evidence/ste-37-dry-run-reanchor-v2-2026-09-16.json)):
+
+| entries | on chain now | after | write |
+|---|---|---|---|
+| `com.fixtures.safe.price-checker` 0.9.0 | DANGEROUS 10 | **SAFE 90** | `submit_verdict` (verdict, score, hash), then `mint_verified` |
+| `org.stellar.skills.cross-chain.cctp` 2026.8.31 | DANGEROUS 10 | **SAFE 100** | `submit_verdict` (verdict, score, hash), then `mint_verified` |
+| the other 23 audited entries | unchanged verdict and score | unchanged | `submit_verdict` (hash only — the STE-39 byte shift) |
+| `com.fixtures.demo.changelog-writer` 2.0.0 (register-only) | UNAUDITED | UNAUDITED | none |
+
+Before the run, all 25 committed `reports/` files still hash to what v2 holds, so nothing is
+already out of step. The run itself happens only after STE-37 merges, from `main`, with `REGISTRY_CA`, `TOKENS_CA` and
+the signer secrets loaded from the root `.env`:
+
+```bash
+cd pipeline
+uv run --project . sterish intake seed --corpus corpus \
+  --label catalog --label safe --label poisoned --label demo --allow-dangerous \
+  --reports-dir ../reports --json-out ../docs/evidence/ste-37-reanchor-<date>.json
+```
+
+`--allow-dangerous` is needed for the poisoned and demo rows, which are ours and are meant to be
+`DANGEROUS`; it publishes no new accusation against a third party, since every catalogue entry
+audits `SAFE`. The rewritten `reports/` files are committed with the run log, and the API
+redeployed so `/reports` serves the bytes the chain now anchors.
