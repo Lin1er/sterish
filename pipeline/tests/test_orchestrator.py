@@ -240,3 +240,196 @@ class TestRegisterOnly:
         result = orchestrator.register_only("com.acme.demo", "2.0.0", "b" * 64, cfg)
         assert chain == []
         assert next(s for s in result.steps if s.step == Step.REGISTER).status == "skipped"
+
+
+# --- STE-49: lock before the audit, slash to the reporter ------------------------------
+
+REPORTER = Keypair.random().public_key
+
+
+@pytest.fixture
+def escrow_chain(chain, monkeypatch):
+    """The chain fixture, plus an escrow that remembers its requests and records who a
+    slash paid, so a test can assert the arguments, not only the call order."""
+    requests: dict[int, dict] = {}
+    slashed_to: list[str] = []
+    next_id = [7]
+
+    def create(cfg, escrow_id, requestor_secret, skill_id, version, fee, bond):
+        chain.append("create")
+        rid = next_id[0]
+        next_id[0] += 1
+        requests[rid] = {"skill_id": skill_id, "version": version, "status": ["Open"]}
+        return onchain.TxResult(tx_hash=f"create-{rid}", value=rid)
+
+    def bond(cfg, escrow_id, auditor_secret, request_id):
+        chain.append("bond")
+        requests[request_id]["status"] = ["Bonded"]
+        return onchain.TxResult(tx_hash=f"bond-{request_id}")
+
+    def settle(cfg, escrow_id, admin_secret, request_id):
+        chain.append(f"settle#{request_id}")
+        requests[request_id]["status"] = ["Settled"]
+        return onchain.TxResult(tx_hash=f"settle-{request_id}")
+
+    def slash(cfg, escrow_id, admin_secret, request_id, reporter):
+        chain.append(f"slash#{request_id}")
+        slashed_to.append(reporter)
+        requests[request_id]["status"] = ["Slashed"]
+        return onchain.TxResult(tx_hash=f"slash-{request_id}")
+
+    def simulate(cfg, contract_id, function, args=None):
+        if function == "get_request":
+            rid = int(onchain.scval.to_native(args[0]))
+            return requests.get(rid)
+        return False
+
+    monkeypatch.setattr(onchain, "create_audit_request", create)
+    monkeypatch.setattr(onchain, "post_bond", bond)
+    monkeypatch.setattr(onchain, "settle", settle)
+    monkeypatch.setattr(onchain, "slash", slash)
+    monkeypatch.setattr(onchain, "simulate", simulate)
+    return {"calls": chain, "requests": requests, "slashed_to": slashed_to}
+
+
+@pytest.fixture
+def before_audit(cfg):
+    cfg.run_escrow = True
+    cfg.escrow_lock = "before_audit"
+    return cfg
+
+
+class TestLockBeforeAudit:
+    def test_fee_and_bond_are_locked_before_anything_else_happens(self, before_audit, escrow_chain):
+        steps = orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        assert escrow_chain["calls"] == ["create", "bond"]
+        assert [s.status for s in steps] == ["done", "done"]
+        assert escrow_chain["requests"][7]["status"] == ["Bonded"]
+
+    def test_the_audit_result_closes_the_same_job(self, before_audit, escrow_chain):
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        result = orchestrator.orchestrate(DOC, before_audit)
+        assert escrow_chain["calls"] == [
+            "create", "bond", "register", "verdict", "mint", "settle#7"
+        ]
+        assert result.ok
+
+    def test_the_request_id_is_carried_by_the_journal_not_guessed(self, before_audit, escrow_chain):
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        # Another job opened by someone else in between must not be the one settled.
+        escrow_chain["requests"][99] = {
+            "skill_id": DOC["skill_id"], "version": DOC["version"], "status": ["Bonded"]
+        }
+        orchestrator.orchestrate(DOC, before_audit)
+        assert "settle#7" in escrow_chain["calls"] and "settle#99" not in escrow_chain["calls"]
+        entry = Journal(before_audit.journal_path).get(DOC["skill_id"], DOC["version"],
+                                                       Step.CREATE_REQUEST)
+        assert entry["request_id"] == 7
+
+    def test_a_dangerous_verdict_slashes_the_locked_bond_to_the_reporter(
+        self, before_audit, escrow_chain
+    ):
+        before_audit.reporter_address = REPORTER
+        orchestrator.open_escrow_job(POISON["skill_id"], POISON["version"], before_audit)
+        result = orchestrator.orchestrate(POISON, before_audit)
+        assert escrow_chain["calls"][-1] == "slash#7"
+        assert escrow_chain["slashed_to"] == [REPORTER]
+        slash = next(s for s in result.steps if s.step == Step.SLASH)
+        assert REPORTER in slash.detail and "reporter" in slash.detail
+
+    def test_closing_without_an_open_job_moves_nothing(self, before_audit, escrow_chain):
+        result = orchestrator.orchestrate(DOC, before_audit)
+        settle = next(s for s in result.steps if s.step == Step.SETTLE)
+        assert settle.status == "failed"
+        assert "open_escrow_job" in settle.detail
+        assert not any(c.startswith(("settle#", "slash#")) for c in escrow_chain["calls"])
+        assert not result.ok
+
+    @pytest.mark.parametrize(
+        "tamper, why",
+        [
+            ({"skill_id": "com.someone.else"}, "someone else's request"),
+            ({"version": "9.9.9"}, "another version"),
+            ({"status": ["Settled"]}, "already settled"),
+        ],
+    )
+    def test_a_journal_that_disagrees_with_the_chain_is_refused(
+        self, before_audit, escrow_chain, tamper, why
+    ):
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        escrow_chain["requests"][7].update(tamper)
+        result = orchestrator.orchestrate(DOC, before_audit)
+        settle = next(s for s in result.steps if s.step == Step.SETTLE)
+        assert settle.status == "failed", why
+        assert "refusing" in settle.detail
+        assert "settle#7" not in escrow_chain["calls"]
+
+    def test_opening_again_resumes_instead_of_locking_twice(self, before_audit, escrow_chain):
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        steps = orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        assert escrow_chain["calls"] == ["create", "bond"]
+        assert [s.status for s in steps] == ["skipped", "skipped"]
+
+    def test_a_crash_between_create_and_bond_resumes_at_the_bond(
+        self, before_audit, escrow_chain, monkeypatch
+    ):
+        def bond_times_out(*a, **k):
+            raise onchain.OnChainError("rpc refused the connection")
+
+        real_bond = onchain.post_bond
+        monkeypatch.setattr(onchain, "post_bond", bond_times_out)
+        with pytest.raises(onchain.OnChainError):
+            orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        monkeypatch.setattr(onchain, "post_bond", real_bond)
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        assert escrow_chain["calls"] == ["create", "bond"]  # one job, one bond
+
+    def test_a_closed_job_is_not_closed_twice_or_reopened(self, before_audit, escrow_chain):
+        orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        orchestrator.orchestrate(DOC, before_audit)
+        orchestrator.orchestrate(DOC, before_audit)
+        steps = orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        assert escrow_chain["calls"].count("settle#7") == 1
+        assert escrow_chain["calls"].count("create") == 1
+        assert "completion" in steps[0].detail
+
+    def test_the_request_id_is_never_guessed_when_the_contract_returns_none(
+        self, before_audit, escrow_chain, monkeypatch
+    ):
+        monkeypatch.setattr(onchain, "create_audit_request",
+                            lambda *a, **k: onchain.TxResult(tx_hash="c", value=None))
+        steps = orchestrator.open_escrow_job(DOC["skill_id"], DOC["version"], before_audit)
+        assert steps[-1].step == Step.POST_BOND and steps[-1].status == "failed"
+        assert "bond" not in escrow_chain["calls"]
+
+
+class TestReporter:
+    def test_after_verdict_mode_also_pays_the_reporter(self, cfg, escrow_chain):
+        cfg.run_escrow = True
+        cfg.reporter_address = REPORTER
+        orchestrator.orchestrate(POISON, cfg)
+        assert escrow_chain["slashed_to"] == [REPORTER]
+
+    def test_no_reporter_falls_back_to_the_admin_and_says_so(self, cfg, escrow_chain):
+        cfg.run_escrow = True
+        result = orchestrator.orchestrate(POISON, cfg)
+        assert escrow_chain["slashed_to"] == [cfg.admin_address]
+        slash = next(s for s in result.steps if s.step == Step.SLASH)
+        assert "explicit fallback" in slash.detail
+
+    @pytest.mark.parametrize(
+        "bad",
+        ["not-an-address", "CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE"],
+    )
+    def test_an_invalid_reporter_is_refused_before_any_money_moves(self, cfg, escrow_chain, bad):
+        cfg.run_escrow = True
+        cfg.reporter_address = bad
+        with pytest.raises(ValueError, match="reporter_address"):
+            orchestrator.orchestrate(POISON, cfg)
+        assert not any(c.startswith(("create", "slash#")) for c in escrow_chain["calls"])
+
+    def test_an_unknown_lock_mode_is_refused(self, cfg, escrow_chain):
+        cfg.run_escrow = True
+        cfg.escrow_lock = "whenever"
+        with pytest.raises(ValueError, match="escrow_lock"):
+            orchestrator.orchestrate(DOC, cfg)

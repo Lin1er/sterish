@@ -1,0 +1,243 @@
+{
+  "ticket": "STE-49",
+  "started_at": 1789580908,
+  "escrow": "CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE",
+  "registry": "CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2",
+  "tokens": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
+  "fee": 1000000,
+  "bond": 2000000,
+  "reporter": "GADNHGAFXH3BE2PY2QYY5NAH3A6PWKQKK2YMF4HAF5BDOVHKI2GC5JFJ",
+  "runs": [
+    {
+      "skill_id": "com.sterish.e2e-escrow-order-safe-1789580908",
+      "version": "1.0.0",
+      "expect": "SAFE",
+      "open": [
+        {
+          "step": "create_audit_request",
+          "status": "done",
+          "tx_hash": "1a2e892ca142e3e31f49315dce4491a838a84d71a9c401b6efe7c04f664a4a6b",
+          "detail": "",
+          "request_id": 20
+        },
+        {
+          "step": "post_bond",
+          "status": "done",
+          "tx_hash": "9198b1ecbbcb3c54457efb401c5ed1c882bcaa82e93aaccf41106d9d0013b62e",
+          "detail": ""
+        }
+      ],
+      "request_id": 20,
+      "orchestrate": {
+        "skill_id": "com.sterish.e2e-escrow-order-safe-1789580908",
+        "version": "1.0.0",
+        "content_hash": "ffbc3f0546fb38f2629ca9352318e911896df340e8cc0311bbe12c10c6f99eb4",
+        "verdict": "SAFE",
+        "score": 100,
+        "evidence_hash": "b0ebc62d822235192c670f717bd7a4024dfa659cf9ed3a741b31d2b07d22d3cc",
+        "report_uri": "file://<workdir>/reports/com.sterish.e2e-escrow-order-safe-1789580908/1.0.0.json",
+        "ok": true,
+        "steps": [
+          {
+            "step": "register_skill",
+            "status": "done",
+            "tx_hash": "9bd647d5f0b6d8386ee76577077ea12f42ee040f66e2258441cc38acddc81efc",
+            "detail": ""
+          },
+          {
+            "step": "publish_report",
+            "status": "done",
+            "tx_hash": null,
+            "detail": "<workdir>/reports/com.sterish.e2e-escrow-order-safe-1789580908/1.0.0.json (669 bytes)"
+          },
+          {
+            "step": "submit_verdict",
+            "status": "done",
+            "tx_hash": "9d9961c0329b2edd8ecebb3965e7655930e8e7b656754fc3964fa1b3c4685fd3",
+            "detail": ""
+          },
+          {
+            "step": "mint_verified",
+            "status": "done",
+            "tx_hash": "d06497c863f5e84b09eacc743278359fd33fff575136705663d51f7bdccaff71",
+            "detail": ""
+          },
+          {
+            "step": "settle",
+            "status": "done",
+            "tx_hash": "7d2695e0e3fec11feb86fc620bab68a0459696e513a8b677ac6469dd34b88c2e",
+            "detail": ""
+          }
+        ]
+      },
+      "balance_deltas": {
+        "developer": -1000000,
+        "auditor": 1000000,
+        "reporter": 0,
+        "escrow": 0
+      },
+      "final_status": "Settled",
+      "tx": {
+        "register_skill": "9bd647d5f0b6d8386ee76577077ea12f42ee040f66e2258441cc38acddc81efc",
+        "submit_verdict": "9d9961c0329b2edd8ecebb3965e7655930e8e7b656754fc3964fa1b3c4685fd3",
+        "mint_verified": "d06497c863f5e84b09eacc743278359fd33fff575136705663d51f7bdccaff71",
+        "settle": "7d2695e0e3fec11feb86fc620bab68a0459696e513a8b677ac6469dd34b88c2e",
+        "create_audit_request": "1a2e892ca142e3e31f49315dce4491a838a84d71a9c401b6efe7c04f664a4a6b",
+        "post_bond": "9198b1ecbbcb3c54457efb401c5ed1c882bcaa82e93aaccf41106d9d0013b62e"
+      }
+    },
+    {
+      "skill_id": "com.sterish.e2e-escrow-order-poisoned-1789580952",
+      "version": "1.0.0",
+      "expect": "DANGEROUS",
+      "open": [
+        {
+          "step": "create_audit_request",
+          "status": "done",
+          "tx_hash": "6d718710ab383f3413344d7260a6f996739f842d79f35991cbff37a392170502",
+          "detail": "",
+          "request_id": 21
+        },
+        {
+          "step": "post_bond",
+          "status": "done",
+          "tx_hash": "bafc90e84add28a4123d91e0c5ac7ba85f7f86445a8186e98e4960e7741a26cb",
+          "detail": ""
+        }
+      ],
+      "request_id": 21,
+      "orchestrate": {
+        "skill_id": "com.sterish.e2e-escrow-order-poisoned-1789580952",
+        "version": "1.0.0",
+        "content_hash": "749f03669256c97a59d4dd880b3a3cf05457b5b743563a11cd076743e5aaca71",
+        "verdict": "DANGEROUS",
+        "score": 10,
+        "evidence_hash": "35ea5dac50938bda6605fef689dc20e7e90174d4435de19de36e6278c1e7e460",
+        "report_uri": "file://<workdir>/reports/com.sterish.e2e-escrow-order-poisoned-1789580952/1.0.0.json",
+        "ok": true,
+        "steps": [
+          {
+            "step": "register_skill",
+            "status": "done",
+            "tx_hash": "0510931a10a4e9cafb46691a3f8dbd9c99eeef424c8e52d82b163a19e5717d92",
+            "detail": ""
+          },
+          {
+            "step": "publish_report",
+            "status": "done",
+            "tx_hash": null,
+            "detail": "<workdir>/reports/com.sterish.e2e-escrow-order-poisoned-1789580952/1.0.0.json (10049 bytes)"
+          },
+          {
+            "step": "submit_verdict",
+            "status": "done",
+            "tx_hash": "81fe33648491a321b0981207153691fb30ca129b9bb71636f7807e818f097963",
+            "detail": ""
+          },
+          {
+            "step": "mint_verified",
+            "status": "skipped",
+            "tx_hash": null,
+            "detail": "verdict is DANGEROUS, not SAFE \u2014 no badge"
+          },
+          {
+            "step": "slash",
+            "status": "done",
+            "tx_hash": "5321aeca3e1ac61b79c5c495f61aa0c2f44a70fb0dee40a71a7bc592547719ba",
+            "detail": "bond forfeited to reporter GADNHGAFXH3BE2PY2QYY5NAH3A6PWKQKK2YMF4HAF5BDOVHKI2GC5JFJ"
+          }
+        ]
+      },
+      "balance_deltas": {
+        "developer": 0,
+        "auditor": -2000000,
+        "reporter": 2000000,
+        "escrow": 0
+      },
+      "final_status": "Slashed",
+      "tx": {
+        "register_skill": "0510931a10a4e9cafb46691a3f8dbd9c99eeef424c8e52d82b163a19e5717d92",
+        "submit_verdict": "81fe33648491a321b0981207153691fb30ca129b9bb71636f7807e818f097963",
+        "slash": "5321aeca3e1ac61b79c5c495f61aa0c2f44a70fb0dee40a71a7bc592547719ba",
+        "create_audit_request": "6d718710ab383f3413344d7260a6f996739f842d79f35991cbff37a392170502",
+        "post_bond": "bafc90e84add28a4123d91e0c5ac7ba85f7f86445a8186e98e4960e7741a26cb"
+      }
+    }
+  ],
+  "result": "pass",
+  "checks": [
+    {
+      "check": "create_audit_request returned request #20",
+      "ok": true
+    },
+    {
+      "check": "request #20 is Bonded for com.sterish.e2e-escrow-order-safe-1789580908 before the audit",
+      "ok": true
+    },
+    {
+      "check": "lock moved fee and bond into escrow: {'developer': -1000000, 'auditor': -2000000, 'reporter': 0, 'escrow': 3000000}",
+      "ok": true
+    },
+    {
+      "check": "the registry has no record of these bytes while the funds are already locked",
+      "ok": true
+    },
+    {
+      "check": "audit verdict SAFE == SAFE",
+      "ok": true
+    },
+    {
+      "check": "orchestrate reported every step done or skipped",
+      "ok": true
+    },
+    {
+      "check": "request #20 Settled",
+      "ok": true
+    },
+    {
+      "check": "settle paid fee+bond to the auditor: net {'developer': -1000000, 'auditor': 1000000, 'reporter': 0, 'escrow': 0}",
+      "ok": true
+    },
+    {
+      "check": "registry.is_verified true for the audited version",
+      "ok": true
+    },
+    {
+      "check": "create_audit_request returned request #21",
+      "ok": true
+    },
+    {
+      "check": "request #21 is Bonded for com.sterish.e2e-escrow-order-poisoned-1789580952 before the audit",
+      "ok": true
+    },
+    {
+      "check": "lock moved fee and bond into escrow: {'developer': -1000000, 'auditor': -2000000, 'reporter': 0, 'escrow': 3000000}",
+      "ok": true
+    },
+    {
+      "check": "the registry has no record of these bytes while the funds are already locked",
+      "ok": true
+    },
+    {
+      "check": "audit verdict DANGEROUS == DANGEROUS",
+      "ok": true
+    },
+    {
+      "check": "orchestrate reported every step done or skipped",
+      "ok": true
+    },
+    {
+      "check": "request #21 Slashed",
+      "ok": true
+    },
+    {
+      "check": "slash sent the bond to the reporter and refunded the fee: net {'developer': 0, 'auditor': -2000000, 'reporter': 2000000, 'escrow': 0}",
+      "ok": true
+    },
+    {
+      "check": "the slash step names the reporter it paid",
+      "ok": true
+    }
+  ],
+  "finished_at": 1789580987
+}

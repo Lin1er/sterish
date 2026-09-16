@@ -175,6 +175,13 @@ def _raise_for_error(error: Any, function: str, contract: str | None = None) -> 
     raise OnChainError(f"{function} simulation failed: {error}")
 
 
+def is_account_address(value: str) -> bool:
+    """A classic `G...` account (not a contract `C...` or a muxed `M...`)."""
+    from stellar_sdk.strkey import StrKey
+
+    return isinstance(value, str) and StrKey.is_valid_ed25519_public_key(value)
+
+
 # --- encoding ---------------------------------------------------------------
 
 

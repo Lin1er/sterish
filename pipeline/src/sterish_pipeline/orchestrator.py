@@ -66,6 +66,16 @@ class OrchestratorConfig:
     fee_amount: int = 50_000_000
     bond_amount: int = 100_000_000
     run_escrow: bool = False
+    # When the escrow job is opened (STE-49):
+    #   "after_verdict" — the original order: register, verdict, then create + bond +
+    #                     settle/slash in one go. Kept as the default so existing runs
+    #                     do not change underneath anyone.
+    #   "before_audit"  — the product order: `open_escrow_job` locks fee + bond BEFORE the
+    #                     audit runs, and `orchestrate` then closes that same job, found
+    #                     by the request_id the journal recorded. Never guessed.
+    escrow_lock: str = "after_verdict"
+    # Who a slashed bond goes to. Empty = the admin, and the step says so explicitly.
+    reporter_address: str = ""
 
     @property
     def owner_address(self) -> str:
@@ -95,8 +105,13 @@ class StepResult:
         return None if not self.tx_hash else f"https://stellar.expert/explorer/testnet/tx/{self.tx_hash}"
 
     def to_dict(self) -> dict:
-        return {"step": str(self.step), "status": self.status,
-                "tx_hash": self.tx_hash, "detail": self.detail}
+        out = {"step": str(self.step), "status": self.status,
+               "tx_hash": self.tx_hash, "detail": self.detail}
+        # The escrow request_id is the one value a later run must read back from the
+        # journal (STE-49: the job is opened before the audit and closed after it).
+        if self.step == Step.CREATE_REQUEST and isinstance(self.value, int):
+            out["request_id"] = self.value
+        return out
 
 
 @dataclass
@@ -274,8 +289,159 @@ def orchestrate(
 
     # 4. Economic path, opt-in: it moves real balances and needs a funded escrow.
     if config.run_escrow and config.escrow_id:
-        result.steps.extend(_run_escrow(journal, cfg, config, skill_id, version, verdict))
+        _check_escrow_config(config)
+        if config.escrow_lock == "before_audit":
+            result.steps.extend(_close_escrow_job(journal, cfg, config, skill_id, version, verdict))
+        else:
+            result.steps.extend(_run_escrow(journal, cfg, config, skill_id, version, verdict))
 
+    return result
+
+
+ESCROW_LOCK_MODES = ("after_verdict", "before_audit")
+
+
+def _check_escrow_config(config: OrchestratorConfig) -> None:
+    if config.escrow_lock not in ESCROW_LOCK_MODES:
+        raise ValueError(
+            f"escrow_lock must be one of {ESCROW_LOCK_MODES}, got {config.escrow_lock!r}"
+        )
+    if config.reporter_address and not onchain.is_account_address(config.reporter_address):
+        raise ValueError(
+            f"reporter_address must be a Stellar account (G...), got {config.reporter_address!r}"
+        )
+
+
+def open_escrow_job(
+    skill_id: str,
+    version: str,
+    config: OrchestratorConfig,
+    pipeline_config: PipelineConfig | None = None,
+) -> list[StepResult]:
+    """Lock the developer's fee and the auditor's bond BEFORE the audit runs (STE-49).
+
+    `create_audit_request` then `post_bond`. The request_id the contract returns is
+    journalled with the step, so the `orchestrate` call that follows the audit closes
+    exactly this job. Re-running resumes: a job already created is not created again,
+    a bond already posted is not posted again.
+    """
+    _check_escrow_config(config)
+    cfg = pipeline_config or PipelineConfig()
+    journal = Journal(config.journal_path)
+    stuck = journal.has_unknown(skill_id, version)
+    if stuck:
+        raise onchain.OnChainError(
+            f"previous run left {stuck} in an UNKNOWN state for {skill_id}@{version}. "
+            "Check the ledger and clear that entry from the journal before re-running."
+        )
+    if not config.escrow_id:
+        raise ValueError("open_escrow_job needs escrow_id")
+
+    steps: list[StepResult] = []
+    created = journal.get(skill_id, version, Step.CREATE_REQUEST)
+    closed = journal.get(skill_id, version, Step.SETTLE) or journal.get(
+        skill_id, version, Step.SLASH
+    )
+    if created and created.get("status") == "done" and not (
+        closed and closed.get("status") == "done"
+    ):
+        request_id = created.get("request_id")
+        steps.append(StepResult(
+            Step.CREATE_REQUEST, "skipped", created.get("tx_hash"),
+            f"escrow job #{request_id} already open for this version (journal)",
+            value=request_id,
+        ))
+    elif created and created.get("status") == "done":
+        # A finished job exists; opening another is a deliberate act, not a resume.
+        steps.append(StepResult(
+            Step.CREATE_REQUEST, "skipped", created.get("tx_hash"),
+            "escrow job already run to completion for this version (journal); "
+            "delete the journal entry to open another",
+        ))
+        return steps
+    else:
+        result = _run_step(
+            journal, skill_id, version, Step.CREATE_REQUEST,
+            lambda: onchain.create_audit_request(
+                cfg, config.escrow_id, config.owner_secret, skill_id, version,
+                config.fee_amount, config.bond_amount),
+        )
+        steps.append(result)
+        request_id = _request_id_from(cfg, config, result)
+
+    if not isinstance(request_id, int):
+        steps.append(StepResult(Step.POST_BOND, "failed", None, "could not resolve request_id"))
+        return steps
+
+    bonded = journal.get(skill_id, version, Step.POST_BOND)
+    if bonded and bonded.get("status") == "done":
+        steps.append(StepResult(Step.POST_BOND, "skipped", bonded.get("tx_hash"),
+                                f"bond already posted on #{request_id} (journal)"))
+    else:
+        steps.append(_run_step(
+            journal, skill_id, version, Step.POST_BOND,
+            lambda: onchain.post_bond(cfg, config.escrow_id, config.auditor_secret, request_id),
+        ))
+    return steps
+
+
+def _close_escrow_job(journal, cfg, config, skill_id, version, verdict) -> list[StepResult]:
+    """Settle or slash the job `open_escrow_job` locked, found through the journal."""
+    _check_escrow_config(config)
+    for step in (Step.SETTLE, Step.SLASH):
+        done = journal.get(skill_id, version, step)
+        if done and done.get("status") == "done":
+            return [StepResult(step, "skipped", done.get("tx_hash"),
+                               "escrow job already closed for this version (journal)")]
+
+    created = journal.get(skill_id, version, Step.CREATE_REQUEST)
+    bonded = journal.get(skill_id, version, Step.POST_BOND)
+    request_id = (created or {}).get("request_id")
+    if not isinstance(request_id, int) or not (bonded and bonded.get("status") == "done"):
+        step = Step.SETTLE if verdict == FinalVerdict.SAFE.value else Step.SLASH
+        return [StepResult(
+            step, "failed", None,
+            "escrow_lock=before_audit but the journal holds no bonded job for this version; "
+            "run open_escrow_job before the audit (nothing was settled or slashed)",
+        )]
+
+    # The journal is local and could be stale or copied from elsewhere. Before moving
+    # money, confirm on chain that this request is ours and still Bonded.
+    record = onchain.simulate(cfg, config.escrow_id, "get_request",
+                              [onchain.scval.to_uint32(request_id)])
+    status = record.get("status") if isinstance(record, dict) else None
+    if isinstance(status, (list, tuple)) and status:
+        status = status[0]
+    if not isinstance(record, dict) or record.get("skill_id") != skill_id or record.get(
+        "version"
+    ) != version or str(status) != "Bonded":
+        step = Step.SETTLE if verdict == FinalVerdict.SAFE.value else Step.SLASH
+        seen = (f"{record.get('skill_id')}@{record.get('version')} {status}"
+                if isinstance(record, dict) else repr(record))
+        return [StepResult(
+            step, "failed", None,
+            f"journal says request #{request_id}, but on chain it is {seen}, not a Bonded "
+            f"job for {skill_id}@{version}; refusing to settle or slash it",
+        )]
+
+    return [_settle_or_slash(journal, cfg, config, skill_id, version, verdict, request_id)]
+
+
+def _settle_or_slash(journal, cfg, config, skill_id, version, verdict, request_id) -> StepResult:
+    if verdict == FinalVerdict.SAFE.value:
+        return _run_step(
+            journal, skill_id, version, Step.SETTLE,
+            lambda: onchain.settle(cfg, config.escrow_id, config.admin_secret, request_id),
+        )
+    reporter = config.reporter_address or config.admin_address
+    result = _run_step(
+        journal, skill_id, version, Step.SLASH,
+        lambda: onchain.slash(cfg, config.escrow_id, config.admin_secret, request_id, reporter),
+    )
+    result.detail = (
+        f"bond forfeited to reporter {reporter}" if config.reporter_address
+        else f"no reporter given: bond forfeited to the admin {reporter} (explicit fallback)"
+    )
     return result
 
 
@@ -374,20 +540,10 @@ def _run_escrow(journal, cfg, config, skill_id, version, verdict) -> list[StepRe
         lambda: onchain.post_bond(cfg, config.escrow_id, config.auditor_secret, request_id),
     ))
 
-    if verdict == FinalVerdict.SAFE.value:
-        steps.append(_run_step(
-            journal, skill_id, version, Step.SETTLE,
-            lambda: onchain.settle(cfg, config.escrow_id, config.admin_secret, request_id),
-        ))
-    else:
-        # A bad audit forfeits the bond. With no external reporter the admin is paid,
-        # which is the documented fallback in contracts/escrow (claim_forfeited).
-        steps.append(_run_step(
-            journal, skill_id, version, Step.SLASH,
-            lambda: onchain.slash(cfg, config.escrow_id, config.admin_secret,
-                                  request_id, config.admin_address),
-        ))
-
+    # A bad audit forfeits the bond — to the reporter when one is configured (STE-49),
+    # otherwise to the admin, the documented fallback in contracts/escrow, and the step
+    # says which.
+    steps.append(_settle_or_slash(journal, cfg, config, skill_id, version, verdict, request_id))
     return steps
 
 
