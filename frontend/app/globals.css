@@ -188,6 +188,24 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Loading shimmer for <Skeleton>. A band of cream at low opacity sweeps across
+   the placeholder instead of the whole block pulsing. The pulse faded every
+   skeleton on the page in and out at once, which reads as flicker on a page
+   made mostly of placeholders (the registry table while /skills answers). A
+   sweep has a direction, so it reads as "loading" rather than "broken". */
+@theme {
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
