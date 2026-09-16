@@ -57,4 +57,6 @@ export const queryKeys = {
   skills: (start: number, limit: number) =>
     ["skills", { start, limit }] as const,
   feed: (limit: number) => ["feed", { limit }] as const,
+  licence: (skillId: string, version: string, agent: string) =>
+    ["licence", { skillId, version, agent }] as const,
 };

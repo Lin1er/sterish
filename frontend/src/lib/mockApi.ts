@@ -101,9 +101,10 @@ function fakeTxHash(seed: string): string {
 
 function agentOf(request: Request, url: URL): string | null {
   return (
-    url.searchParams.get("agent") ??
-    request.headers.get("X-AGENT-ADDRESS")
-  )?.trim() || null;
+    (
+      url.searchParams.get("agent") ?? request.headers.get("X-AGENT-ADDRESS")
+    )?.trim() || null
+  );
 }
 
 /** Resolve a version the way both 3.7 and 3.2 do, or say which part is unknown. */

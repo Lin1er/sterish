@@ -59,9 +59,12 @@ describe("requestSkill before paying", () => {
 
   it("sends the agent so an existing licence is served without a charge", async () => {
     const spy = respond(
-      Response.json({ "SKILL.md": "# x" }, {
-        headers: { "X-STERISH-LICENSE": "held" },
-      }),
+      Response.json(
+        { "SKILL.md": "# x" },
+        {
+          headers: { "X-STERISH-LICENSE": "held" },
+        },
+      ),
     );
 
     const outcome = await requestSkill("com.acme.pdf-suite", "0.9.0", {
@@ -73,7 +76,9 @@ describe("requestSkill before paying", () => {
     expect((init?.headers as Record<string, string>)["X-AGENT-ADDRESS"]).toBe(
       AGENT,
     );
-    expect((init?.headers as Record<string, string>)["X-PAYMENT"]).toBeUndefined();
+    expect(
+      (init?.headers as Record<string, string>)["X-PAYMENT"],
+    ).toBeUndefined();
     expect(outcome).toEqual({
       kind: "granted",
       licence: "held",
@@ -121,13 +126,19 @@ describe("requestSkill before paying", () => {
 describe("requestSkill with a payment", () => {
   it("reports a mint with both transactions", async () => {
     const spy = respond(
-      Response.json({ "SKILL.md": "# x" }, {
-        headers: {
-          "X-STERISH-LICENSE": "minted",
-          "X-STERISH-LICENSE-TX": "ab".repeat(32),
-          "X-PAYMENT-RESPONSE": b64({ success: true, transaction: "cd".repeat(32) }),
+      Response.json(
+        { "SKILL.md": "# x" },
+        {
+          headers: {
+            "X-STERISH-LICENSE": "minted",
+            "X-STERISH-LICENSE-TX": "ab".repeat(32),
+            "X-PAYMENT-RESPONSE": b64({
+              success: true,
+              transaction: "cd".repeat(32),
+            }),
+          },
         },
-      }),
+      ),
     );
 
     const outcome = await requestSkill("x", "1", {
@@ -152,7 +163,12 @@ describe("requestSkill with a payment", () => {
     respond(
       Response.json(
         { error: "PAYMENT_REJECTED", detail: "insufficient balance" },
-        { status: 402, headers: { "PAYMENT-REQUIRED": b64({ x402Version: 2, accepts: [TERMS] }) } },
+        {
+          status: 402,
+          headers: {
+            "PAYMENT-REQUIRED": b64({ x402Version: 2, accepts: [TERMS] }),
+          },
+        },
       ),
     );
     const error = (await requestSkill("x", "1", {
@@ -167,7 +183,10 @@ describe("requestSkill with a payment", () => {
   it("keeps the facilitator outage distinct from a refusal", async () => {
     respond(
       Response.json(
-        { error: "FACILITATOR_UNAVAILABLE", detail: "facilitator /verify unreachable" },
+        {
+          error: "FACILITATOR_UNAVAILABLE",
+          detail: "facilitator /verify unreachable",
+        },
         { status: 503 },
       ),
     );
@@ -180,7 +199,9 @@ describe("requestSkill with a payment", () => {
   });
 
   it("marks a lost answer after paying as an unknown outcome, not as unreachable", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"));
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("fetch failed"),
+    );
     const error = (await requestSkill("x", "1", {
       agent: AGENT,
       payment: "signed",
@@ -191,7 +212,9 @@ describe("requestSkill with a payment", () => {
   });
 
   it("leaves an unpaid transport failure as a plain transport error", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"));
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("fetch failed"),
+    );
     const error = (await requestSkill("x", "1", { agent: AGENT }).catch(
       (cause: unknown) => cause,
     )) as ApiError;

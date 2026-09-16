@@ -32,6 +32,8 @@ frontend/
 │   ├── page.tsx                          /                    → <Registry />
 │   ├── error.tsx                         error boundary
 │   ├── globals.css                       tailwind + tokens (NABIL'S)
+│   ├── activity/page.tsx                 /activity            → <Activity />
+│   ├── check/page.tsx                    /check               → <Check />
 │   ├── skills/[skillId]/
 │   │   ├── page.tsx                      /skills/:id          → <SkillDetail />
 │   │   └── not-found.tsx                 skill is not registered
@@ -45,6 +47,10 @@ frontend/
     ├── components/
     │   ├── elements/
     │   │   ├── VerdictBadge.tsx          4 verdicts: colour + icon + text
+    │   │   ├── VerdictBanner.tsx         what a verdict means for an install
+    │   │   ├── EvidenceLinks.tsx         the transactions behind a verdict
+    │   │   ├── CopyHash.tsx              a hash, short to read, whole to copy
+    │   │   ├── ActivityList.tsx
     │   │   └── ErrorNotice.tsx           takes an ApiError, not a raw string
     │   ├── layouts/
     │   │   ├── Header.tsx
@@ -59,21 +65,30 @@ frontend/
     │   │       ├── RegistryTable.tsx
     │   │       ├── RegistryPagination.tsx
     │   │       └── RegistrySkeleton.tsx
+    │   ├── check/
+    │   │   ├── Check.tsx                 rendered by app/check/page.tsx
+    │   │   ├── readFiles.ts              picker and drop to the hashed file set
+    │   │   └── component/
+    │   │       └── CheckResult.tsx
     │   └── skill-detail/
     │       ├── SkillDetail.tsx           rendered by app/skills/[skillId]/page.tsx
     │       └── component/
     │           ├── VersionCard.tsx
-    │           ├── VerdictBanner.tsx
-    │           ├── EvidenceLinks.tsx
-    │           └── CopyHash.tsx
+    │           ├── LicensePanel.tsx      licence status and the x402 buy flow
+    │           ├── AuditTrail.tsx
+    │           └── TrustScorePanel.tsx
     │
     ├── hooks/
-    │   └── useWallet.tsx                 WalletProvider + useWallet
+    │   ├── useWallet.tsx                 WalletProvider + useWallet
+    │   ├── useLicense.ts                 licence for one version and one wallet
+    │   └── usePurchase.ts                402 -> sign -> pay -> 200, as states
     │
     ├── lib/
     │   ├── api.ts                        the only door to the API
     │   ├── types.ts                      mirrors api-spec v1.0.0
     │   ├── wallet.ts                     Stellar Wallets Kit, lazily loaded
+    │   ├── x402.ts                       buyer side of x402, lazily loaded
+    │   ├── contentHash.ts                content_hash v1 on WebCrypto
     │   ├── fixtures.ts                   4 verdict cases
     │   ├── mockApi.ts                    mock logic, outside app/
     │   └── utils.ts                      shadcn's `cn()`
@@ -107,7 +122,8 @@ one of them deserves a retry button.
 **Promotion rule:** used by one module, it stays in `component/`. Used by two or more, it moves
 up to `components/elements/`. Never import from another module's `component/`; if you need to,
 promote it first. `VerdictBadge` has been promoted because registry and skill-detail both use it.
-`CopyHash` deliberately has not, because only one module uses it so far.
+`VerdictBanner`, `EvidenceLinks` and `CopyHash` were promoted in STE-22, when the check page
+became their second user.
 
 ### 3.4 `src/lib/` — API and chain
 
@@ -163,6 +179,18 @@ red-green colour-blind eyes.
   live. The evidence panel can link to the report and show `findings[]`, `capabilities[]` and
   `recommendation` rather than saying "not published yet". The 47 older versions still return
   null, correctly: they predate report publishing.
+- **The paid path is signed in the browser (STE-22).** `lib/x402.ts` builds the payment with
+  `@x402/core`'s `x402Client` and `@x402/stellar`'s `ExactStellarScheme`, the same assembly as
+  `demo/x402-buyer/buy.js`, with the connected wallet signing one Soroban auth entry instead of
+  a secret key. The facilitator sponsors the fee, so a buyer needs testnet USDC and no XLM. Both
+  packages are imported only when somebody clicks Pay, because they bring a second copy of the
+  Stellar SDK.
+- **`content_hash` is computed client side** by `lib/contentHash.ts`, a port of
+  `docs/specs/reference/contentHash.ts`. Its test runs the shared vectors in `docs/specs/vectors`;
+  if that test fails, the check page is answering about bytes nobody audited.
+- **Wallet errors are classified by message, never by code.** The kit's `parseError` fills in
+  `code: -1` for any error without one, so "Freighter is not connected" and a closed modal look
+  the same by code.
 - **The API still has no filter or sort.** Do not build client-side filter or sort controls over
   a single page; a label like "highest trust first" that only orders a third of the data
   misleads. Tracked as STE-34.

@@ -26,7 +26,6 @@ import {
   NETWORK_PASSPHRASE,
   RPC_URL,
   X402_NETWORK,
-  isUserCancelled,
   signAuthEntry,
   walletErrorMessage,
 } from "./wallet";
@@ -164,6 +163,7 @@ export function formatBaseUnits(
 /** Why a payment could not be built or signed, in terms a visitor can act on. */
 export type PaymentFailure =
   | { kind: "declined"; message: string }
+  | { kind: "wallet_unavailable"; message: string }
   | { kind: "insufficient_funds"; message: string }
   | { kind: "failed"; message: string };
 
@@ -171,9 +171,11 @@ export type PaymentFailure =
  * Sort a failure from the wallet or from `@x402/stellar` into something the UI
  * can word.
  *
- * Wallets do not agree on how to say "the user said no". The kit's own cancel
- * is `{ code: -1 }`; Freighter and others reject with a message instead. Both
- * are a decision, not an error, and are reported as such.
+ * Wallets do not agree on how to say "the user said no", so this reads the
+ * message and not the code. The code is useless here: the kit's `parseError`
+ * fills in `-1` for any error that has none, so "Freighter is not connected"
+ * arrives as `{ code: -1 }` exactly like a closed modal does. Reading -1 as a
+ * refusal told somebody with no wallet installed that they had declined.
  *
  * An underfunded payment surfaces as a failed simulation of the USDC transfer,
  * since @x402/stellar simulates before asking for a signature. The contract's
@@ -182,9 +184,15 @@ export type PaymentFailure =
 export function classifyPaymentFailure(cause: unknown): PaymentFailure {
   const message = walletErrorMessage(cause);
   if (
-    isUserCancelled(cause) ||
-    /reject|declin|denied|cancel/i.test(message)
+    /not connected|not installed|not available|no wallet|locked/i.test(message)
   ) {
+    return {
+      kind: "wallet_unavailable",
+      message:
+        "Your wallet did not respond. Make sure the wallet extension is installed, unlocked and connected to this site, then try again. Nothing was paid.",
+    };
+  }
+  if (/reject|declin|denied|cancel/i.test(message)) {
     return {
       kind: "declined",
       message: "You declined the signature in your wallet. Nothing was paid.",
@@ -197,7 +205,15 @@ export function classifyPaymentFailure(cause: unknown): PaymentFailure {
         "The USDC transfer could not be simulated, which usually means this account holds too little USDC or has no USDC trustline. Nothing was paid.",
     };
   }
-  return { kind: "failed", message };
+  return {
+    kind: "failed",
+    // An error object with no message stringifies to "[object Object]", which
+    // tells a buyer nothing and reads like a bug in this page.
+    message:
+      message === "[object Object]"
+        ? "The wallet returned an error without saying why. Nothing was paid."
+        : message,
+  };
 }
 
 /**
@@ -262,8 +278,14 @@ export async function readTokenBalance(
   account: string,
 ): Promise<bigint | null> {
   try {
-    const { Account, Contract, TransactionBuilder, nativeToScVal, rpc, scValToNative } =
-      await import("@stellar/stellar-sdk");
+    const {
+      Account,
+      Contract,
+      TransactionBuilder,
+      nativeToScVal,
+      rpc,
+      scValToNative,
+    } = await import("@stellar/stellar-sdk");
     const server = new rpc.Server(RPC_URL);
     // A simulation needs a source account but never checks its sequence, so a
     // throwaway Account object with sequence 0 is enough and costs no read.

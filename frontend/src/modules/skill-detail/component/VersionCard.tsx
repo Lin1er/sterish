@@ -3,12 +3,15 @@ import { EvidenceLinks } from "@/components/elements/EvidenceLinks";
 import { VerdictBadge } from "@/components/elements/VerdictBadge";
 import type { AuditedVersion, Verdict } from "@/lib/types";
 import { formatLedgerTime } from "@/utils/format";
+import { LicensePanel } from "./LicensePanel";
 
 export function VersionCard({
+  skillId,
   version,
   audited,
   isLatest,
 }: {
+  skillId: string;
   version: string;
   audited: AuditedVersion | null;
   isLatest: boolean;
@@ -16,7 +19,12 @@ export function VersionCard({
   const verdict: Verdict = audited?.verdict ?? "UNAUDITED";
 
   return (
-    <article className="rounded-lg border border-border p-5">
+    // The id is the target of the check page's "Get a licence" link, so a
+    // visitor who just checked these bytes lands on the version they checked.
+    <article
+      id={`version-${version}`}
+      className="scroll-mt-6 rounded-lg border border-border p-5"
+    >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h3 className="numeric font-mono text-base font-bold">{version}</h3>
@@ -68,6 +76,13 @@ export function VersionCard({
           <EvidenceLinks evidence={audited.evidence} />
         </div>
       ) : null}
+
+      <LicensePanel
+        skillId={skillId}
+        version={version}
+        verdict={verdict}
+        isVerified={audited?.is_verified ?? false}
+      />
     </article>
   );
 }

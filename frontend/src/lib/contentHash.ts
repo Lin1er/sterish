@@ -24,10 +24,7 @@ const STRICT_UTF8 = new TextDecoder("utf-8", { fatal: true });
 export const MAGIC: Uint8Array = ENCODER.encode("sterish-content-hash/v1\n");
 
 export type ContentHashErrorKind =
-  | "EmptyFileSet"
-  | "DuplicatePath"
-  | "InvalidPath"
-  | "NotUtf8";
+  "EmptyFileSet" | "DuplicatePath" | "InvalidPath" | "NotUtf8";
 
 export class ContentHashError extends Error {
   readonly kind: ContentHashErrorKind;
@@ -122,7 +119,7 @@ export function normalizeContent(raw: Uint8Array): Uint8Array {
 
   const out = new Uint8Array(raw.length);
   let n = 0;
-  for (let i = 0; i < raw.length; ) {
+  for (let i = 0; i < raw.length;) {
     if (raw[i] === CR && i + 1 < raw.length && raw[i + 1] === LF) {
       out[n++] = LF;
       i += 2;

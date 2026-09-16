@@ -21,7 +21,10 @@ const AGENT = "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H";
 const OTHER_AGENT = "GCFCURTZ7XHMTKZRWJ4U2YJ7KXQGJ6V2OQDVZ3YI4XWAHC3C5N4JDNQM";
 const SAFE = "com.acme.pdf-suite/0.9.0";
 
-function call(path: string, init: { query?: string; headers?: HeadersInit } = {}) {
+function call(
+  path: string,
+  init: { query?: string; headers?: HeadersInit } = {},
+) {
   return handleMockRequest(
     new Request(`http://localhost/api/mock/${path}${init.query ?? ""}`, {
       headers: init.headers,
@@ -53,9 +56,9 @@ describe("the licensable fixture", () => {
   it("serves bytes whose content hash is the one the registry holds", async () => {
     // The loop the check page closes: buy, save, drop the files back in, get
     // SAFE. It only works if this hash is real, so it is recomputed here.
-    const files = Object.entries(FIXTURE_ARTIFACTS["com.acme.pdf-suite@0.9.0"]).map(
-      ([path, text]) => ({ path, raw: new TextEncoder().encode(text) }),
-    );
+    const files = Object.entries(
+      FIXTURE_ARTIFACTS["com.acme.pdf-suite@0.9.0"],
+    ).map(([path, text]) => ({ path, raw: new TextEncoder().encode(text) }));
     await expect(contentHash(files)).resolves.toBe(
       FIXTURE_VERSIONS["com.acme.pdf-suite@0.9.0"].content_hash,
     );
@@ -113,7 +116,9 @@ describe("GET /use with a payment", () => {
     });
     expect(response.status).toBe(200);
     expect(response.headers.get("X-STERISH-LICENSE")).toBe("minted");
-    expect(response.headers.get("X-STERISH-LICENSE-TX")).toMatch(/^[0-9a-z]{64}$/);
+    expect(response.headers.get("X-STERISH-LICENSE-TX")).toMatch(
+      /^[0-9a-z]{64}$/,
+    );
 
     const receipt = decode(response.headers.get("X-PAYMENT-RESPONSE"));
     expect(receipt.success).toBe(true);

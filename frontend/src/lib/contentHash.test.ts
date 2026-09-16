@@ -108,9 +108,9 @@ describe("packaging what a browser picker hands over", () => {
   });
 
   it("uses the file name for a loose file", () => {
-    expect(relativeSkillPath({ name: "SKILL.md", webkitRelativePath: "" })).toBe(
-      "SKILL.md",
-    );
+    expect(
+      relativeSkillPath({ name: "SKILL.md", webkitRelativePath: "" }),
+    ).toBe("SKILL.md");
     expect(relativeSkillPath({ name: "SKILL.md" })).toBe("SKILL.md");
   });
 

@@ -146,16 +146,27 @@ describe("decodeSettlementReceipt", () => {
 });
 
 describe("classifyPaymentFailure", () => {
-  it("reads the kit's own cancel as a decision", () => {
-    expect(classifyPaymentFailure({ code: -1, message: "closed" }).kind).toBe(
-      "declined",
-    );
+  it("does not read the kit's default code -1 as a refusal", () => {
+    // parseError in the kit assigns -1 to any error without a code. With no
+    // Freighter extension present, this is exactly what signing rejects with.
+    const failure = classifyPaymentFailure({
+      code: -1,
+      message: "Freighter is not connected",
+    });
+    expect(failure.kind).toBe("wallet_unavailable");
+    expect(failure.message).not.toContain("declined");
+  });
+
+  it("reports a failure with no message as a failure, not a refusal", () => {
+    expect(classifyPaymentFailure({ code: -1 }).kind).toBe("failed");
   });
 
   it("reads a wallet's rejection message as a decision", () => {
     expect(
-      classifyPaymentFailure({ code: -4, message: "The user rejected this request." })
-        .kind,
+      classifyPaymentFailure({
+        code: -4,
+        message: "The user rejected this request.",
+      }).kind,
     ).toBe("declined");
   });
 
@@ -171,8 +182,9 @@ describe("classifyPaymentFailure", () => {
 
   it("recognises a missing trustline", () => {
     expect(
-      classifyPaymentFailure(new Error("trustline entry is missing for account"))
-        .kind,
+      classifyPaymentFailure(
+        new Error("trustline entry is missing for account"),
+      ).kind,
     ).toBe("insufficient_funds");
   });
 
