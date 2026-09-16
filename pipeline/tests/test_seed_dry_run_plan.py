@@ -161,3 +161,61 @@ def test_a_register_only_entry_plans_register_or_nothing(monkeypatch):
 
     monkeypatch.setattr(onchain, "get_version", lambda *_: _record("Unaudited", 0, "00" * 32))
     assert _dry_run_plan(_cfg(), entry, None, None, None)["action"] == "noop"
+
+
+def _dry_run_rows(monkeypatch, tmp_path, *extra):
+    monkeypatch.setattr(onchain, "get_version", lambda *_: _record("Safe", 100, H1))
+    monkeypatch.setattr(onchain, "invoke", lambda *a, **k: pytest.fail("dry run signed"))
+    monkeypatch.setenv("REGISTRY_CA", REGISTRY)
+    out = tmp_path / "plan.json"
+    result = CliRunner().invoke(
+        cli,
+        ["intake", "seed", "--corpus", str(CORPUS_DIR), "--dry-run",
+         "--json-out", str(out), *extra],
+    )
+    assert result.exit_code == 0, result.output
+    return {(r["skill_id"], r["version"]): r for r in json.loads(out.read_text())}, result.output
+
+
+def test_allow_dangerous_marks_every_dangerous_row_as_intended(monkeypatch, tmp_path):
+    rows, output = _dry_run_rows(
+        monkeypatch, tmp_path, "--label", "poisoned", "--label", "demo", "--allow-dangerous"
+    )
+    dangerous = {k: r for k, r in rows.items() if r.get("verdict") == "DANGEROUS"}
+    assert len(dangerous) == 5  # four poisoned fixtures + the release-notes rug pull
+    for key, row in dangerous.items():
+        assert row["status"] == "dry_run", key
+        assert row["dangerous_intended"] is True, key
+        assert "expected_verdict DANGEROUS" in row["dangerous_reason"]
+    others = [r for r in rows.values() if r["verdict"] != "DANGEROUS"]
+    assert not any(r.get("dangerous_intended") for r in others)
+    assert "5 DANGEROUS on purpose" in output
+
+
+def test_without_the_flag_dangerous_rows_are_skipped_with_a_reason(monkeypatch, tmp_path):
+    rows, _ = _dry_run_rows(monkeypatch, tmp_path, "--label", "poisoned")
+    assert {r["status"] for r in rows.values()} == {"skipped_dangerous"}
+    assert all(r["reason"] == "--allow-dangerous not given" for r in rows.values())
+
+
+def test_the_flag_never_publishes_a_dangerous_verdict_the_corpus_did_not_expect(
+    monkeypatch, tmp_path
+):
+    """Simulate the detector regressing on a catalogue skill: the flag must not carry it."""
+    from sterish_pipeline.intake import cli as intake_cli
+    from sterish_pipeline.models import FinalVerdict
+
+    real = intake_cli.audit_normalized
+
+    def cctp_regresses(skill, **kwargs):
+        report = real(skill, **kwargs)
+        if skill.manifest.name and "cctp" in str(skill.manifest.name).lower():
+            report.final_verdict = FinalVerdict.DANGEROUS
+            report.trust_score = 10
+        return report
+
+    monkeypatch.setattr(intake_cli, "audit_normalized", cctp_regresses)
+    rows, _ = _dry_run_rows(monkeypatch, tmp_path, "--label", "catalog", "--allow-dangerous")
+    cctp = rows[("org.stellar.skills.cross-chain.cctp", "2026.8.31")]
+    assert cctp["status"] == "skipped_dangerous"
+    assert "not DANGEROUS" in cctp["reason"]

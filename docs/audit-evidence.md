@@ -269,12 +269,37 @@ convenient version of the principle rather than the principle.
 Consequence: the catalogue is 13 of 13, with **zero exclusions**, and the SOW D2 threshold of
 "10+ real catalogue skills" is met with 13.
 
-**Update, STE-37 (16 September 2026): the reading above was right, and the verdict is being
-corrected.** With `wallet_op` reading whether a sentence directs a move of assets rather than
-whether transfer vocabulary appears anywhere, cctp audits `SAFE` (score 100) — both findings
+This section is kept as it was written. What follows is added beneath it rather than replacing
+it: an audit registry has to be able to show that it publishes the answer it got, says in public
+when it believes that answer is wrong, and then corrects it — in that order, with dates.
+
+**Update, STE-37 (16–17 September 2026): the reading above was right, and the verdict is
+corrected.** With `wallet_op` reading whether a sentence *directs* a move of assets rather than
+whether transfer vocabulary appears anywhere, cctp audits `SAFE` (score 100): both findings
 disappear, and all four poisoned fixtures stay `DANGEROUS`. The on-chain `DANGEROUS` is replaced
-by a re-audit transaction, not left standing beside a fix we already made in code; the
-`542468dc…` transaction above stays in history as what we published on 15 September. See
+by a re-audit transaction rather than left standing beside a fix already made in code. The
+`542468dc…` transaction above stays in history as what we published on 15 September.
+
+The protocol's own documentation says the same thing the skill said. Circle's Stellar contract
+reference (<https://developers.circle.com/cctp/references/stellar-contracts>, read 16 September
+2026) describes `TokenMessengerMinter` as *"Burns USDC and emits a crosschain message for minting
+on another domain"* — first-party, burn-and-mint phrasing for a protocol whose contracts are live
+on Stellar:
+
+| Circle contract | testnet | mainnet |
+|---|---|---|
+| `TokenMessengerMinter` | `CDNG7HXAPBWICI2E3AUBP3YZWZELJLYSB6F5CC7WLDTLTHVM74SLRTHP` | `CAE2G5Z77UP7GYPYGFOWFGW7C7J6I4YP2AFGSADRKQY62SYUFLPNFTXL` |
+| `MessageTransmitter` | `CBJ6MTCKKZG73PMDZCJMSFRD7DQEMI4FKDH7CGDSV4W6FHCRBCQAVVJY` | `CACMENFFJPJMSDAJQLX4R7K3SFZIW2LJSE3R2UMLGSWHFHS353FVXAZV` |
+| `CctpForwarder` | `CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ` | `CBZL2IH7F6BIDAA3WBNXYKIXSATJGMSW7K5P5MJ6STX5RXN47TZJDF5T` |
+
+So the sentence the detector condemned was not a careless skill author; it is the standard way the
+company that built the protocol describes it. That is the distinction the fixed detector exists to
+make — *describing* a burn-and-mint protocol versus *instructing* an agent to move funds — and
+Circle's sentence is pinned as a benign case in `tests/test_wallet_op_context.py`. (Checked, not
+assumed: that exact sentence never fired even before the fix, because "burns" is not a transfer
+verb. What fired was the skill's "Cross-Chain **Transfer** Protocol" and "**moves** USDC by
+burning it", both also pinned. Circle's sentence is kept so a future verb list that adds
+burn/mint cannot start accusing the protocol's own documentation.) See
 [Correcting the chain after STE-37](#correcting-the-chain-after-ste-37-and-ste-39).
 
 ## The demo set: four skills, four states
@@ -596,6 +621,18 @@ uv run --project . sterish intake seed --corpus corpus \
 ```
 
 `--allow-dangerous` is needed for the poisoned and demo rows, which are ours and are meant to be
-`DANGEROUS`; it publishes no new accusation against a third party, since every catalogue entry
-audits `SAFE`. The rewritten `reports/` files are committed with the run log, and the API
+`DANGEROUS`. Since STE-37 it is not a blanket: it publishes a `DANGEROUS` verdict **only where the
+corpus's own `expected_verdict` is `DANGEROUS`**, and every such row is marked
+`dangerous_intended` with its reason in the run log (and listed at the end of the console output).
+A `DANGEROUS` the corpus did not expect, e.g. a catalogue skill after a detector regression, stays
+held with or without the flag.
+
+**If you recorded an `evidence_hash` before 17 September, it will no longer match — and that is not
+tampering.** This run replaces the `evidence_hash` of 23 entries whose skill bytes, verdict and score
+did **not** change. The verdict document they anchor changed shape: STE-39 (merged 16 September
+2026) took the model's advisory trail out of the hashed report, so the same audit now serialises
+to different bytes. Nothing was re-judged for those 23. Their `content_hash` is untouched, and
+the previous `evidence_hash` stays readable in the history of each `submit_verdict` transaction;
+the report that hashes to it is the `reports/` file at the commit before this run. Only
+`price-checker` and `cctp` change verdict. The rewritten `reports/` files are committed with the run log, and the API
 redeployed so `/reports` serves the bytes the chain now anchors.

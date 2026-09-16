@@ -238,9 +238,10 @@ def audit_corpus(
 @click.option(
     "--allow-dangerous",
     is_flag=True,
-    help="Also seed entries that audit DANGEROUS. Off by default: publishing a DANGEROUS "
-    "verdict against a third party's skill is an accusation, and an unreviewed batch is "
-    "not the place to make one.",
+    help="Also seed entries that audit DANGEROUS, but only where the corpus itself expects "
+    "DANGEROUS (expected_verdict). Off by default: publishing a DANGEROUS verdict against a "
+    "third party's skill is an accusation, and an unreviewed batch is not the place to make "
+    "one. Every DANGEROUS row published is marked dangerous_intended in the run log.",
 )
 def seed(
     corpus_dir: str,
@@ -374,17 +375,33 @@ def seed(
         verdict = payload["verdict"]
         score = payload["score"]
 
-        if verdict == FinalVerdict.DANGEROUS.value and not allow_dangerous:
+        # STE-37: --allow-dangerous is not a blanket. A DANGEROUS verdict is published only
+        # where the corpus declares it (our poisoned fixtures and the demo rug pull), and
+        # each such row says so in the run log, so a reader can see the flag was used on
+        # purpose. A DANGEROUS the corpus did not expect is exactly the unreviewed
+        # accusation the flag's default guards against, so it stays held either way.
+        intended = entry.expected_verdict == FinalVerdict.DANGEROUS.value
+        if verdict == FinalVerdict.DANGEROUS.value and not (allow_dangerous and intended):
             elapsed = time.monotonic() - started
+            reason = (
+                "--allow-dangerous not given" if not allow_dangerous
+                else f"corpus expects {entry.expected_verdict or 'no verdict'}, not DANGEROUS"
+            )
             table.add_row(
                 entry.skill_id, entry.version, _verdict_markup(FinalVerdict.DANGEROUS),
                 str(score), f"{elapsed:.1f}", "[yellow]skipped (DANGEROUS)[/yellow]",
             )
             log.append(
                 {"skill_id": entry.skill_id, "version": entry.version,
-                 "status": "skipped_dangerous", "verdict": verdict, "score": score}
+                 "status": "skipped_dangerous", "verdict": verdict, "score": score,
+                 "reason": reason}
             )
             continue
+        dangerous_note = (
+            {"dangerous_intended": True,
+             "dangerous_reason": f"label {entry.label}, corpus expected_verdict DANGEROUS"}
+            if verdict == FinalVerdict.DANGEROUS.value else {}
+        )
 
         try:
             specs.validate_verdict_document(payload, submittable=True)
@@ -410,7 +427,7 @@ def seed(
                 {"skill_id": entry.skill_id, "version": entry.version, "status": "dry_run",
                  "verdict": verdict, "score": score,
                  "content_hash": payload["content_hash"], "evidence_hash": evidence_hash,
-                 **plan, "seconds": round(elapsed, 1)}
+                 **plan, **dangerous_note, "seconds": round(elapsed, 1)}
             )
             continue
 
@@ -428,6 +445,7 @@ def seed(
         row = result.to_dict()
         row["seconds"] = round(elapsed, 1)
         row["tx"] = result.tx_hashes()
+        row.update(dangerous_note)
         log.append(row)
 
         if not result.ok:
@@ -446,6 +464,11 @@ def seed(
         f"{sum(1 for r in log if r.get('status') == 'skipped_dangerous')} skipped DANGEROUS, "
         f"{len(failures)} failed."
     )
+    intended = [r for r in log if r.get("dangerous_intended")]
+    if intended:
+        console.print(f"{len(intended)} DANGEROUS on purpose (corpus expects it):")
+        for r in intended:
+            console.print(f"  {r['skill_id']} {r['version']} — {r['dangerous_reason']}")
     slow = [r for r in log if (r.get("seconds") or 0) > 300]
     if slow:
         # delivery-plan criterion: under five minutes per skill.
