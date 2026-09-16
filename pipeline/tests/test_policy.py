@@ -81,23 +81,17 @@ class TestCriticalOverride:
         assert decision.verdict is FinalVerdict.WARNING
         assert decision.risk is not Risk.CRITICAL
 
-    def test_enforce_critical_is_idempotent(self):
-        stage1 = Stage1Result(injection_findings=[_injection("wallet_op")])
-        once = policy.enforce_critical(policy.decide(stage1, Stage2Result(), 100, CFG),
-                                       stage1, CFG)
-        twice = policy.enforce_critical(once, stage1, CFG)
-        assert (once.verdict, once.score) == (twice.verdict, twice.score)
+    def test_there_is_no_merge_path_left_to_reassert_row_1_after(self):
+        """`tighten` and `enforce_critical` existed to merge a model's verdict and then
+        re-assert row 1. STE-39 removed the merge, so both are gone rather than kept as code
+        that suggests a model can still move the verdict."""
+        assert not hasattr(policy, "tighten")
+        assert not hasattr(policy, "enforce_critical")
 
-    def test_enforce_critical_reasserts_after_a_bad_merge(self):
-        """Even if something upstream handed back SAFE/100, row 1 wins."""
-        stage1 = Stage1Result(injection_findings=[_injection("exfiltration")])
-        loose = policy.PolicyDecision(
-            FinalVerdict.SAFE, Risk.NONE, Recommendation.ALLOW, 100
-        )
-        fixed = policy.enforce_critical(loose, stage1, CFG)
-        assert fixed.verdict is FinalVerdict.DANGEROUS
-        assert fixed.score <= CFG.critical_max_score
-        assert "re-applied" in " ".join(fixed.reasons)
+    def test_verdict_rank_orders_strictness(self):
+        ranks = [policy.verdict_rank(v) for v in (FinalVerdict.SAFE, FinalVerdict.WARNING,
+                                                  FinalVerdict.DANGEROUS)]
+        assert ranks == sorted(ranks) and len(set(ranks)) == 3
 
 
 class TestSandboxEscape:
@@ -118,15 +112,14 @@ class TestAmbiguityBias:
         assert decision.verdict is FinalVerdict.WARNING
         assert decision.recommendation is Recommendation.REVIEW
 
-    def test_failed_llm_attempt_biases_to_warning(self):
-        """Row 5: a score that would otherwise be SAFE becomes WARNING when the model was
-        asked and could not answer."""
+    def test_the_decision_takes_no_model_input_at_all(self):
+        """Row 5 (a failed model attempt forces WARNING) was removed in STE-39. The policy
+        is a function of stage 1, stage 2 and the score; nothing about a model call."""
+        import inspect
+
+        assert "llm_inconclusive" not in inspect.signature(policy.decide).parameters
         stage1 = Stage1Result(initial_score=100)
-        confident = policy.decide(stage1, Stage2Result(), 100, CFG)
-        inconclusive = policy.decide(stage1, Stage2Result(), 100, CFG, llm_inconclusive=True)
-        assert confident.verdict is FinalVerdict.SAFE
-        assert inconclusive.verdict is FinalVerdict.WARNING
-        assert "never to SAFE" in " ".join(inconclusive.reasons)
+        assert policy.decide(stage1, Stage2Result(), 100, CFG).verdict is FinalVerdict.SAFE
 
     def test_high_injection_finding_can_never_be_safe(self):
         stage1 = Stage1Result(
@@ -173,42 +166,6 @@ class TestCleanPath:
         decision = policy.decide(Stage1Result(initial_score=10), Stage2Result(), 10, CFG)
         assert decision.verdict is FinalVerdict.DANGEROUS
         assert decision.recommendation is Recommendation.BLOCK
-
-
-class TestTighten:
-    def _base(self, verdict, risk, rec, score):
-        return policy.PolicyDecision(verdict, risk, rec, score)
-
-    def test_llm_may_raise_a_verdict(self):
-        merged = policy.tighten(
-            self._base(FinalVerdict.SAFE, Risk.LOW, Recommendation.ALLOW, 90),
-            self._base(FinalVerdict.DANGEROUS, Risk.HIGH, Recommendation.BLOCK, 20),
-        )
-        assert merged.verdict is FinalVerdict.DANGEROUS
-        assert merged.score == 20
-        assert merged.recommendation is Recommendation.BLOCK
-
-    def test_llm_may_not_lower_a_verdict(self):
-        merged = policy.tighten(
-            self._base(FinalVerdict.DANGEROUS, Risk.CRITICAL, Recommendation.BLOCK, 5),
-            self._base(FinalVerdict.SAFE, Risk.NONE, Recommendation.ALLOW, 100),
-        )
-        assert merged.verdict is FinalVerdict.DANGEROUS
-        assert merged.risk is Risk.CRITICAL
-        assert merged.recommendation is Recommendation.BLOCK
-        assert merged.score == 5
-
-    def test_score_is_the_minimum(self):
-        merged = policy.tighten(
-            self._base(FinalVerdict.WARNING, Risk.MEDIUM, Recommendation.REVIEW, 60),
-            self._base(FinalVerdict.WARNING, Risk.MEDIUM, Recommendation.REVIEW, 42),
-        )
-        assert merged.score == 42
-
-    def test_reasons_are_concatenated(self):
-        a = policy.PolicyDecision(FinalVerdict.SAFE, Risk.NONE, Recommendation.ALLOW, 100, ["a"])
-        b = policy.PolicyDecision(FinalVerdict.SAFE, Risk.NONE, Recommendation.ALLOW, 100, ["b"])
-        assert policy.tighten(a, b).reasons == ["a", "b"]
 
 
 class TestInjectionDeduction:

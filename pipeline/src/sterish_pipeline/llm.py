@@ -8,8 +8,11 @@ Three properties, in order of importance:
    third-party API is not an audit pipeline.
 2. **Structured.** The model answers by calling a tool whose ``input_schema`` is ``strict``,
    so the response is validated JSON before it reaches the pipeline, not prose to be parsed.
-3. **Advisory.** Nothing here decides anything. ``policy.tighten`` merges the answer into the
-   deterministic decision by taking the stricter half of each field.
+3. **Advisory.** Nothing here decides anything. Since STE-39 the answer is recorded as
+   ``AuditReport.llm_advisory`` and never merged into the verdict, in either direction: the
+   same skill returned three different model answers in five runs, and a verdict that moves
+   with the model cannot be reproduced. Requests ask for ``temperature`` 0 and a fixed
+   ``seed`` to narrow that variance; they do not make it safe to put on chain.
 
 The key is read from the environment and from nowhere else. It is never written to a config
 file, never logged and never placed in the verdict document.
@@ -250,6 +253,12 @@ class OpenAICompatibleClient:
             # prose, and prose is what this module exists to avoid parsing.
             "tool_choice": {"type": "function", "function": {"name": tool["name"]}},
         }
+        # STE-39 option 3. Omitted when configured as None, for a gateway or model that
+        # rejects the parameter outright.
+        if config.llm_temperature is not None:
+            body["temperature"] = config.llm_temperature
+        if config.llm_seed is not None:
+            body["seed"] = config.llm_seed
 
         try:
             response = httpx.post(
@@ -331,6 +340,10 @@ class AnthropicClient:
             ) from exc
 
         client = anthropic.Anthropic(api_key=self._api_key, timeout=config.llm_timeout_s)
+        extra: dict[str, Any] = {}
+        if config.llm_temperature is not None:
+            # Messages has no seed parameter; temperature is the knob it offers.
+            extra["temperature"] = config.llm_temperature
         message = client.messages.create(
             model=config.llm_model,
             max_tokens=config.llm_max_tokens,
@@ -343,6 +356,7 @@ class AnthropicClient:
                     "content": json.dumps(payload, ensure_ascii=False, sort_keys=True),
                 }
             ],
+            **extra,
         )
         for block in message.content:
             if getattr(block, "type", None) == "tool_use" and block.name == tool["name"]:

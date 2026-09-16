@@ -141,11 +141,18 @@ class TestFailSoftWithoutKey:
 
 
 # ======================================================================================
-# The model may only tighten
+# The model is advisory: recorded, never merged (STE-39)
 # ======================================================================================
-class TestLLMCannotDowngrade:
-    def test_llm_cannot_downgrade_verdict(self):
-        """A model answering SAFE over a deterministic DANGEROUS changes nothing."""
+def _document_bytes(run) -> bytes:
+    from sterish_pipeline import reports
+
+    return reports.canonical_bytes(run.verdict_json())
+
+
+class TestLLMIsAdvisoryOnly:
+    """Same bytes in, same document out — whatever the model says, or whether it answers."""
+
+    def test_a_lenient_model_does_not_lower_a_dangerous_verdict(self):
         client = FakeClient(answer=SAFE_ANSWER)
         run = run_audit(POISONED_PDF, llm_client=client)
         assert client.calls, "the fake client must actually have been called"
@@ -156,34 +163,89 @@ class TestLLMCannotDowngrade:
         assert run.document.score <= PipelineConfig().critical_max_score
         run.validate(submittable=True)
 
-    def test_llm_can_tighten_a_safe_verdict(self):
-        client = FakeClient(answer=DANGEROUS_ANSWER)
-        run = run_audit(SAFE_SKILL, llm_client=client)
-        assert run.document.verdict is Verdict.DANGEROUS
-        assert run.document.score == 3
-        run.validate()
-
-    def test_llm_agreeing_changes_nothing_material(self):
-        baseline = run_audit(SAFE_SKILL)
-        agreed = run_audit(
-            SAFE_SKILL,
-            llm_client=FakeClient(
-                answer={
-                    "verdict": "SAFE",
-                    "risk": "low",
-                    "score": baseline.document.score,
-                    "recommendation": "ALLOW",
-                    "rationale": "Declared endpoint, no hidden instructions.",
-                }
-            ),
-        )
-        assert agreed.document.verdict == baseline.document.verdict
-        assert agreed.document.score == baseline.document.score
-
-    def test_rationale_is_recorded_in_the_report_not_the_document(self):
+    def test_a_strict_model_does_not_raise_a_safe_verdict_either(self):
+        """Until STE-39 this went DANGEROUS/3. A model that can raise the verdict is a
+        model whose variance lands on chain."""
+        baseline = run_audit(SAFE_SKILL, PipelineConfig(use_llm=False))
         run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer=DANGEROUS_ANSWER))
-        assert any("SSH key" in reason for reason in run.report.policy_reasons)
+        assert run.document.verdict is Verdict.SAFE
+        assert run.document.score == baseline.document.score
+        run.validate(submittable=True)
+
+    def test_the_opinion_is_recorded_as_advisory_with_its_disagreement(self):
+        run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer=DANGEROUS_ANSWER))
+        advisory = run.report.llm_advisory
+        assert advisory is not None
+        assert advisory.verdict is FinalVerdict.DANGEROUS
+        assert advisory.score == 3
+        assert advisory.stricter_than_verdict is True
+        assert advisory.disagrees_with_verdict is True
+        assert "SSH key" in advisory.rationale
+
+    def test_an_agreeing_opinion_is_marked_as_agreeing(self):
+        run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer=SAFE_ANSWER))
+        assert run.report.llm_advisory.disagrees_with_verdict is False
+        assert run.report.llm_advisory.stricter_than_verdict is False
+
+    def test_a_lenient_opinion_is_a_disagreement_but_not_stricter(self):
+        run = run_audit(POISONED_PDF, llm_client=FakeClient(answer=SAFE_ANSWER))
+        assert run.report.llm_advisory.disagrees_with_verdict is True
+        assert run.report.llm_advisory.stricter_than_verdict is False
+
+    def test_the_rationale_never_reaches_the_document_or_the_reasons(self):
+        run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer=DANGEROUS_ANSWER))
         assert "SSH key" not in json.dumps(run.verdict_json())
+        assert not any("SSH key" in reason for reason in run.report.policy_reasons)
+
+    @pytest.mark.parametrize(
+        "client",
+        [
+            FakeClient(answer=SAFE_ANSWER),
+            FakeClient(answer=DANGEROUS_ANSWER),
+            FakeClient(answer={"verdict": "MALICIOUS"}),
+            FakeClient(raises=TimeoutError("gateway timed out")),
+            None,
+        ],
+        ids=["lenient", "strict", "invalid", "timeout", "no-model"],
+    )
+    @pytest.mark.parametrize("fixture", [SAFE_SKILL, POISONED_PDF], ids=["safe", "poisoned"])
+    def test_the_published_bytes_do_not_depend_on_the_model(self, fixture, client):
+        """The reproduction promise, stated as a test: the document — and so the
+        evidence_hash on chain — is byte-identical with or without a model, and whatever
+        the model answered."""
+        reference = run_audit(fixture, PipelineConfig(use_llm=False))
+        if client is None:
+            run = run_audit(fixture, PipelineConfig(use_llm=False))
+        else:
+            run = run_audit(fixture, llm_client=client)
+        assert _document_bytes(run) == _document_bytes(reference)
+        assert run.document.evidence_hash == reference.document.evidence_hash
+
+    def test_the_llm_trail_is_excluded_from_evidence_hash(self):
+        from sterish_pipeline.stages.stage3_verdict_synthesis import (
+            LLM_TRAIL_FIELDS,
+            compute_evidence_hash,
+        )
+
+        run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer=DANGEROUS_ANSWER))
+        before = compute_evidence_hash(run.report)
+        run.report.llm_notes = ["something entirely different"]
+        run.report.llm_model = "another-model"
+        run.report.llm_advisory = None
+        run.report.llm_used = False
+        run.report.llm_attempted = False
+        assert compute_evidence_hash(run.report) == before
+        assert LLM_TRAIL_FIELDS == {
+            "llm_used", "llm_attempted", "llm_model", "llm_notes", "llm_advisory",
+        }
+
+    def test_everything_else_is_still_hashed(self):
+        from sterish_pipeline.stages.stage3_verdict_synthesis import compute_evidence_hash
+
+        run = run_audit(SAFE_SKILL, PipelineConfig(use_llm=False))
+        before = compute_evidence_hash(run.report)
+        run.report.policy_reasons = [*run.report.policy_reasons, "tampered"]
+        assert compute_evidence_hash(run.report) != before
 
 
 # ======================================================================================
@@ -214,13 +276,15 @@ class TestFailureModes:
         with pytest.raises(LLMUnavailable):
             parse_opinion(answer, "claude-sonnet-5")
 
-    def test_invalid_answer_falls_back_to_the_baseline(self):
+    def test_invalid_answer_leaves_the_verdict_alone(self):
+        """Until STE-39 an attempted-but-inconclusive model forced WARNING (policy row 5).
+        Whether a gateway answered is a fact about the auditor's network, not the skill."""
         run = run_audit(SAFE_SKILL, llm_client=FakeClient(answer={"verdict": "MALICIOUS"}))
         assert run.report.llm_used is False
         assert run.report.llm_attempted is True
-        # Attempted and inconclusive -> row 5 -> WARNING, never SAFE.
-        assert run.document.verdict is Verdict.WARNING
-        assert run.document.recommendation is Recommendation.REVIEW
+        assert run.report.llm_advisory is None
+        assert run.document.verdict is Verdict.SAFE
+        assert run.document.recommendation is Recommendation.ALLOW
         run.validate()
 
     def test_exception_falls_back_to_the_baseline(self):
@@ -267,10 +331,17 @@ class TestPrompts:
         with pytest.raises(LLMUnavailable):
             load_prompt("no_such_prompt")
 
-    def test_synthesis_prompt_states_the_one_way_merge(self):
-        text = load_prompt("stage3_synthesis")
-        assert "advisory" in text.lower()
-        assert "cannot lower" in text.lower()
+    def test_synthesis_prompt_states_the_model_is_advisory_only(self):
+        text = load_prompt("stage3_synthesis").lower()
+        assert "advisory and recorded, never merged" in text
+        assert "not upward, not downward" in text
+
+    def test_synthesis_prompt_says_markdown_skills_have_no_declaration_surface(self):
+        """STE-39 part A: the model downgraded two catalogue skills "while declaring no
+        permissions or tools" — the category error STE-36 removed from the regexes."""
+        text = load_prompt("stage3_synthesis").lower()
+        assert "published as markdown has nowhere to declare anything" in text
+        assert "absence of declared permissions or tools is then not a" in " ".join(text.split())
 
     def test_prompt_is_sent_as_the_system_message(self):
         client = FakeClient(answer=DANGEROUS_ANSWER)

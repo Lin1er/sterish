@@ -55,6 +55,11 @@ class PipelineConfig(BaseModel):
     llm_model: str = "openai/gpt-5.6-luna"
     llm_timeout_s: int = 60
     llm_max_tokens: int = 2048
+    #: STE-39 option 3: ask for the least varied answer the backend offers. None omits the
+    #: parameter for a model that rejects it. The answer is advisory either way.
+    llm_temperature: float | None = 0.0
+    #: OpenAI-compatible backends only; the native Messages backend has no seed parameter.
+    llm_seed: int | None = 0
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> "PipelineConfig":

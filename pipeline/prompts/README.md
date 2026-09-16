@@ -12,11 +12,12 @@ the auditor was ever told to do.
 
 | | |
 |---|---|
-| Model | `PipelineConfig.llm_model` (default `claude-sonnet-5`) |
-| Key | `ANTHROPIC_API_KEY` environment variable **only**. Never a config file, never a literal. |
+| Model | `PipelineConfig.llm_model` (default `openai/gpt-5.6-luna` over the OpenAI-compatible gateway) |
+| Key | `LLM_API_KEY` (or `ANTHROPIC_API_KEY` for the native Messages backend) environment variable **only**. Never a config file, never a literal. |
+| Sampling | `temperature` 0 and `seed` 0 by default (`llm_temperature`, `llm_seed`; `None` omits them) |
 | Output | Structured, via tool use with `strict: true` — the model cannot return prose |
-| On failure | Fail-soft. The deterministic baseline stands; the reason is recorded in the internal report (`AuditReport.llm_notes`), never in the verdict document |
-| Authority | **Advisory only.** `policy.tighten` lets a model raise a verdict, never lower one |
+| On failure | Fail-soft. The verdict is unaffected; the reason is recorded in the internal report (`AuditReport.llm_notes`), never in the verdict document |
+| Authority | **Advisory, recorded, never merged** (STE-39). The answer is stored as `AuditReport.llm_advisory` and changes no verdict field in either direction; it is excluded from `evidence_hash` |
 
 ## Files
 
@@ -38,8 +39,15 @@ union, not replacement.
 (declared + injection), the stage-2 result, and the deterministic baseline verdict/risk/score.
 Output: tool call `emit_verdict` with `{verdict, risk, score, recommendation, rationale}`.
 
-Purpose: a judgement over the whole picture, in the frozen vocabulary. The output is merged
-with `policy.tighten`, so `SAFE` over a deterministic `DANGEROUS` changes nothing at all.
+Purpose: a judgement over the whole picture, in the frozen vocabulary, kept beside the
+deterministic verdict as `llm_advisory` with `stricter_than_verdict` / `disagrees_with_verdict`
+flags for human review. It used to be merged with `policy.tighten`; STE-39 removed that after the
+same skill returned three different answers in five runs.
+
+It states explicitly that an Agent Skill published as markdown has no permission surface, so the
+absence of declared permissions or tools is not a finding. Without that sentence the model
+downgraded `agentic-payments.x402` and `dapp.smart-accounts` "while declaring no permissions or
+tools" — the category error STE-36 had already removed from the regex scanner.
 
 ## Editing rules
 
