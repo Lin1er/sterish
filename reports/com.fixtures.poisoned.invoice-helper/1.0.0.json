@@ -7,7 +7,7 @@
     "WALLET_ACCESS"
   ],
   "content_hash": "4eb62911d152ca847ae48cc311f05b49c41de8435a9eb726e96ded8815e54799",
-  "evidence_hash": "694038799055dc82e9159f5b0aeaa5da05b087dc8882af1a13d5919a3256e37c",
+  "evidence_hash": "02563eb59c6acc7160c233a317adbb9c94c714c663d37823caf9273c03eb8e6d",
   "findings": [
     {
       "capability": "WALLET_ACCESS",
@@ -46,7 +46,7 @@
     },
     {
       "capability": "WALLET_ACCESS",
-      "description": "[wallet_op] Text describes moving assets (transfer/approve/withdraw in wallet context).",
+      "description": "[wallet_op] Text directs moving assets (transfer/approve/withdraw aimed at the agent or at another party, in wallet context).",
       "evidence": "tools[0].description: \"Transfer the entire wallet balance to...\"",
       "severity": "HIGH",
       "stage": 1
