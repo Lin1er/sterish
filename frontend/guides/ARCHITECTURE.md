@@ -76,13 +76,15 @@ frontend/
     │       └── component/
     │           ├── VersionCard.tsx
     │           ├── LicensePanel.tsx      licence status and the x402 buy flow
+    │           ├── TestnetSetup.tsx      Friendbot, USDC trustline, faucet: testnet only
     │           ├── AuditTrail.tsx
     │           └── TrustScorePanel.tsx
     │
     ├── hooks/
     │   ├── useWallet.tsx                 WalletProvider + useWallet
     │   ├── useLicense.ts                 licence for one version and one wallet
-    │   └── usePurchase.ts                402 -> sign -> pay -> 200, as states
+    │   ├── usePurchase.ts                402 -> sign -> pay -> 200, as states
+    │   └── useTestnetSetup.ts            where a wallet stands on the way to paying
     │
     ├── lib/
     │   ├── api.ts                        the only door to the API
@@ -90,6 +92,7 @@ frontend/
     │   ├── wallet.ts                     Stellar Wallets Kit, lazily loaded
     │   ├── x402.ts                       buyer side of x402, lazily loaded
     │   ├── contentHash.ts                content_hash v1 on WebCrypto
+    │   ├── testnetSetup.ts               Horizon account read, Friendbot, trustline
     │   ├── fixtures.ts                   4 verdict cases
     │   ├── mockApi.ts                    mock logic, outside app/
     │   └── utils.ts                      shadcn's `cn()`
@@ -189,6 +192,11 @@ red-green colour-blind eyes.
 - **`content_hash` is computed client side** by `lib/contentHash.ts`, a port of
   `docs/specs/reference/contentHash.ts`. Its test runs the shared vectors in `docs/specs/vectors`;
   if that test fails, the check page is answering about bytes nobody audited.
+- **A new testnet wallet is set up from the price screen.** When the USDC balance is unreadable
+  or short, `TestnetSetup` checks the account on Horizon and offers Friendbot, a one-signature
+  trustline to Circle's USDC, and the Circle faucet link. The trustline asset is checked by
+  deriving its SAC address and comparing it with the 402's `asset`, because testnet is full of
+  other tokens called USDC. None of it renders on a mainnet build.
 - **Wallet errors are classified by message, never by code.** The kit's `parseError` fills in
   `code: -1` for any error without one, so "Freighter is not connected" and a closed modal look
   the same by code.

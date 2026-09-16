@@ -174,11 +174,30 @@ export function usePurchase(
     }
   }, [agent, refreshLicence, skillId, state, version]);
 
+  /**
+   * Read the balance again while the quote is on screen. The testnet setup
+   * guide calls this after funding, trusting and topping up, so the quote
+   * does not keep saying "unavailable" about an account that is now ready.
+   */
+  const refreshBalance = useCallback(async () => {
+    if (!agent || state.step !== "quoted") return;
+    const { requirement } = state;
+    setState((current) =>
+      current.step === "quoted" ? { ...current, balance: undefined } : current,
+    );
+    const balance = await readTokenBalance(requirement.asset, agent);
+    setState((current) =>
+      current.step === "quoted" && current.requirement === requirement
+        ? { ...current, balance }
+        : current,
+    );
+  }, [agent, state]);
+
   const reset = useCallback(() => {
     generation.current += 1;
     inFlight.current = false;
     setState({ step: "idle" });
   }, []);
 
-  return { state, start, pay, reset };
+  return { state, start, pay, reset, refreshBalance };
 }

@@ -50,6 +50,16 @@ export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
   (IS_MAINNET ? "" : "https://soroban-testnet.stellar.org");
 
+/**
+ * Horizon, for the classic side of an account: whether it exists, its XLM, and
+ * its trustlines. Soroban RPC does not answer those questions.
+ */
+export const HORIZON_URL =
+  process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL ??
+  (IS_MAINNET
+    ? "https://horizon.stellar.org"
+    : "https://horizon-testnet.stellar.org");
+
 let kitPromise: Promise<KitModule> | null = null;
 
 /**
@@ -138,4 +148,22 @@ export async function signAuthEntry(
     address: opts.address,
     networkPassphrase: opts.networkPassphrase ?? NETWORK_PASSPHRASE,
   });
+}
+
+/**
+ * Sign a whole transaction envelope with the connected wallet.
+ *
+ * Only the testnet setup uses this, to add a USDC trustline. The x402 payment
+ * itself never asks for an envelope signature: see `signAuthEntry`.
+ */
+export async function signTransaction(
+  xdr: string,
+  opts: { address: string; networkPassphrase?: string },
+): Promise<string> {
+  const { StellarWalletsKit } = await loadKit();
+  const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+    address: opts.address,
+    networkPassphrase: opts.networkPassphrase ?? NETWORK_PASSPHRASE,
+  });
+  return signedTxXdr;
 }

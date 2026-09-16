@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import {
   AlertOctagon,
   Download,
@@ -18,8 +19,10 @@ import { useWallet } from "@/hooks/useWallet";
 import { ApiError } from "@/lib/api";
 import type { SkillArtifact, Verdict } from "@/lib/types";
 import { EXPLORER_BASE } from "@/lib/wallet";
+import { SETUP_AVAILABLE } from "@/lib/testnetSetup";
 import { formatBaseUnits, type PaymentFailure } from "@/lib/x402";
 import { shortAddress, shortHash } from "@/utils/format";
+import { TestnetSetup } from "./TestnetSetup";
 
 /**
  * Licence status and the buy flow, for one version.
@@ -185,17 +188,27 @@ function toneOf(state: PurchaseState): Tone {
 function Flow({
   skillId,
   version,
+  agent,
   state,
   onStart,
   onPay,
   onReset,
+  onRefreshBalance,
+  guideLatched,
+  setupReady,
 }: {
   skillId: string;
   version: string;
+  agent: string;
   state: PurchaseState;
   onStart: () => void;
   onPay: () => void;
   onReset: () => void;
+  onRefreshBalance: () => void;
+  /** The guide was on screen already; keep it there while the balance re-reads. */
+  guideLatched: boolean;
+  /** The guide has confirmed from Horizon that this wallet can pay. */
+  setupReady: boolean;
 }) {
   switch (state.step) {
     case "idle":
@@ -214,6 +227,12 @@ function Flow({
       const price = formatBaseUnits(requirement.amount);
       const short =
         typeof balance === "bigint" && balance < BigInt(requirement.amount);
+      const guideShown =
+        SETUP_AVAILABLE &&
+        (balance === null || short || (balance === undefined && guideLatched));
+      // While the guide is open, paying would only fail at the wallet, so the
+      // button waits for the guide to confirm the wallet is ready.
+      const payBlocked = short || (guideShown && !setupReady);
       return (
         <div className="mt-4">
           <p className="text-xs text-text-tertiary">
@@ -269,7 +288,17 @@ function Flow({
               </dd>
             </div>
           </dl>
-          {balance === null ? (
+          {guideShown ? (
+            // On testnet the fix is a few clicks away, so the guide replaces
+            // the warning: it checks the account and walks through what is
+            // missing, with the price above still in view.
+            <TestnetSetup
+              address={agent}
+              requirement={requirement}
+              onReady={onRefreshBalance}
+            />
+          ) : null}
+          {!SETUP_AVAILABLE && balance === null ? (
             // The SAC refuses to report a balance for an account with no USDC
             // trustline, which is the usual reason this read fails. Signing
             // would fail the same way, so it is said before the wallet opens.
@@ -279,19 +308,9 @@ function Flow({
               not go through either.
             </p>
           ) : null}
-          {short ? (
+          {!SETUP_AVAILABLE && short ? (
             <p className="mt-4 text-sm text-danger">
-              This account holds less than {price} USDC. Get testnet USDC from
-              the{" "}
-              <a
-                href="https://faucet.circle.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                Circle faucet
-              </a>{" "}
-              first.
+              This account holds less than {price} USDC.
             </p>
           ) : null}
           <p className="mt-4 max-w-3xl text-xs text-text-secondary">
@@ -300,7 +319,7 @@ function Flow({
             this account and cannot be transferred.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={onPay} disabled={short}>
+            <Button onClick={onPay} disabled={payBlocked}>
               <Wallet data-icon="inline-start" />
               Pay {price} USDC
             </Button>
@@ -428,6 +447,28 @@ export function LicensePanel({
   const agent = wallet.status === "connected" ? wallet.address : null;
   const licence = useLicense(skillId, version, agent);
   const purchase = usePurchase(skillId, version, agent);
+  // Stable across renders, because the setup guide calls it from an effect.
+  const { refreshBalance: refresh } = purchase;
+  const [setupReady, setSetupReady] = useState(false);
+  const onSetupReady = useCallback(() => {
+    setSetupReady(true);
+    void refresh();
+  }, [refresh]);
+
+  // Once the setup guide has been needed, it stays mounted while the balance is
+  // re-read. Unmounting it on the "reading" state and remounting on a failed
+  // read would reset its once-only refresh and loop for as long as the read
+  // keeps failing.
+  const quoted = purchase.state.step === "quoted" ? purchase.state : null;
+  const needsGuide =
+    quoted !== null &&
+    (quoted.balance === null ||
+      (typeof quoted.balance === "bigint" &&
+        quoted.balance < BigInt(quoted.requirement.amount)));
+  const [guideLatched, setGuideLatched] = useState(false);
+  if (needsGuide && !guideLatched) setGuideLatched(true);
+  if (quoted === null && guideLatched) setGuideLatched(false);
+  if (quoted === null && setupReady) setSetupReady(false);
 
   if (wallet.status === "restoring") {
     return (
@@ -554,10 +595,14 @@ export function LicensePanel({
         <Flow
           skillId={skillId}
           version={version}
+          agent={agent}
           state={purchase.state}
           onStart={() => void purchase.start()}
           onPay={() => void purchase.pay()}
           onReset={purchase.reset}
+          onRefreshBalance={onSetupReady}
+          guideLatched={guideLatched}
+          setupReady={setupReady}
         />
       </div>
     </Strip>
