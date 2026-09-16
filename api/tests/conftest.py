@@ -7,6 +7,11 @@ os.environ.setdefault(
 )
 os.environ.setdefault("STELLAR_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015")
 os.environ.setdefault("INDEXER_ENABLED", "0")
+# The limiter counts per middleware instance, and every test shares the one app, so a
+# suite past 100 requests started failing late tests with 429 from the outermost
+# middleware. tests/test_ratelimit.py builds its own app with an explicit limit, so
+# the limiter itself stays covered.
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "0")
 
 # x402 settings the paid-path tests assert on. Set here, not inherited: these tests
 # passed locally only because a developer shell had .env loaded, and CI — which has
@@ -33,16 +38,22 @@ def _isolated_db(tmp_path):
     so the one shared object is mutated in place via `object.__setattr__` and restored
     afterwards — patching `config.settings` itself would not reach those modules.
     """
-    from sterish_api import config, indexer
+    from sterish_api import config, indexer, payments
 
     db = tmp_path / "index.db"
     previous = config.settings.db_path
+    previous_payments = config.settings.payments_db_path
     object.__setattr__(config.settings, "db_path", str(db))
+    # The payments ledger too: a settlement recorded by one test must never look
+    # "owed" to the next one.
+    object.__setattr__(config.settings, "payments_db_path", str(tmp_path / "payments.db"))
     indexer.init_db()
+    payments.init_db()
     try:
         yield db
     finally:
         object.__setattr__(config.settings, "db_path", previous)
+        object.__setattr__(config.settings, "payments_db_path", previous_payments)
 
 
 @pytest.fixture

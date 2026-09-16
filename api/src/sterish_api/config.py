@@ -26,6 +26,10 @@ class Settings:
     rpc_url: str
     network_passphrase: str
     db_path: str
+    # Settled payments still owed a licence (STE-42). NOT a cache: it is the only
+    # record of money that moved, so it lives apart from db_path and is never
+    # deleted by an index rebuild. See payments.py.
+    payments_db_path: str
     rate_limit_per_minute: int
     indexer_enabled: bool
     indexer_poll_seconds: int
@@ -117,6 +121,7 @@ def load_settings() -> Settings:
         rpc_url=os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org").strip(),
         network_passphrase=os.getenv("STELLAR_NETWORK_PASSPHRASE", TESTNET_PASSPHRASE),
         db_path=os.getenv("STERISH_DB_PATH", "sterish_index.db"),
+        payments_db_path=os.getenv("STERISH_PAYMENTS_DB_PATH", "sterish_payments.db"),
         rate_limit_per_minute=_env_int("RATE_LIMIT_PER_MINUTE", 100),
         indexer_enabled=os.getenv("INDEXER_ENABLED", "1") not in ("0", "false", "False"),
         indexer_poll_seconds=_env_int("INDEXER_POLL_SECONDS", 8),

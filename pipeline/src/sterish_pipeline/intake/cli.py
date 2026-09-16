@@ -455,6 +455,220 @@ def seed(
         raise SystemExit(1)
 
 
+@intake.command("publish-artifacts")
+@click.option("--corpus", "corpus_dir", default=str(DEFAULT_CORPUS), type=click.Path())
+@click.option(
+    "--out",
+    "out_dir",
+    required=True,
+    type=click.Path(),
+    help="Artifact root served by /use (STERISH_SKILLS_DIR), e.g. ../deploy/artifacts",
+)
+@click.option(
+    "--label",
+    "labels",
+    multiple=True,
+    # `demo` since STE-18: the demo set includes SAFE versions that are for sale too.
+    # Anything not SAFE on chain is skipped whatever its label, so a wider default
+    # cannot put an unsold skill up for sale.
+    default=("catalog", "safe", "demo"),
+    help="Corpus labels to consider. Repeatable. Default: catalog, safe, demo.",
+)
+@click.option("--json-out", type=click.Path(), default=None, help="Write the result as JSON")
+def publish_artifacts(
+    corpus_dir: str, out_dir: str, labels: tuple[str, ...], json_out: str | None
+) -> None:
+    """Publish the artifacts `/use` sells, for every version the chain calls SAFE.
+
+    An artifact is written only when three hashes agree: the bytes on disk, the corpus
+    index, and the `content_hash` the registry holds for that exact version. And only
+    when the on-chain verdict is SAFE — anything else is never sold, so publishing its
+    bytes would only put them somewhere they do not belong.
+
+    Why this exists (STE-42): `/use` used to settle the payment and mint the licence
+    before it looked for the artifact, and only one of the twelve SAFE catalogue
+    skills had one. The API now refuses to price anything it cannot deliver, which
+    makes this command the thing that decides what is for sale.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    from sterish_pipeline import onchain
+
+    cfg = PipelineConfig.load(None)
+    for name, value in (
+        ("registry_contract_id", os.getenv("REGISTRY_CA") or os.getenv("REGISTRY_CONTRACT_ID")),
+        ("rpc_url", os.getenv("STELLAR_RPC_URL")),
+        ("network_passphrase", os.getenv("STELLAR_NETWORK_PASSPHRASE")),
+    ):
+        if value:
+            setattr(cfg, name, value)
+    if not cfg.registry_contract_id:
+        raise click.ClickException("REGISTRY_CA (or REGISTRY_CONTRACT_ID) is not set")
+
+    corpus = Corpus(corpus_dir)
+    wanted = set(labels)
+    entries = [e for e in sorted(corpus.load(), key=lambda e: e.skill_id) if e.label in wanted]
+    if not entries:
+        console.print(f"[red]no corpus entries with label(s) {sorted(wanted)}[/red]")
+        raise SystemExit(1)
+
+    root = Path(out_dir)
+    root.mkdir(parents=True, exist_ok=True)
+
+    table = Table("skill_id", "version", "result")
+    log: list[dict] = []
+    failures: list[str] = []
+
+    for entry in entries:
+        row = {"skill_id": entry.skill_id, "version": entry.version}
+
+        problems = corpus.verify(entry)
+        if problems:
+            failures.extend(problems)
+            row["status"] = "corpus_integrity_failed"
+            table.add_row(entry.skill_id, entry.version, "[red]corpus bytes drifted[/red]")
+            log.append(row)
+            continue
+
+        try:
+            record = onchain.get_version(
+                cfg, cfg.registry_contract_id, entry.skill_id, entry.version
+            )
+        except onchain.ContractCallError as exc:
+            if exc.code in (3, 4):  # SkillNotFound / VersionNotFound: not on chain
+                row["status"] = "not_on_chain"
+                table.add_row(entry.skill_id, entry.version, "[yellow]not on chain[/yellow]")
+                log.append(row)
+                continue
+            failures.append(f"{entry.skill_id}: {exc}")
+            row["status"] = "chain_error"
+            table.add_row(entry.skill_id, entry.version, "[red]chain error[/red]")
+            log.append(row)
+            continue
+        except onchain.OnChainError as exc:
+            failures.append(f"{entry.skill_id}: {exc}")
+            row["status"] = "chain_error"
+            table.add_row(entry.skill_id, entry.version, "[red]chain error[/red]")
+            log.append(row)
+            continue
+
+        verdict = _onchain_verdict(record.get("verdict"))
+        onchain_hash = bytes(record.get("content_hash") or b"").hex()
+
+        if onchain_hash != entry.content_hash:
+            # Same name, different bytes: selling these would sell something the audit
+            # never saw. A hard failure, not a skip.
+            failures.append(
+                f"{entry.skill_id}@{entry.version}: corpus hash {entry.content_hash} "
+                f"is not the on-chain content_hash {onchain_hash}"
+            )
+            row["status"] = "hash_mismatch"
+            table.add_row(entry.skill_id, entry.version, "[red]hash != chain[/red]")
+            log.append(row)
+            continue
+
+        if verdict != "SAFE":
+            row["status"] = "not_safe"
+            row["verdict"] = verdict
+            table.add_row(entry.skill_id, entry.version, f"[yellow]{verdict}, not sold[/yellow]")
+            log.append(row)
+            continue
+
+        files = corpus.read_files(entry)
+        target = root / entry.skill_id / entry.version
+
+        if target.is_dir():
+            from sterish_pipeline.content_hash import read_skill_files
+
+            try:
+                if content_hash(read_skill_files(target)) == entry.content_hash:
+                    # Right bytes can still sit behind wrong modes (an older publish
+                    # renamed a 0700 mkdtemp into place). Repair them, or the API's
+                    # unprivileged user keeps failing to read a skill "for sale".
+                    _make_world_readable(target)
+                    row["status"] = "unchanged"
+                    table.add_row(entry.skill_id, entry.version, "[green]already published[/green]")
+                    log.append(row)
+                    continue
+            except Exception:  # noqa: BLE001 - an unreadable old copy is replaced below
+                pass
+
+        # Written to a sibling temp directory and swapped in, so /use never reads a
+        # half-written artifact, and a stray old file cannot survive into the new set.
+        target.parent.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix=f".{entry.version}.", dir=target.parent))
+        try:
+            # mkdtemp creates 0700. Renamed into place as-is, a publish run as root on
+            # the host leaves an artifact the API's unprivileged user cannot read, and
+            # a skill that is "for sale" fails at the moment of sale.
+            staging.chmod(0o755)
+            for path, data in files.items():
+                destination = staging / path
+                for parent in reversed(destination.relative_to(staging).parents[:-1]):
+                    (staging / parent).mkdir(mode=0o755, exist_ok=True)
+                    (staging / parent).chmod(0o755)
+                destination.write_bytes(data)
+                destination.chmod(0o644)
+
+            from sterish_pipeline.content_hash import read_skill_files
+
+            written = content_hash(read_skill_files(staging))
+            if written != entry.content_hash:
+                raise click.ClickException(
+                    f"{entry.skill_id}: written artifact hashes to {written}, "
+                    f"expected {entry.content_hash}"
+                )
+            if target.exists():
+                shutil.rmtree(target)
+            staging.rename(target)
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+
+        row["status"] = "published"
+        row["content_hash"] = entry.content_hash
+        table.add_row(entry.skill_id, entry.version, "[green]published[/green]")
+        log.append(row)
+
+    console.print(table)
+    for_sale = [r for r in log if r["status"] in ("published", "unchanged")]
+    console.print(
+        f"\n{len(for_sale)} for sale "
+        f"({sum(1 for r in log if r['status'] == 'published')} newly published), "
+        f"{sum(1 for r in log if r['status'] == 'not_on_chain')} not on chain, "
+        f"{sum(1 for r in log if r['status'] == 'not_safe')} not SAFE, "
+        f"{len(failures)} failed."
+    )
+
+    if json_out:
+        Path(json_out).write_text(json.dumps(log, indent=2), encoding="utf-8")
+
+    if failures:
+        console.print("[bold red]Failures:[/bold red]")
+        for failure in failures:
+            console.print(f"  [red]x[/red] {failure}")
+        raise SystemExit(1)
+
+
+def _make_world_readable(root: Path) -> None:
+    """Directories 0755, files 0644, for an artifact tree the API reads as another user."""
+    root.chmod(0o755)
+    for path in root.rglob("*"):
+        path.chmod(0o755 if path.is_dir() else 0o644)
+
+
+def _onchain_verdict(raw: object) -> str:
+    """`['Safe']` -> `SAFE`. Anything unrecognised is UNAUDITED, never SAFE."""
+    if isinstance(raw, (list, tuple)) and raw:
+        raw = raw[0]
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", "replace")
+    name = str(raw).upper()
+    return name if name in {"SAFE", "DANGEROUS", "WARNING", "UNAUDITED"} else "UNAUDITED"
+
+
 def _load_existing(corpus: Corpus) -> dict[tuple[str, str], CorpusEntry]:
     """Existing entries by (skill_id, version).
 

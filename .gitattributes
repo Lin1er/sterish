@@ -1,9 +1,13 @@
+# Force LF line endings everywhere — prevents CRLF breakage on Windows
+# (core.autocrlf=true converts on checkout, breaking byte-for-byte tests)
+#
+# This default comes FIRST. In gitattributes the last matching line wins, and it
+# used to sit at the bottom, where it silently overrode the `-text` rules below:
+# `git check-attr text` reported `auto` for corpus files the whole time.
+* text=auto eol=lf
+
 # Corpus snapshots carry recorded per-file digests over their RAW bytes
 # (see docs/specs/content-hash.md and pipeline/corpus/index.json). Git must
 # never translate their line endings, or the file-digest integrity check in
 # `intake verify` fails on checkout.
 pipeline/corpus/** -text
-
-# Force LF line endings everywhere — prevents CRLF breakage on Windows
-# (core.autocrlf=true converts on checkout, breaking byte-for-byte tests)
-* text=auto eol=lf

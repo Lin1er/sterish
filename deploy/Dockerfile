@@ -39,20 +39,25 @@ COPY --from=build --chown=sterish:sterish /src /src
 
 ENV PATH="/src/api/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    STERISH_DB_PATH=/data/sterish_index.db
+    STERISH_DB_PATH=/data/sterish_index.db \
+    STERISH_PAYMENTS_DB_PATH=/payments/sterish_payments.db
 
-# Create the mount point owned by the runtime user. Docker seeds an empty named
+# Create the mount points owned by the runtime user. Docker seeds an empty named
 # volume from the image, ownership included; without this the volume arrives
 # owned by root and the unprivileged process dies at startup with
 # "unable to open database file".
-RUN mkdir -p /data && chown sterish:sterish /data
+#
+# /payments is a separate mount from /data on purpose (STE-42): /data is a cache
+# that the runbook says to delete, /payments records settled money still owed a
+# licence and must survive that.
+RUN mkdir -p /data /payments && chown sterish:sterish /data /payments
 
 WORKDIR /src/api
 USER sterish
 
 # The index is a cache, but it lives on a volume so a restart does not re-walk the
 # whole retained ledger range every time.
-VOLUME ["/data"]
+VOLUME ["/data", "/payments"]
 EXPOSE 8000
 
 # Fails the container when the chain cannot be read — /health returns 503 in that

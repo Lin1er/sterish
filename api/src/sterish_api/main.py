@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import chain, indexer, x402
+from . import chain, indexer, payments, x402
 from .chain import ChainError, ContractError, NotConfiguredError
 from .config import settings
 from .errors import (
@@ -53,6 +53,8 @@ async def lifespan(app: FastAPI):
     # and the evidence lookups then read an empty index instead of erroring on a
     # missing table.
     indexer.init_db()
+    # The payments ledger is not a cache (STE-42): created here, never rebuilt.
+    payments.init_db()
 
     task = None
     if settings.indexer_enabled:
@@ -89,6 +91,7 @@ app.add_middleware(
         "X-PAYMENT-RESPONSE",
         "X-STERISH-LICENSE",
         "X-STERISH-LICENSE-TX",
+        "X-STERISH-SETTLEMENT-TX",
     ],
 )
 app.add_middleware(RateLimitMiddleware)

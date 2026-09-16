@@ -348,6 +348,78 @@ gate.
 - **`/supported` reports `areFeesSponsored: true`**, which means the buying agent needs no XLM at
   all — it signs an auth entry and the facilitator assembles and pays for the transaction.
 
+## On-chain evidence — nothing undeliverable is sold (STE-42)
+
+**The bug.** `/use` settled the USDC and minted the licence *before* it looked for the artifact.
+Only `com.sterish.weather-lookup@1.0.0` had one, so every other SAFE version — including all
+12 catalogue skills seeded in STE-18 — offered a 402, took 0.10 USDC, minted, and then answered
+`404 ARTIFACT_NOT_FOUND`. The STE-19 proof passed only because it happened to buy that one skill.
+A second hole in the same path: the payer was read from `X-AGENT-ADDRESS`, because the Stellar
+exact payload carries no payer, so a client that omitted the header was settled and then told
+`400 UNKNOWN_PAYER` with no licence.
+
+**Fixed and proven on testnet, 15 September 2026**, API running locally against the deployed
+contracts and the live OZ Channels facilitator, driven by `api/scripts/e2e_paid_path.py` with the
+real x402 client (`demo/x402-buyer/buy.js`). Every claim was checked against the ledger, not
+against what the API answered. Full record: [`evidence/ste-42-e2e-paid-path-2026-09-15.json`](evidence/ste-42-e2e-paid-path-2026-09-15.json).
+
+| | |
+|---|---|
+| Artifacts published | 14 by `intake publish-artifacts` (12 catalogue + 2 safe fixtures), each written only after bytes, corpus index and on-chain `content_hash` agreed and the on-chain verdict was SAFE |
+| Every SAFE row in the registry | **15 for sale (402), 33 not offered (404, no challenge), 0 anything else** |
+| DANGEROUS `com.fixtures.poisoned.token-drainer@1.0.0` | 403, no challenge |
+| Agent (fresh, no history) | `GAUJNTTBOZ4YONBUHLMKQOJGQNIHBN423ID26AKQ62BVK3HKKTJDMD4V` |
+| Funding (create + trustline + 0.2 USDC, one tx) | [`18cf690533f75618…`](https://stellar.expert/explorer/testnet/tx/18cf690533f756183fe7fcfc8af9cec6a54734a8b23b154ffe936aca613d5777) |
+| Bought `org.stellar.skills.agentic-payments.x402@2026.8.31` **with no `X-AGENT-ADDRESS`** | settlement [`73a5124de3b85434…`](https://stellar.expert/explorer/testnet/tx/73a5124de3b854341f3bbeacf45ff6304ee6b59fa8072d16c43c3a16d6320221) · mint [`858c136e206a3a03…`](https://stellar.expert/explorer/testnet/tx/858c136e206a3a037baa81dd68c54e3a6ab6b619adca392e0337f5ef6173fdb2) |
+
+Verified from outside the API:
+
+- the agent's USDC balance dropped by **exactly 0.1**, and `payTo` received at least 0.1
+- `has_license(agent, skill, version)` read **true** from the tokens contract
+- `content_hash` of the served bytes = the on-chain `a1728e0400eb3bc9…`
+- the same agent then **signed a second payment** for the licence it already held, again without
+  the header: served `held`, **no settlement**, balance unchanged
+
+The failure paths that cannot be forced on a live network — a mint that fails after settlement, a
+mint whose confirmation times out but lands, concurrent payments from one payer, a facilitator
+that verifies without naming a payer — are covered offline in `api/tests/test_use_x402.py`, each
+asserting how many times settle ran.
+
+### Re-verified against Registry v2 (16 September 2026)
+
+STE-44 moved the Registry and Tokens to new addresses, and STE-18 added demo skills. After rebasing
+onto that `main`, the same e2e was run again with the API pointed at **Registry v2**
+`CCZJN366…` and **Tokens v2** `CB6VK4EX…`. Record:
+[`evidence/ste-42-e2e-paid-path-v2-2026-09-16.json`](evidence/ste-42-e2e-paid-path-v2-2026-09-16.json).
+
+| | |
+|---|---|
+| Artifacts published against v2 | 16 skill versions: 12 catalogue (`cctp` is DANGEROUS on chain), 2 safe fixtures, and the SAFE demo versions `release-notes` 1.0.0 and `changelog-writer` 1.0.0. 6 refused as not SAFE on chain |
+| SAFE rows in `/skills` | **15 for sale, 0 not offered**, nothing else |
+| Agent (no `X-AGENT-ADDRESS`) | `GCF76SG6QUBTJHK6AEFPS22TOB6JO5TKXXR5FW3QSDFOFLNXNLCJTXSC` |
+| Settlement · mint | [`ea78a0348640629a…`](https://stellar.expert/explorer/testnet/tx/ea78a0348640629ae8e96a4de8afdf6fab57b8f4414e240064995ab07b43bea4) · [`f73dfdfc46b35d62…`](https://stellar.expert/explorer/testnet/tx/f73dfdfc46b35d6235294736b51004a946d740b2ead0b29d5a6fe244036bd126) |
+
+Same results as on v1: exactly 0.1 USDC paid, `has_license` true on Tokens v2, served bytes hash to
+the on-chain `content_hash`, and a second signed payment for the held licence settles nothing.
+
+`publish-artifacts` now includes the `demo` label by default, because the demo set contains SAFE
+versions that are for sale too.
+
+`deploy/artifacts/` is operator-supplied and gitignored (STE-25), so merging does not put artifacts
+on the server. **The redeploy for this ticket must run, on CT 204:**
+
+```bash
+cd /opt/sterish/deploy
+docker compose --env-file .env --profile tools run --rm publish-artifacts
+```
+
+(On 16 September the v2-verified artifacts were already copied to CT 204 as a mitigation, STE-45;
+the command above is idempotent and leaves matching artifacts untouched.)
+
+`verify.sh` sends its own User-Agent for that check. Cloudflare answers the default
+`Python-urllib/3.x` agent with `403 error code: 1010`, an HTML page that is not an answer about
+`/use` at all.
+
 ## Backend deployment (STE-25)
 
 A Docker Compose stack in `deploy/`: the API (with the indexer running inside its process) plus

@@ -42,6 +42,10 @@ services:
       STERISH_SKILLS_DIR: /artifacts
     volumes:
       - index:/data
+      # Settled payments still owed a licence (STE-42). NOT the cache: never remove
+      # this volume when rebuilding the index — it is the only record that a buyer
+      # paid and has not received their licence yet.
+      - payments:/payments
       # Pinned artifacts served by /use. Read-only: this service publishes them,
       # it never writes them.
       - ${STERISH_ARTIFACTS_DIR:-./artifacts}:/artifacts:ro
@@ -50,6 +54,27 @@ services:
       - ${STERISH_REPORTS_DIR_HOST:-../reports}:/reports:ro
     expose:
       - "8000"
+
+  # One-shot: fill ./artifacts with what /use may sell (STE-42). Not started by `up`.
+  #   docker compose --env-file .env --profile tools run --rm publish-artifacts
+  # Same image as the api, so the hashing is the exact code /use runs. Writes only
+  # versions whose bytes, corpus index and on-chain content_hash agree and whose
+  # on-chain verdict is SAFE. Runs as root because the host's ./artifacts is usually
+  # root-owned; the command writes 0755/0644 so the unprivileged api can read it.
+  publish-artifacts:
+    profiles: ["tools"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    user: "0:0"
+    environment:
+      REGISTRY_CA: ${REGISTRY_CONTRACT_ID:-}
+      STELLAR_RPC_URL: ${STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}
+      STELLAR_NETWORK_PASSPHRASE: ${STELLAR_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
+    command: ["sterish", "intake", "publish-artifacts", "--corpus", "/corpus", "--out", "/artifacts"]
+    volumes:
+      - ../pipeline/corpus:/corpus:ro
+      - ${STERISH_ARTIFACTS_DIR:-./artifacts}:/artifacts
 
   caddy:
     image: caddy:2-alpine
@@ -90,5 +115,6 @@ services:
 
 volumes:
   index:
+  payments:
   caddy_data:
   caddy_config:
