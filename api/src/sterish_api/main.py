@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import chain, indexer, payments, x402
+from . import chain, indexer, payments, proofs, x402
 from .chain import ChainError, ContractError, NotConfiguredError
 from .config import settings
 from .errors import (
@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
     indexer.init_db()
     # The payments ledger is not a cache (STE-42): created here, never rebuilt.
     payments.init_db()
+    proofs.init_db()
 
     task = None
     if settings.indexer_enabled:

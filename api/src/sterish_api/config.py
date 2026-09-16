@@ -60,6 +60,10 @@ class Settings:
     # (STE-33). Not a thread pool size for the app — FastAPI already has one; this
     # bounds the fan-out *inside* one handler. See fanout.py.
     chain_concurrency: int
+    # Lifetime of a licence ownership challenge (STE-48), seconds. Long enough for a
+    # human to approve a wallet prompt, short enough that a captured signature is
+    # worthless soon after. Clamped to [30, 900].
+    proof_ttl_seconds: int
 
     @property
     def network(self) -> str:
@@ -127,6 +131,7 @@ def load_settings() -> Settings:
         indexer_poll_seconds=_env_int("INDEXER_POLL_SECONDS", 8),
         indexer_chunk_ledgers=_env_int("INDEXER_CHUNK_LEDGERS", 4000),
         report_base_url=os.getenv("REPORT_BASE_URL", "").rstrip("/"),
+        proof_ttl_seconds=min(900, max(30, _env_int("STERISH_PROOF_TTL_SECONDS", 300))),
     )
 
 
