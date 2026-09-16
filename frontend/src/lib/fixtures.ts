@@ -56,11 +56,16 @@ function evidence(opts: { audited: boolean; evidenceHash?: string }): Evidence {
 export const FIXTURE_VERSIONS: Record<string, VersionCheck> = {
   // SAFE, and the audited version is NOT the latest: exercises the section 3.3
   // warning path, the exact confusion the spec was rewritten to stop.
+  //
+  // The only fixture hash that is real. It is the content_hash v1 of
+  // FIXTURE_ARTIFACTS below, computed with docs/specs/reference/content_hash.py,
+  // so the mock closes the loop STE-22 is about: buy the skill, save the files,
+  // drop them into the check page, and get SAFE back for exactly those bytes.
   "com.acme.pdf-suite@0.9.0": {
     skill_id: "com.acme.pdf-suite",
     version: "0.9.0",
     content_hash:
-      "a67ded9f1b2c3d4e5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c0d5",
+      "13300ad8c8718f1878092e6e6b0c8d8611660e1dfb1b70026469831de741cc76",
     verdict: "SAFE",
     trust_score: 88,
     is_verified: true,
@@ -352,3 +357,39 @@ export const FIXTURE_FEED_RESPONSE: FeedResponse = {
   indexer_enabled: true,
   last_indexed_ledger: 4600100,
 };
+
+/**
+ * What `GET /use` serves for the one licensable fixture, path to text. Only
+ * SAFE versions are ever served, so only SAFE versions have an artifact.
+ */
+export const FIXTURE_ARTIFACTS: Record<string, Record<string, string>> = {
+  "com.acme.pdf-suite@0.9.0": {
+    "SKILL.md":
+      "# PDF Suite\n\nExtracts text and tables from PDF files the agent already has on disk.\n\n## Permissions\n\n- reads files passed to it\n- no network access\n- no wallet access\n",
+    "tools/extract.py":
+      'def extract_text(path):\n    """Return the text of every page in the PDF at path."""\n    raise NotImplementedError("fixture: the mock serves this file, it never runs it")\n',
+  },
+};
+
+/**
+ * The x402 terms the mock asks for, copied from spec section 3.7 and the live
+ * deployment: 0.10 USDC on testnet, paid to the developer account.
+ *
+ * These are real testnet addresses on purpose. Building the payment runs a
+ * genuine simulation of the USDC transfer against Soroban RPC, so a wallet
+ * without testnet USDC fails here exactly as it would against the live API.
+ * The mock never settles anything, so no USDC moves.
+ */
+export const FIXTURE_PAYMENT_TERMS = {
+  scheme: "exact",
+  network: "stellar:testnet",
+  amount: "1000000",
+  asset: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+  payTo: "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU",
+  maxTimeoutSeconds: 300,
+  extra: { areFeesSponsored: true },
+} as const;
+
+/** The tokens contract `GET /license` names, the v2 address from STE-44. */
+export const FIXTURE_TOKENS_CONTRACT_ID =
+  "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T";

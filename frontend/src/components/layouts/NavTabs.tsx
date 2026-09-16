@@ -6,13 +6,14 @@ import { usePathname } from "next/navigation";
 const DESTINATIONS = [
   { href: "/", label: "Registry" },
   { href: "/activity", label: "Audit feed" },
+  { href: "/check", label: "Check" },
 ];
 
 /**
  * Top-level destinations, as tabs.
  *
  * Tabs rather than a bottom navigation bar, which was the alternative. There
- * are two destinations today and STE-22 adds a third; a fixed bar for that is
+ * are three destinations since STE-22 added the check page; a fixed bar for that is
  * a lot of permanent screen furniture, and it would sit on top of the footer,
  * where the network chip lives. That chip is the only thing telling a visitor
  * these numbers come from testnet, so covering it is the one thing the layout

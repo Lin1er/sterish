@@ -11,9 +11,10 @@ import type { Verdict } from "@/lib/types";
  * skill visibly blocked" is a claim this project makes and has to show.
  *
  * Every line here is a fact the API or the contract guarantees. There is no
- * findings summary because the API does not serve one: GET /reports is still
- * PLANNED and report_uri is null on every live version. Inventing a reason
- * would be exactly the unverifiable claim Sterish exists to remove.
+ * findings summary: the verdict response carries none, and the report behind
+ * `evidence.report_uri` is off chain and mutable until its bytes are checked
+ * against `evidence_hash`. Paraphrasing it here would be exactly the
+ * unverifiable claim Sterish exists to remove.
  */
 const BANNER = {
   DANGEROUS: {

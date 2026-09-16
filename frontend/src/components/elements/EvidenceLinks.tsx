@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
-import { CopyHash } from "@/modules/skill-detail/component/CopyHash";
+import { CopyHash } from "./CopyHash";
 import type { Evidence } from "@/lib/types";
 
 /**
@@ -85,12 +85,13 @@ export function EvidenceLinks({ evidence }: { evidence: Evidence }) {
             <ExternalLink className="size-3" aria-hidden />
           </a>
         ) : (
-          // GET /reports is still PLANNED in the spec and the live API serves
-          // report_uri as null for every version. Saying so is better than an
+          // GET /reports is live since STE-32, but the API only advertises a
+          // report_uri when a report actually exists, and versions audited
+          // before report publishing have none. Saying so is better than an
           // empty cell that reads like an oversight, and far better than
           // linking somewhere that would 404.
           <span className="text-xs text-text-tertiary">
-            not published yet
+            not published for this version
           </span>
         )}
       </Row>

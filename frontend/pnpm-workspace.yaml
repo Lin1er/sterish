@@ -22,3 +22,6 @@ allowBuilds:
   secp256k1: false
   unrs-resolver: true
   utf-8-validate: false
+minimumReleaseAgeExclude:
+  - '@x402/core@2.26.0'
+  - '@x402/stellar@2.26.0'

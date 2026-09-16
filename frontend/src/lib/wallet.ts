@@ -28,6 +28,38 @@ export const EXPLORER_BASE = IS_MAINNET
   ? "https://stellar.expert/explorer/public"
   : "https://stellar.expert/explorer/testnet";
 
+/**
+ * The passphrase every signature is bound to. A signature made for one network
+ * is invalid on the other, so this is passed to the wallet explicitly rather
+ * than left to whichever network the wallet happens to be set to.
+ */
+export const NETWORK_PASSPHRASE = IS_MAINNET
+  ? "Public Global Stellar Network ; September 2015"
+  : "Test SDF Network ; September 2015";
+
+/** The CAIP-2 id x402 uses for the same network (spec §3.7). */
+export const X402_NETWORK = IS_MAINNET ? "stellar:pubnet" : "stellar:testnet";
+
+/**
+ * Soroban RPC for the client's own reads: the USDC balance before a purchase,
+ * and the simulation @x402/stellar runs while building the payment. Mainnet has
+ * no public default, so a mainnet build without this variable fails loudly at
+ * the first read instead of quietly asking testnet.
+ */
+export const RPC_URL =
+  process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
+  (IS_MAINNET ? "" : "https://soroban-testnet.stellar.org");
+
+/**
+ * Horizon, for the classic side of an account: whether it exists, its XLM, and
+ * its trustlines. Soroban RPC does not answer those questions.
+ */
+export const HORIZON_URL =
+  process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL ??
+  (IS_MAINNET
+    ? "https://horizon.stellar.org"
+    : "https://horizon-testnet.stellar.org");
+
 let kitPromise: Promise<KitModule> | null = null;
 
 /**
@@ -96,4 +128,42 @@ export function walletErrorMessage(cause: unknown): string {
     return (cause as { message: string }).message;
   }
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+/**
+ * Sign one Soroban authorisation entry with the connected wallet.
+ *
+ * This is the whole of what an x402 payment asks of the wallet. The payment is
+ * a USDC `transfer` whose network fee the facilitator sponsors, so the buyer
+ * never signs or submits a transaction envelope, only the auth entry that says
+ * "this account agrees to this transfer". The shape matches SEP-43, which is
+ * what `@x402/stellar` expects of a signer.
+ */
+export async function signAuthEntry(
+  authEntry: string,
+  opts: { address: string; networkPassphrase?: string },
+): Promise<{ signedAuthEntry: string; signerAddress?: string }> {
+  const { StellarWalletsKit } = await loadKit();
+  return StellarWalletsKit.signAuthEntry(authEntry, {
+    address: opts.address,
+    networkPassphrase: opts.networkPassphrase ?? NETWORK_PASSPHRASE,
+  });
+}
+
+/**
+ * Sign a whole transaction envelope with the connected wallet.
+ *
+ * Only the testnet setup uses this, to add a USDC trustline. The x402 payment
+ * itself never asks for an envelope signature: see `signAuthEntry`.
+ */
+export async function signTransaction(
+  xdr: string,
+  opts: { address: string; networkPassphrase?: string },
+): Promise<string> {
+  const { StellarWalletsKit } = await loadKit();
+  const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+    address: opts.address,
+    networkPassphrase: opts.networkPassphrase ?? NETWORK_PASSPHRASE,
+  });
+  return signedTxXdr;
 }

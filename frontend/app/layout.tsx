@@ -61,10 +61,15 @@ export default function RootLayout({
         />
         <link rel="stylesheet" href={SATOSHI_CSS} />
       </head>
-      <body className="min-h-screen">
+      {/* A column that fills the viewport, with main taking the slack. A short
+          page (an error panel, an empty feed) used to end at main's own
+          height, so the footer sat mid-screen with a band of empty navy under
+          it. dvh rather than vh so a phone's collapsing URL bar does not push
+          the footer below the fold. */}
+      <body className="flex min-h-dvh flex-col">
         <Providers>
           <Header />
-          <main className="min-h-[50vh]">{children}</main>
+          <main className="flex-1">{children}</main>
           <Footer network={STELLAR_NETWORK} />
         </Providers>
       </body>

@@ -127,7 +127,18 @@ export interface ApiErrorBody {
   detail: string;
 }
 
-/** The `error` codes enumerated in spec §4. */
+/**
+ * The `error` codes enumerated in spec §4, plus the paid path (§3.7) and the
+ * licence read (§3.8).
+ *
+ * `LICENSE_MINT_PENDING` is not in the spec yet. STE-42 adds it: settlement
+ * succeeded and the mint did not, and the next request from the same payer
+ * finishes the mint without charging again. It is listed here so the UI can
+ * say that, rather than tell somebody who has paid to pay again.
+ *
+ * `PAYMENT_OUTCOME_UNKNOWN` and `INVALID_CHALLENGE` are the client's own: the
+ * API never sends them. See `requestSkill` in api.ts.
+ */
 export type ApiErrorCode =
   | "INVALID_CONTENT_HASH"
   | "INVALID_PARAMETER"
@@ -136,7 +147,79 @@ export type ApiErrorCode =
   | "VERSION_NOT_FOUND"
   | "RPC_UNAVAILABLE"
   | "NOT_CONFIGURED"
-  | "INTERNAL";
+  | "INTERNAL"
+  | "NOT_VERIFIED"
+  | "INVALID_PAYMENT"
+  | "PAYMENT_REJECTED"
+  | "FACILITATOR_UNAVAILABLE"
+  | "ARTIFACT_NOT_FOUND"
+  | "ARTIFACT_HASH_MISMATCH"
+  | "UNKNOWN_PAYER"
+  | "LICENSE_MINT_PENDING"
+  | "MISSING_AGENT"
+  | "INVALID_AGENT"
+  | "PAYMENT_OUTCOME_UNKNOWN"
+  | "INVALID_CHALLENGE";
+
+/**
+ * Spec §3.8. Whether one agent holds a licence for one exact version.
+ *
+ * Deliberately says nothing about the verdict: a licence bought while a
+ * version was SAFE survives a later flip to DANGEROUS, and the page has to be
+ * able to show both facts at once.
+ */
+export interface LicenseStatus {
+  skill_id: string;
+  version: string;
+  agent: string;
+  held: boolean;
+  tokens_contract_id: string;
+  contract_url: string;
+}
+
+/**
+ * One entry of `accepts` in an x402 v2 challenge (spec §3.7).
+ *
+ * `amount` is in the asset's base units: 7 decimals for USDC, so `1000000` is
+ * 0.10. `asset` is the SAC contract (`C...`) the payment calls `transfer` on,
+ * and `payTo` is the classic account (`G...`) that receives it. The two are
+ * different kinds of address and are never derived from one another.
+ */
+export interface PaymentRequirement {
+  scheme: string;
+  network: string;
+  amount: string;
+  asset: string;
+  payTo: string;
+  maxTimeoutSeconds: number;
+  extra: Record<string, unknown>;
+}
+
+/** The decoded `PAYMENT-REQUIRED` header of a 402 from `GET /use`. */
+export interface PaymentRequired {
+  x402Version: number;
+  error?: string;
+  resource: { url: string; description: string; mimeType: string };
+  accepts: PaymentRequirement[];
+}
+
+/**
+ * The decoded `X-PAYMENT-RESPONSE` header: the facilitator's settlement
+ * receipt. Only `transaction` is relied on; the rest is kept as it arrived.
+ */
+export interface SettlementReceipt {
+  success?: boolean;
+  transaction?: string;
+  network?: string;
+  payer?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * What `GET /use` serves on 200: every file of the skill, path to text, after
+ * the API has checked the bytes against the content hash on chain.
+ */
+export type SkillArtifact = Record<string, string>;
 
 /**
  * One indexed registry event. Served by `GET /feed`, newest first.
