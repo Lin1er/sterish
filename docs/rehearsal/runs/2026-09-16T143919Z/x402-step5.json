@@ -1,0 +1,17 @@
+{
+  "agent": "GCZDHFCV73PFEO53ERKVOEBU3X2QYL7UGHOX5BBSDEID4FSM4NDCPWQN",
+  "url": "https://api-sterish.jameshub.fun/use/com.sterish.e2e-rehearsal-unit-converter-1789569559/1.0.0",
+  "mode": "held",
+  "requests": [
+    {
+      "label": "held",
+      "status": 404,
+      "license": null,
+      "license_tx": null,
+      "payment_required": false,
+      "payment_response": null,
+      "body_excerpt": "{\"error\":\"ARTIFACT_NOT_FOUND\",\"detail\":\"no artifact on disk for com.sterish.e2e-rehearsal-unit-converter-1789569559@1.0.0\"}",
+      "body_bytes": 123
+    }
+  ]
+}
