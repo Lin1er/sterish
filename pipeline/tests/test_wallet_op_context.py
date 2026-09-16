@@ -92,8 +92,7 @@ def test_directed_moves_still_fire(text):
         "```\nawait sac.transfer({from, to, amount}) // move USDC\n```",
         # protocol description with no party and no directive
         "Outbound-from-Stellar transfers always execute at Standard finality.",
-        "When transferring **to** Stellar, on the source-chain burn, set the hook "
-        "data.",
+        "When transferring **to** Stellar, on the source-chain burn, set the hook data.",
         "Up to ~15 minutes for Standard transfers from Ethereum-derived chains.",
         # asset context in a different sentence than the verb
         "Fetches the XLM price. Moves the cursor to the next row.",
@@ -125,15 +124,25 @@ def corpus_verdicts():
     corpus = Corpus(CORPUS_DIR)
     out = {}
     for entry in corpus.load():
+        if entry.register_only:
+            continue  # never audited, so there is no verdict to grade
         report = audit_normalized(corpus.normalized(entry), skip_sandbox=True)
-        out[entry.skill_id] = (entry, report)
+        # Keyed by (skill_id, version): the demo set holds two versions of one skill.
+        out[entry.key] = (entry, report)
     return out
 
 
+def _by_id(corpus_verdicts, skill_id):
+    (hit,) = [v for (sid, _), v in corpus_verdicts.items() if sid == skill_id]
+    return hit
+
+
 def test_false_positives_are_gone(corpus_verdicts):
-    assert corpus_verdicts["com.fixtures.safe.price-checker"][1].final_verdict == FinalVerdict.SAFE
-    assert (
-        corpus_verdicts["org.stellar.skills.cross-chain.cctp"][1].final_verdict == FinalVerdict.SAFE
+    assert _by_id(corpus_verdicts, "com.fixtures.safe.price-checker")[1].final_verdict == (
+        FinalVerdict.SAFE
+    )
+    assert _by_id(corpus_verdicts, "org.stellar.skills.cross-chain.cctp")[1].final_verdict == (
+        FinalVerdict.SAFE
     )
 
 
@@ -148,19 +157,32 @@ def test_every_poisoned_fixture_is_still_dangerous(corpus_verdicts):
 def test_wallet_op_still_carries_the_two_fixtures_it_protects(corpus_verdicts):
     protected = ("com.fixtures.poisoned.invoice-helper", "com.fixtures.poisoned.token-drainer")
     for skill_id in protected:
-        fired = {f.pattern_id for f in corpus_verdicts[skill_id][1].stage1.injection_findings}
+        report = _by_id(corpus_verdicts, skill_id)[1]
+        fired = {f.pattern_id for f in report.stage1.injection_findings}
         assert ir.WALLET_OP in fired, skill_id
 
 
 def test_false_positive_and_negative_rates_on_the_corpus(corpus_verdicts):
     """Recorded because the 2026-07-30 review noted the audit never stated them.
 
-    Positive = audited DANGEROUS. Truth = the entry's label (poisoned vs everything else).
+    Positive = audited DANGEROUS. Truth = the entry's label: `poisoned` should be caught,
+    `safe` and `catalog` should come back SAFE. The `demo` set is left out of the rate on
+    purpose: it was written to light WARNING and DANGEROUS on the dashboard, so counting
+    it as "benign" would report deliberate verdicts as false positives. It is graded
+    exactly against its expected verdicts in the next test instead.
     """
-    benign = [r for e, r in corpus_verdicts.values() if not e.is_poisoned]
+    benign = [r for e, r in corpus_verdicts.values() if e.label in ("safe", "catalog")]
     poisoned = [r for e, r in corpus_verdicts.values() if e.is_poisoned]
     false_positives = sum(1 for r in benign if r.final_verdict != FinalVerdict.SAFE)
     false_negatives = sum(1 for r in poisoned if r.final_verdict == FinalVerdict.SAFE)
     assert (len(benign), len(poisoned)) == (16, 4)
     assert false_positives == 0, [r for r in benign if r.final_verdict != FinalVerdict.SAFE]
     assert false_negatives == 0
+
+
+def test_the_demo_set_still_lands_on_the_verdicts_it_was_written_for(corpus_verdicts):
+    """A narrower wallet_op must not quietly move a demo row off its intended state."""
+    demo = {k: v for k, v in corpus_verdicts.items() if v[0].label == "demo"}
+    assert len(demo) == 5
+    for key, (entry, report) in demo.items():
+        assert report.final_verdict.value == entry.expected_verdict, key
