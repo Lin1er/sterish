@@ -108,7 +108,8 @@ class Evidence:
     def scrub(self, text: str) -> str:
         for secret in self._secrets:
             text = text.replace(secret, "<redacted>")
-        return text
+        # Not a secret, but a committed evidence file has no business naming a local home dir.
+        return text.replace(f"{REPO}/", "")
 
     def _write(self, row: dict) -> None:
         line = self.scrub(json.dumps(row, default=str))
