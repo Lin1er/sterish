@@ -456,6 +456,18 @@ All seven steps `ok`, progress visible while polling. Verified from outside: all
 transactions `successful` on Horizon, the agent's USDC went from the funded 0.1 to **0**,
 `has_license` true, and the served bytes hash to the registry's `content_hash`.
 
+**Re-run against Registry v2 (16 September 2026)**, after rebasing onto `main` (STE-18, STE-44)
+and onto the rebased STE-42. Every SAFE skill on v2 has an artifact, so the "SAFE but not
+deliverable" refusal was exercised by serving from a copy of the artifact directory without
+`standards.resources`. Record:
+[`evidence/ste-43-e2e-demo-buyer-v2-2026-09-16.json`](evidence/ste-43-e2e-demo-buyer-v2-2026-09-16.json).
+Refusals created no job (403 / 404 `ARTIFACT_NOT_FOUND` / 404 `SKILL_NOT_FOUND`), a concurrent start
+was 409, and buying `data.horizon` ran all seven steps: funding
+[`d1dcfa3299f7cbb3…`](https://stellar.expert/explorer/testnet/tx/d1dcfa3299f7cbb358ffd92e91ed74f99563eeb9977a8690dffc540c8c5e0cec),
+settlement [`7d0f7d3e0dc582e4…`](https://stellar.expert/explorer/testnet/tx/7d0f7d3e0dc582e40213e33a61b8c7178afebb0afbc66b7e890f8fbbda960115),
+mint [`667eeace5b6d6238…`](https://stellar.expert/explorer/testnet/tx/667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3),
+all successful on Horizon; the agent went from 0.1 USDC to 0 and holds the licence on Tokens v2.
+
 **To enable on CT 204** (after merge): add `DEMO_BUYER_ENABLED=1` and `DEMO_TREASURY_SECRET` to
 `/opt/sterish/deploy/.env` (mode 600), redeploy, and check `GET /demo/status` reports
 `enabled: true` with the treasury address above.

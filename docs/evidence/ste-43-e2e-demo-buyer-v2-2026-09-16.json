@@ -1,0 +1,135 @@
+{
+  "api": "http://127.0.0.1:8765",
+  "skill": "org.stellar.skills.data.horizon",
+  "version": "2026.8.31",
+  "treasury": "GA6WWQKPRA7C2GU47GRN44R7DEJTKH2CDXSG5Q7V3YDG55S4M7KZNLMZ",
+  "funding_tx": "d1dcfa3299f7cbb358ffd92e91ed74f99563eeb9977a8690dffc540c8c5e0cec",
+  "settlement_tx": "7d0f7d3e0dc582e40213e33a61b8c7178afebb0afbc66b7e890f8fbbda960115",
+  "mint_tx": "667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3",
+  "agent": "GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL",
+  "job": {
+    "job_id": "1f32433d68dc4f8c9fead2e4dff2fb73",
+    "skill_id": "org.stellar.skills.data.horizon",
+    "version": "2026.8.31",
+    "status": "succeeded",
+    "agent": "GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL",
+    "error": null,
+    "created_at": "2026-09-16T08:49:26Z",
+    "finished_at": "2026-09-16T08:49:54Z",
+    "steps": [
+      {
+        "key": "fund_agent",
+        "title": "A fresh agent account is created and funded by the demo treasury",
+        "status": "ok",
+        "detail": "agent GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL holds 0.1 USDC",
+        "tx_hash": "d1dcfa3299f7cbb358ffd92e91ed74f99563eeb9977a8690dffc540c8c5e0cec",
+        "tx_url": "https://stellar.expert/explorer/testnet/tx/d1dcfa3299f7cbb358ffd92e91ed74f99563eeb9977a8690dffc540c8c5e0cec",
+        "data": {
+          "agent": "GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL",
+          "usdc": "0.1"
+        },
+        "started_at": "2026-09-16T08:49:26Z",
+        "finished_at": "2026-09-16T08:49:33Z"
+      },
+      {
+        "key": "challenge",
+        "title": "The agent asks for the skill without paying and receives HTTP 402",
+        "status": "ok",
+        "detail": "HTTP 402 Payment Required",
+        "tx_hash": null,
+        "tx_url": null,
+        "data": {
+          "status": 402,
+          "amount": "1000000",
+          "amount_usdc": "0.1",
+          "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "pay_to": "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU",
+          "network": "stellar:testnet"
+        },
+        "started_at": "2026-09-16T08:49:33Z",
+        "finished_at": "2026-09-16T08:49:33Z"
+      },
+      {
+        "key": "sign_payment",
+        "title": "The agent signs a USDC transfer authorization for exactly the price",
+        "status": "ok",
+        "detail": "authorization entry signed by the agent; no XLM needed, fees are sponsored",
+        "tx_hash": null,
+        "tx_url": null,
+        "data": {
+          "payer": "GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL",
+          "amount": "1000000"
+        },
+        "started_at": "2026-09-16T08:49:33Z",
+        "finished_at": "2026-09-16T08:49:36Z"
+      },
+      {
+        "key": "pay",
+        "title": "The agent retries with the payment: Sterish verifies, settles and mints the licence",
+        "status": "ok",
+        "detail": "payment settled and licence minted",
+        "tx_hash": "667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3",
+        "tx_url": "https://stellar.expert/explorer/testnet/tx/667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3",
+        "data": {
+          "settlement_tx": "7d0f7d3e0dc582e40213e33a61b8c7178afebb0afbc66b7e890f8fbbda960115",
+          "settlement_tx_url": "https://stellar.expert/explorer/testnet/tx/7d0f7d3e0dc582e40213e33a61b8c7178afebb0afbc66b7e890f8fbbda960115",
+          "mint_tx": "667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3",
+          "mint_tx_url": "https://stellar.expert/explorer/testnet/tx/667eeace5b6d6238615c2aa4ad3558960ba0899619a66686a4b04f2aba35d7f3"
+        },
+        "started_at": "2026-09-16T08:49:36Z",
+        "finished_at": "2026-09-16T08:49:53Z"
+      },
+      {
+        "key": "verify_bytes",
+        "title": "The bytes served hash to the content_hash recorded on chain",
+        "status": "ok",
+        "detail": "content_hash(served bytes) matches the registry",
+        "tx_hash": null,
+        "tx_url": null,
+        "data": {
+          "content_hash": "56b6ca1b464d02b6a4a60de6b94f4577ccf20535305cda5afda0b2fb33dd7fb8",
+          "files": [
+            "horizon.md"
+          ]
+        },
+        "started_at": "2026-09-16T08:49:53Z",
+        "finished_at": "2026-09-16T08:49:53Z"
+      },
+      {
+        "key": "licence_on_chain",
+        "title": "The tokens contract reports the licence as held",
+        "status": "ok",
+        "detail": "has_license returned true",
+        "tx_hash": null,
+        "tx_url": null,
+        "data": {
+          "tokens_contract_id": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
+          "contract_url": "https://stellar.expert/explorer/testnet/contract/CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T"
+        },
+        "started_at": "2026-09-16T08:49:53Z",
+        "finished_at": "2026-09-16T08:49:53Z"
+      },
+      {
+        "key": "repeat_free",
+        "title": "A second request is served from the licence, without paying again",
+        "status": "ok",
+        "detail": "HTTP 200, served from the licence, no payment",
+        "tx_hash": null,
+        "tx_url": null,
+        "data": {
+          "status": 200,
+          "licence": "held"
+        },
+        "started_at": "2026-09-16T08:49:53Z",
+        "finished_at": "2026-09-16T08:49:54Z"
+      }
+    ],
+    "signer": {
+      "kind": "demo",
+      "treasury": "GA6WWQKPRA7C2GU47GRN44R7DEJTKH2CDXSG5Q7V3YDG55S4M7KZNLMZ",
+      "notice": "This purchase is signed by a Sterish demo account on Stellar testnet, not by your wallet. Every step below is a real testnet transaction you can open on stellar.expert."
+    },
+    "network": "testnet"
+  },
+  "result": "pass"
+}
