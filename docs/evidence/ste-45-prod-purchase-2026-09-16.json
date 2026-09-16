@@ -1,0 +1,11 @@
+{
+  "api": "https://api-sterish.jameshub.fun",
+  "skill": "org.stellar.skills.dapp.data-fetching@2026.8.31",
+  "agent": "GCGV7KHNO5G6MSRTJHIXDYROGOFR2VF5Y4CS5ADS2ZW4SPIU6HVON36R",
+  "funding_tx": "8f430cac722c19058d3084566bfb5bb69ecaa422d64faa4d1200bcf4c50c15be",
+  "mint_tx": "3e6fcf757baad2e2a93529721657b924f9f00800250669fa0dfec12a0aa19371",
+  "paid_usdc": "0.1000000",
+  "licence_held": true,
+  "bytes_match_chain": true,
+  "note": "production running main dc0a0c6 (pre-STE-42) with v2-verified artifacts copied in; agent header sent"
+}

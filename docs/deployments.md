@@ -800,6 +800,85 @@ offline mock. The real UI renders `evidence.contract_url` and `evidence.registry
 straight from the API response — `frontend/src/modules/skill-detail/component/EvidenceLinks.tsx`
 takes `evidence` as a prop and has no contract id of its own.
 
+### Redeploy 2026-09-16 — production reads v2 (STE-45)
+
+STE-44 moved the repo to Registry v2 and Tokens v2 on 15 September, but the running service on CT 204
+still read v1 and still ran `c13ac21` (10 September), so neither the v2 addresses nor the STE-18
+test-namespace filter had reached production.
+
+**What was done, in this order:**
+
+1. Checked on chain, not assumed, that the account behind the production `MINTER_SECRET`
+   (`GAGU7Z5R…`, the deployer) **holds the minter role on Tokens v2**, and that Tokens v2 points at
+   Registry v2. Switching first would have let `/use` settle payments it could not mint for.
+2. `deploy/.env` on the CT: backed up as `.env.bak-20260916-v1`, then `REGISTRY_CONTRACT_ID` and
+   `TOKENS_CONTRACT_ID` set to the v2 pair. Mode stays 600.
+3. The index volume removed. It is a cache (see STE-25), and it held v1 events that must not
+   decorate v2 records.
+4. `ctredeploy` → running `dc0a0c6` (`main`, including STE-18, STE-44 and STE-39).
+5. The repo `.env` moved to v2 as well (v1 kept as `REGISTRY_V1_CA` / `TOKENS_V1_CA`), so the
+   pipeline and the API write and read the same registry.
+
+**Verified through the public URL:**
+
+| | |
+|---|---|
+| `/health` | `ok`, registry `CCZJN366…`, RPC and facilitator reachable |
+| `/skills` | `total 24`, `chain_total 24`, no test namespace shown; SAFE 15, DANGEROUS 7, WARNING 2 |
+| `/check` | `token-drainer` DANGEROUS/10, `release-notes` 1.0.0 SAFE/100 → 2.0.0 DANGEROUS/10, `cctp` DANGEROUS/10 |
+| `/reports` | served, `sha256(report) == evidence_hash` |
+| `verify.sh` | everything passes except `/use unpaid -> 402`, which fails for a script reason: on `main` it still hardcodes version `1.0.0`. A direct request answers 402 with the challenge. The fix (`SAFE_SKILL_VERSION`) is in STE-42 |
+
+**A live risk found while verifying, and mitigated the same hour.** Production runs the pre-STE-42
+`/use`, which settles and mints *before* it looks for the artifact. The artifact directory held only
+`com.sterish.weather-lookup`, which is not on v2 — so all 15 SAFE skills were priced with nothing to
+hand over, and a buyer would have paid 0.10 USDC for a 404. The artifacts for v2 were published with
+STE-42's `intake publish-artifacts` (written only where bytes, corpus and the v2 `content_hash` agree
+and the v2 verdict is SAFE: 16 versions, 6 refused) and copied to `deploy/artifacts` on the CT,
+755/644, readable by the API's uid 10001. That is data, not code; no unmerged code runs in
+production.
+
+Proven with a real purchase through the public URL, fresh agent
+`GCGV7KHNO5G6MSRTJHIXDYROGOFR2VF5Y4CS5ADS2ZW4SPIU6HVON36R`
+([funding](https://stellar.expert/explorer/testnet/tx/8f430cac722c19058d3084566bfb5bb69ecaa422d64faa4d1200bcf4c50c15be)),
+buying `dapp.data-fetching`: exactly 0.1 USDC paid, licence minted
+([`3e6fcf757baad2e2…`](https://stellar.expert/explorer/testnet/tx/3e6fcf757baad2e2a93529721657b924f9f00800250669fa0dfec12a0aa19371)),
+`/license` held, served bytes hash to the on-chain `content_hash`. Record:
+[`evidence/ste-45-prod-purchase-2026-09-16.json`](evidence/ste-45-prod-purchase-2026-09-16.json).
+
+**Still open until STE-42 merges:** the old code takes the payer from `X-AGENT-ADDRESS`, so a buyer
+that omits the header is still settled and then refused. The purchase above sent the header for that
+reason. *Closed on 17 September — see the STE-42 redeploy below.*
+
+### Redeploy 2026-09-17 — `/use` never charges for what it cannot deliver (STE-42)
+
+PR [#41](https://github.com/Lin1er/sterish/pull/41) merged as `03e7e5d`, deployed to CT 204 on
+pve02 (now on NVMe, reached at `root@100.78.70.40`) with `ctredeploy`, then:
+
+```bash
+cd /opt/sterish/deploy
+docker compose --env-file .env --profile tools run --rm publish-artifacts
+```
+
+→ **16 for sale (0 newly published — the STE-45 copies already matched), 0 not on chain, 6 not SAFE,
+0 failed.** The new `deploy_payments` volume was created by compose.
+
+**Verified through the public URL:**
+
+| | |
+|---|---|
+| `deploy/verify.sh` | all checks pass: `/use` unpaid 402 with challenge, DANGEROUS 403, **every SAFE row: 15 for sale, 0 undeliverable priced** |
+| rehearsal skill `com.sterish.e2e-rehearsal-unit-converter-1789569559` 1.0.0 (the one STE-27 paid for) | `404 ARTIFACT_NOT_FOUND` **before** any payment, no challenge |
+| `api/scripts/e2e_paid_path.py`, real USDC | fresh agent `GAISQEDZDZO3ZODO6DRDD3DV5VKMVNOULTU7B4VASXSXH56BUOAIPXAG`, **no `X-AGENT-ADDRESS`**, bought `agentic-payments.x402`: paid exactly 0.1 USDC ([settle `c72b7def…`](https://stellar.expert/explorer/testnet/tx/c72b7defe42575b5fa83eed1f2e6c155112901eede29c1eeafd8496dfdb15c04)), licence minted to the payer ([`16755730…`](https://stellar.expert/explorer/testnet/tx/167557302d8a0d43e75325b012dd4c4a57da82a403a946fb13ac09f0587414b1)), bytes hash to the on-chain `content_hash`, a second signed payment settled nothing |
+
+Record: [`evidence/ste-42-e2e-paid-path-prod-2026-09-17.json`](evidence/ste-42-e2e-paid-path-prod-2026-09-17.json)
+([funding](https://stellar.expert/explorer/testnet/tx/f8aea7458bad0deb9078532415b1a5e46e033b0c1fedb2417abd1ae0e27879c4)).
+
+**Operational note.** For up to 30 s after every redeploy the public URL answers `503` with an empty
+body: Caddy's active health check (`health_interval 30s`) marks the API down while its container
+restarts and does not look again until the next interval. It clears on its own; run `verify.sh`
+after it has.
+
 ## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
 
 The first run of the whole loop against Registry v2 + Tokens v2 + the unchanged Escrow — the
