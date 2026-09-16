@@ -15,6 +15,7 @@ import argparse
 import sys
 
 import httpx
+from sterish_pipeline.namespaces import is_test_skill_id
 
 VERDICTS = ("SAFE", "WARNING", "DANGEROUS", "UNAUDITED")
 UA = {"User-Agent": "sterish-verify/1.0"}
@@ -30,10 +31,10 @@ def check(condition: bool, message: str) -> None:
     print(f"  ok   {message}")
 
 
-def all_rows(http: httpx.Client, api: str) -> list[dict]:
+def all_rows(http: httpx.Client, api: str, **params) -> list[dict]:
     rows, start = [], 0
     while True:
-        body = http.get(f"{api}/skills", params={"start": start, "limit": 100}).json()
+        body = http.get(f"{api}/skills", params={**params, "start": start, "limit": 100}).json()
         rows.extend(body["skills"])
         start += 100
         if start >= body["total"]:
@@ -157,6 +158,41 @@ def main() -> int:
         [r["skill_id"] for r in plain["skills"]] == [r["skill_id"] for r in base[:5]],
         "registration order preserved",
     )
+
+    print("\n7. test namespaces: hidden under a filter exactly as in the plain listing (STE-18)")
+    everything = all_rows(http, api, include_test="true")
+    tests = [r for r in everything if is_test_skill_id(r["skill_id"])]
+    check(
+        sorted(r["skill_id"] for r in base)
+        == sorted(r["skill_id"] for r in everything if not is_test_skill_id(r["skill_id"])),
+        f"plain listing = include_test listing minus {len(tests)} test rows",
+    )
+    check(not any(is_test_skill_id(r["skill_id"]) for r in base), "no test id in the plain listing")
+    for verdict in VERDICTS:
+        matching_tests = [
+            r for r in tests if (r["latest_audited_verdict"] or "UNAUDITED") == verdict
+        ]
+        rows, body = filtered(http, api, verdict=verdict)
+        check(
+            not any(is_test_skill_id(r["skill_id"]) for r in rows),
+            f"verdict={verdict}: no test id served",
+        )
+        check(
+            body["hidden_test_entries"] == len(matching_tests),
+            f"verdict={verdict}: hidden_test_entries {body['hidden_test_entries']} "
+            "== matching test rows",
+        )
+        check(body["chain_total"] == plain["chain_total"], f"verdict={verdict}: same chain_total")
+        with_tests, body = filtered(http, api, verdict=verdict, include_test="true")
+        want = sorted(
+            r["skill_id"]
+            for r in everything
+            if (r["latest_audited_verdict"] or "UNAUDITED") == verdict
+        )
+        check(
+            sorted(r["skill_id"] for r in with_tests) == want and body["hidden_test_entries"] == 0,
+            f"verdict={verdict}&include_test=true: {len(want)} rows, nothing hidden",
+        )
 
     print("\nPASS")
     return 0
