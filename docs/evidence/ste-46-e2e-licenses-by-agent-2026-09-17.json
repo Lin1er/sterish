@@ -1,0 +1,159 @@
+{
+  "ticket": "STE-46",
+  "date": "2026-09-17",
+  "api": "local API on this branch against testnet (indexer on, caught up to ledger)",
+  "tokens_contract": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
+  "total_supply": 27,
+  "holders": 8,
+  "checks": [
+    {
+      "check": "GCF76SG6\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GCF76SG6\u2026, org.stellar.skills.agentic-payments.x402@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "GCGV7KHN\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GCGV7KHN\u2026, org.stellar.skills.dapp.data-fetching@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "   mint_tx from the indexed license_minted event == known mint 3e6fcf75\u2026",
+      "ok": true
+    },
+    {
+      "check": "GDAVKROB\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GDAVKROB\u2026, org.stellar.skills.data.horizon@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "GA5VKC7Q\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GA5VKC7Q\u2026, org.stellar.skills.agentic-payments.mpp@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "GCZDHFCV\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GCZDHFCV\u2026, com.sterish.e2e-rehearsal-unit-converter-1789569559@1.0.0) true on chain",
+      "ok": true
+    },
+    {
+      "check": "GDUKDRK6\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GDUKDRK6\u2026, org.stellar.skills.cross-chain.axelar@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "GAISQEDZ\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GAISQEDZ\u2026, org.stellar.skills.agentic-payments.x402@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "   mint_tx from the indexed license_minted event == known mint 16755730\u2026",
+      "ok": true
+    },
+    {
+      "check": "GDH5RSHS\u2026: 1 licence(s) == direct get_token enumeration",
+      "ok": true
+    },
+    {
+      "check": "   has_license(GDH5RSHS\u2026, org.stellar.skills.cross-chain.cctp@2026.8.31) true on chain",
+      "ok": true
+    },
+    {
+      "check": "   mint_tx from the indexed license_minted event == known mint e9ea2e19\u2026",
+      "ok": true
+    },
+    {
+      "check": "developer GD73M4F7\u2026 (owns 19 VERIFIED badges): badges are not listed as licences",
+      "ok": true
+    },
+    {
+      "check": "no agent -> 400 MISSING_AGENT",
+      "ok": true
+    },
+    {
+      "check": "{'agent': 'CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T'} -> 400 INVALID_AGENT",
+      "ok": true
+    }
+  ],
+  "result": "pass",
+  "fresh_purchase": {
+    "agent": "GAFQ6QYS73QXCOGJSCSBR7HAQBUKNNCIE5JQINF6TH2TMF6N6OSI6TY5",
+    "skill": "org.stellar.skills.dapp.react@2026.8.31",
+    "mint_tx": "dcaac10eb4f02afe65ae31a83874e1d37dd7700a23794e23c230c019b3aab3f0",
+    "listed": true,
+    "mint_tx_attached_once_indexed": true
+  },
+  "cache_deleted_indexer_off": {
+    "total_supply": 28,
+    "holders": 9,
+    "all_lists_match_direct_enumeration": true,
+    "mint_tx": "null for all (decoration only)",
+    "rows": [
+      {
+        "agent": "GCF76SG6QUBTJHK6AEFPS22TOB6JO5TKXXR5FW3QSDFOFLNXNLCJTXSC",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GCGV7KHNO5G6MSRTJHIXDYROGOFR2VF5Y4CS5ADS2ZW4SPIU6HVON36R",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GDAVKROBU6VGWMAY36YMHQ6LV7XD7D5R5T3LJTTEBJKX3EURZAEDHSPL",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GA5VKC7QHIIC7GBXMHLILU2LMKKXYAHOFNE77CUOGMLO4GB3ZKP5HZS7",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GCZDHFCV73PFEO53ERKVOEBU3X2QYL7UGHOX5BBSDEID4FSM4NDCPWQN",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GDUKDRK63Q24NORQ4SQPUQKZNASZELTDXR7TCLV5T6X5X2BYCLEYNITH",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GAISQEDZDZO3ZODO6DRDD3DV5VKMVNOULTU7B4VASXSXH56BUOAIPXAG",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GDH5RSHSA6QHHJEFP5XNFMKCRGOEAFCJCH2ZETTTSECFMYD7TJGUMJ2M",
+        "licences": 1,
+        "match": true
+      },
+      {
+        "agent": "GAFQ6QYS73QXCOGJSCSBR7HAQBUKNNCIE5JQINF6TH2TMF6N6OSI6TY5",
+        "licences": 1,
+        "match": true
+      }
+    ]
+  }
+}

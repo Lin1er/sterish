@@ -1,7 +1,9 @@
 """Lightweight event indexer.
 
 Tails the registry's `skill_registered` / `version_registered` / `version_recorded` /
-`verdict_flipped` events into SQLite. Two jobs:
+`verdict_flipped` events into SQLite, and the tokens contract's `license_minted` into its
+own table (STE-46, only to attach a mint transaction to a licence — see licenses.py for
+why the licence list itself is not built from events). Two jobs:
 
   1. supply the transaction hashes for the `evidence` object — the contract does not
      store them, so without this the tx links are permanently null;
@@ -83,9 +85,13 @@ def init_db() -> None:
 
 def rebuild() -> None:
     """Drop every indexed row and reset the cursor. The next poll refills from chain."""
+    from . import licenses
+
+    licenses.init_db()
     with _lock, _connect() as conn:
         conn.executescript(_SCHEMA)
         conn.execute("DELETE FROM events")
+        conn.execute("DELETE FROM license_events")
         conn.execute("DELETE FROM meta WHERE key = 'last_indexed_ledger'")
     logger.info("indexer cache dropped; will rebuild from chain")
 
@@ -176,6 +182,30 @@ def feed(
 # --- polling ----------------------------------------------------------------
 
 
+def _decode_license_event(ev: Any, topics: list) -> dict | None:
+    """`license_minted` (docs/specs/events.md §3b.2): topics (name, skill_id, version),
+    data {agent}. Accepted only from the configured tokens contract."""
+    if not settings.tokens_contract_id or getattr(ev, "contract_id", None) != (
+        settings.tokens_contract_id
+    ):
+        return None
+    if len(topics) < 3:
+        return None
+    value = scval.to_native(stellar_xdr.SCVal.from_xdr(ev.value))
+    agent = address_str(value.get("agent")) if isinstance(value, dict) else None
+    if not agent:
+        return None
+    return {
+        "tokens_contract_id": settings.tokens_contract_id,
+        "agent": agent,
+        "skill_id": str(topics[1]),
+        "version": str(topics[2]),
+        "ledger": int(ev.ledger),
+        "tx_hash": ev.transaction_hash,
+        "occurred_at": _ledger_time(ev),
+    }
+
+
 def _decode_event(ev: Any) -> dict | None:
     # Events emitted inside a contract call that ultimately failed are not facts about
     # the ledger state; indexing them would show phantom activity in the feed. Current
@@ -189,7 +219,15 @@ def _decode_event(ev: Any) -> dict | None:
     if not topics:
         return None
     name = str(topics[0])
+    if name == "license_minted":
+        row = _decode_license_event(ev, topics)
+        return {"_license": row} if row else None
     if name not in TRACKED_EVENTS:
+        return None
+    # Registry events only from the registry: the filter now also covers the tokens
+    # contract, and nothing else it emits may land in the feed table.
+    contract_id = getattr(ev, "contract_id", None)
+    if contract_id is not None and contract_id != settings.registry_contract_id:
         return None
 
     value = scval.to_native(stellar_xdr.SCVal.from_xdr(ev.value))
@@ -250,7 +288,10 @@ def _get_events(server: SorobanServer, start: int):
             filters=[
                 EventFilter(
                     event_type=EventFilterType.CONTRACT,
-                    contract_ids=[settings.registry_contract_id],
+                    contract_ids=[
+                        c for c in (settings.registry_contract_id, settings.tokens_contract_id)
+                        if c
+                    ],
                 )
             ],
             limit=200,
@@ -319,13 +360,21 @@ def poll_once() -> int:
             logger.warning("indexer: getEvents at %s failed: %s", start, exc)
             break
 
-        rows = [r for r in (_decode_event(e) for e in res.events) if r]
+        decoded = [r for r in (_decode_event(e) for e in res.events) if r]
+        rows = [r for r in decoded if "_license" not in r]
         new_rows = _store(rows)
         if new_rows:
             # A registration, a new version or a verdict landed: the filtered /skills
             # view (STE-34) may now be wrong, so drop it rather than wait out its TTL.
             registry_snapshot.invalidate()
         stored += new_rows
+        if any("_license" in r for r in decoded):
+            from . import licenses
+
+            for r in decoded:
+                if "_license" in r:
+                    licenses.record_license_event(r["_license"])
+                    stored += 1
         start = min(start + chunk, latest + 1)
         _meta_set("last_indexed_ledger", str(min(start - 1, latest)))
 

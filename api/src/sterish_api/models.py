@@ -180,3 +180,33 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str = ""
+
+
+class LicenseItem(BaseModel):
+    token_id: int
+    skill_id: str
+    version: str
+    minted_at: int
+    minted_at_iso: str | None
+    # From the indexed `license_minted` event; null when the mint is older than the RPC's
+    # event window or not indexed yet. The licence is listed either way.
+    mint_tx: str | None
+    mint_tx_url: str | None
+
+
+class LicensesByAgentResponse(BaseModel):
+    """`GET /licenses?agent=G...` (STE-46).
+
+    Ownership only, like `/license`: no verdict is joined in. Whether a licensed version
+    is still SAFE is a different read against a different contract (`/check`).
+    """
+
+    agent: str
+    licenses: list[LicenseItem]
+    total: int
+    start: int
+    limit: int
+    # `total_supply()` read live for this response: the list is complete up to it.
+    total_supply: int
+    tokens_contract_id: str
+    contract_url: str
