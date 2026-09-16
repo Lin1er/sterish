@@ -1,0 +1,122 @@
+[
+  {
+    "step": 1,
+    "action": "escrow.create_audit_request (developer)",
+    "tx": "a683bcb8b2ddcfcac882501bebf4223d1c4eb176342ac9a698538dc97cbc6d33",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 1,
+    "action": "escrow.post_bond (auditor)",
+    "tx": "e34be0212c27f97f050defa8c24b6e632d6fe835634e0a330e39af4c9ee9a64f",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 2,
+    "action": "orchestrator register_skill",
+    "tx": "024ff259a1b065a2cf04b7d0a8066c4b7348b7bda8ffb7bc6f9b271df6a66b8a",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 2,
+    "action": "orchestrator submit_verdict",
+    "tx": "a4e6803f760ba067cd4a401f76044b18ea75db40fa354d6548cf811d82ef2082",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 2,
+    "action": "orchestrator mint_verified",
+    "tx": "4eaf33ebe792e617e8eb39a2ad65ee58f22e63bcd9badde58f04776ea446d086",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 2,
+    "action": "escrow.settle (admin)",
+    "tx": "cf54378088f6472449f69ba480f3fc4fde43bfc898ef2509049082b22ba21f01",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 3,
+    "action": "setup: Friendbot XLM",
+    "tx": "12dc5a8d82b3d26acd5df10292d7ddc82d06d02cbaa3c3f1a5445f6b07c1661c",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 3,
+    "action": "setup: USDC trustline (agent)",
+    "tx": "ef1857b87eeb38de768d66dc357de5fd28fde0545094549c617d951f6666ee28",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 3,
+    "action": "setup: 0.5 USDC developer -> agent",
+    "tx": "ee1c28f9397d615b72b63a90a0634fdeea5acde64619e085fe42fef5c765ba05",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 4,
+    "action": "x402 settlement (agent USDC debit)",
+    "tx": "192d845349e888df42b3caa55d32c23eb7cda39a63f04ea8de5a343f0fa957e4",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 6,
+    "action": "orchestrator register_skill",
+    "tx": "863a8661fcbd3ac70c62a2af062c97a5683fb70c15c158a9102b27e924077cc2",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 6,
+    "action": "orchestrator submit_verdict",
+    "tx": "29c1b49efac28fed4246fd335ead0d7a039a13e534bf32a705d333ef00ca4992",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 7,
+    "action": "escrow.create_audit_request (developer)",
+    "tx": "d6f71e2a7de0f8cb7c8db49fd9520f23fe8cafb413844261a43560776a9cfbe0",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 7,
+    "action": "escrow.post_bond (auditor)",
+    "tx": "d7afdb1637a85f307389c8c40c2bc2c9b9d8f0f50859f085c4918aa83d48add2",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  },
+  {
+    "step": 7,
+    "action": "escrow.slash (admin) -> reporter",
+    "tx": "1b2282e0dfb4527ca1685f81a44105142dca00374209f4df36dbeb7363f24015",
+    "stellar_expert": 200,
+    "horizon": 200,
+    "successful": true
+  }
+]

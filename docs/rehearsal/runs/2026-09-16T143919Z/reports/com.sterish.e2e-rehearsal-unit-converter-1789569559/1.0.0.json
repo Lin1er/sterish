@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "3e73eedbab93ec2a70cd4bb5e048db2622034f78fe80256088fdbae3cc212cbe",
+  "evidence_hash": "021bc6ff248a0c47cd7e9c8e66e4ac3ae4e84877145bcb255f1b2869350a4b27",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "com.sterish.e2e-rehearsal-unit-converter-1789569559",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "1.0.0"
+}

@@ -728,6 +728,15 @@ offline mock. The real UI renders `evidence.contract_url` and `evidence.registry
 straight from the API response — `frontend/src/modules/skill-detail/component/EvidenceLinks.tsx`
 takes `evidence` as a prop and has no contract id of its own.
 
+## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
+
+The first run of the whole loop against Registry v2 + Tokens v2 + the unchanged Escrow — the
+write path the migration had not yet exercised. **4 / 7 steps green**, 15 / 15 transaction links
+resolve. The escrow-to-v2 wiring and both Tokens v2 roles held under real transactions; the paid
+path charged an agent 0.10 USDC and minted its licence, then answered `404 ARTIFACT_NOT_FOUND`
+(STE-42). Generated evidence: [`rehearsal/runs/2026-09-16T143919Z/EVIDENCE.md`](rehearsal/runs/2026-09-16T143919Z/EVIDENCE.md);
+owners and tickets: [`rehearsal/FINDINGS.md`](rehearsal/FINDINGS.md).
+
 ## Operational notes
 
 - **Registry and Tokens are upgradeable since STE-44** — two-step, 300s timelock, events on

@@ -106,6 +106,24 @@ Scaffold Lin1er/sterish udah ada: `contracts/registry` + `contracts/escrow` (~80
   termasuk contract data). Tiap klaim yang bergantung ke link stellar.expert punya tanggal
   kedaluwarsa — tulis itu di dokumen, jangan janjikan permanensi yang tidak ada.
 
+## Full-loop rehearsal (STE-27, 16 Sep 2026)
+
+- **Satu perintah** menjalankan 7 langkah loop di stack live dan menulis evidence saat jalan:
+  `uv run --project pipeline python docs/rehearsal/run_rehearsal.py [--dashboard-url ...]`.
+  Detail: `docs/rehearsal/README.md`. Transaksi testnet beneran (escrow, USDC, mint).
+- **Hasil run pertama: 4/7 GREEN.** Langkah 4-5 RED karena STE-42 (agen bayar + lisensi
+  ter-mint, lalu `/use` 404) — dan **tidak ada satu pun versi di Registry v2 yang artifact-nya
+  ada di server**, jadi tiap pembelian live saat ini berakhir 404 setelah bayar. Langkah 3
+  PARTIAL: dashboard belum punya URL publik (STE-26). Temuan + owner: `docs/rehearsal/FINDINGS.md`.
+- `EVIDENCE.md` di `docs/rehearsal/runs/<id>/` itu **hasil generate — HARAM diedit tangan**.
+  Tafsiran manusia masuk `FINDINGS.md`, dan fakta yang dicari setelah run wajib ditandai begitu.
+- `orchestrate()` membuka escrow **setelah** verdict dan slash **ke admin** (STE-49); rehearsal
+  memakai primitive `onchain.*` untuk urutan produk (lock sebelum audit, slash ke reporter).
+- `.env` worktree yang dibuat sebelum 15 Sep masih berisi `REGISTRY_CA`/`TOKENS_CA` **v1**. Script
+  rehearsal mem-pin alamat v2; jangan percaya `.env` untuk alamat kontrak.
+- Tooling di macOS: CLI-nya `orca` (bukan `orca-ide`). Kalau `orca linear` menjawab
+  `linear_not_connected`, pakai Linear MCP (`mcp__claude_ai_Linear__*`).
+
 ## Testing (WAJIB, no bug)
 - e2e + edge + positive + negative tiap tiket. Kontrak: `cargo llvm-cov` **>80%**, semua revert/guard path.
 
