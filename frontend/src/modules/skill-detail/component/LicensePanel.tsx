@@ -130,6 +130,58 @@ function describeFailure(
   }
 }
 
+type Tone = "neutral" | "active" | "safe" | "danger";
+
+const TONE: Record<Tone, string> = {
+  neutral: "border-border",
+  active: "border-border bg-bg-deep/50",
+  safe: "border-safe-border bg-safe-surface",
+  danger: "border-danger-border bg-danger-surface",
+};
+
+/**
+ * The licence section is the bottom band of the version card, not a box inside
+ * it. It runs to the card's edges (the negative margins cancel the card's p-5)
+ * under a single divider, and the state is carried by the band's own tint:
+ * darker while a payment is in progress, green once delivered, red on a
+ * failure. The earlier version nested a bordered quote inside a bordered panel
+ * inside the card, three frames deep for one decision.
+ */
+function Strip({
+  tone = "neutral",
+  alert = false,
+  children,
+}: {
+  tone?: Tone;
+  alert?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-label="Licence"
+      role={alert ? "alert" : undefined}
+      className={`-mx-5 mt-5 -mb-5 rounded-b-lg border-t px-5 py-4 transition-colors ${TONE[tone]}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function toneOf(state: PurchaseState): Tone {
+  switch (state.step) {
+    case "granted":
+      return "safe";
+    case "failed":
+      return "danger";
+    case "quoted":
+    case "signing":
+    case "settling":
+      return "active";
+    default:
+      return "neutral";
+  }
+}
+
 function Flow({
   skillId,
   version,
@@ -151,7 +203,7 @@ function Flow({
 
     case "requesting":
       return (
-        <p className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary">
+        <p className="mt-4 inline-flex items-center gap-2 text-sm text-text-secondary">
           <Loader2 className="size-4 animate-spin" aria-hidden />
           Asking the API for {version}...
         </p>
@@ -163,7 +215,7 @@ function Flow({
       const short =
         typeof balance === "bigint" && balance < BigInt(requirement.amount);
       return (
-        <div className="mt-3 rounded-lg border border-hairline-strong bg-bg-deep p-4">
+        <div className="mt-4">
           <p className="text-xs text-text-tertiary">
             402 Payment Required, x402 v{state.paymentRequired.x402Version}
           </p>
@@ -173,7 +225,7 @@ function Flow({
               once, for {version} only
             </span>
           </p>
-          <dl className="mt-3 grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2">
+          <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-xs lg:grid-cols-4">
             <div>
               <dt className="text-text-tertiary">Paid to</dt>
               <dd
@@ -212,13 +264,23 @@ function Flow({
                 {balance === undefined
                   ? "reading..."
                   : balance === null
-                    ? "could not be read"
+                    ? "unavailable"
                     : `${formatBaseUnits(balance)} USDC`}
               </dd>
             </div>
           </dl>
+          {balance === null ? (
+            // The SAC refuses to report a balance for an account with no USDC
+            // trustline, which is the usual reason this read fails. Signing
+            // would fail the same way, so it is said before the wallet opens.
+            <p className="mt-4 text-xs text-warning">
+              Your USDC balance could not be read. This usually means the
+              account has no USDC trustline yet, in which case the payment will
+              not go through either.
+            </p>
+          ) : null}
           {short ? (
-            <p className="mt-3 text-sm text-danger">
+            <p className="mt-4 text-sm text-danger">
               This account holds less than {price} USDC. Get testnet USDC from
               the{" "}
               <a
@@ -232,7 +294,7 @@ function Flow({
               first.
             </p>
           ) : null}
-          <p className="mt-3 text-xs text-text-secondary">
+          <p className="mt-4 max-w-3xl text-xs text-text-secondary">
             Your wallet signs one authorisation for this transfer. The network
             fee is sponsored, so no XLM is spent. The licence is soulbound to
             this account and cannot be transferred.
@@ -252,7 +314,7 @@ function Flow({
 
     case "signing":
       return (
-        <div className="mt-3 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <p className="inline-flex items-center gap-2 text-sm text-text">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Approve the payment in your wallet...
@@ -268,7 +330,7 @@ function Flow({
 
     case "settling":
       return (
-        <div className="mt-3 rounded-lg border border-hairline-strong px-4 py-3 text-sm">
+        <div className="mt-4 text-sm">
           <p className="inline-flex items-center gap-2 text-text">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Settling {formatBaseUnits(state.requirement.amount)} USDC and
@@ -285,7 +347,7 @@ function Flow({
       const { outcome } = state;
       const files = Object.keys(outcome.artifact).sort();
       return (
-        <div className="mt-3 rounded-lg border border-safe-border bg-safe-surface p-4">
+        <div className="mt-4">
           <p className="font-bold text-safe">
             {outcome.licence === "minted"
               ? "Licence minted, skill delivered"
@@ -334,10 +396,7 @@ function Flow({
         state.error instanceof ApiError &&
         state.error.code === "LICENSE_MINT_PENDING";
       return (
-        <div
-          role="alert"
-          className="mt-3 rounded-lg border border-danger-border bg-danger-surface p-4"
-        >
+        <div className="mt-4">
           <p className="font-bold text-danger">{title}</p>
           <p className="mt-1 text-sm text-text-secondary">{body}</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -371,28 +430,34 @@ export function LicensePanel({
   const purchase = usePurchase(skillId, version, agent);
 
   if (wallet.status === "restoring") {
-    return <Skeleton className="mt-4 h-10 w-full" aria-hidden />;
+    return (
+      <Strip>
+        <Skeleton className="h-8 w-full" aria-hidden />
+      </Strip>
+    );
   }
 
   if (!agent) {
     return (
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
-        <p className="inline-flex items-center gap-2 text-sm text-text-secondary">
-          <KeyRound className="size-4 shrink-0" aria-hidden />
-          {isVerified
-            ? `Connect a wallet to see whether you hold a licence for ${version}, or to buy one.`
-            : `Connect a wallet to see whether you hold a licence for ${version}.`}
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void wallet.connect()}
-          disabled={wallet.status === "connecting"}
-        >
-          <Wallet data-icon="inline-start" />
-          Connect wallet
-        </Button>
-      </div>
+      <Strip>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="inline-flex items-center gap-2 text-sm text-text-secondary">
+            <KeyRound className="size-4 shrink-0" aria-hidden />
+            {isVerified
+              ? `Connect a wallet to see whether you hold a licence for ${version}, or to buy one.`
+              : `Connect a wallet to see whether you hold a licence for ${version}.`}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void wallet.connect()}
+            disabled={wallet.status === "connecting"}
+          >
+            <Wallet data-icon="inline-start" />
+            Connect wallet
+          </Button>
+        </div>
+      </Strip>
     );
   }
 
@@ -425,10 +490,7 @@ export function LicensePanel({
     );
   } else if (licence.data.held && !isVerified) {
     return (
-      <div
-        role="alert"
-        className="mt-4 rounded-lg border border-danger-border bg-danger-surface px-4 py-3"
-      >
+      <Strip tone="danger" alert>
         <p className="flex items-center gap-2 font-bold text-danger">
           <AlertOctagon className="size-5 shrink-0" aria-hidden />
           You hold a licence for {version}, and it is no longer SAFE
@@ -438,7 +500,7 @@ export function LicensePanel({
           API refuses to serve a version that is not SAFE, and any copy you
           already installed should be removed.
         </p>
-      </div>
+      </Strip>
     );
   } else if (licence.data.held) {
     status = (
@@ -483,7 +545,10 @@ export function LicensePanel({
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-border px-4 py-3">
+    <Strip
+      tone={toneOf(purchase.state)}
+      alert={purchase.state.step === "failed"}
+    >
       {status}
       <div aria-live="polite">
         <Flow
@@ -495,6 +560,6 @@ export function LicensePanel({
           onReset={purchase.reset}
         />
       </div>
-    </div>
+    </Strip>
   );
 }
