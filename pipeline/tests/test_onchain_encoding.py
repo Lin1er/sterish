@@ -78,3 +78,96 @@ class TestErrorNaming:
 
     def test_an_unmapped_number_still_says_unknown(self):
         assert "Unknown" in str(onchain.ContractCallError(99, "settle"))
+
+
+class TestTokensErrorNaming:
+    """STE-50: Tokens refusals were named from the registry's table."""
+
+    def test_mint_license_5_is_the_verified_gate_not_a_duplicate_version(self):
+        """Found by the STE-27 rehearsal: the contract refusing to licence a DANGEROUS
+        version was logged as `VersionAlreadyExists (#5, registry)`."""
+        err = onchain.ContractCallError(5, "mint_license")
+        assert err.contract == "tokens"
+        assert str(err) == "mint_license failed: NotVerified (#5, tokens)"
+
+    def test_mint_verified_4_is_not_safe_verdict(self):
+        err = onchain.ContractCallError(4, "mint_verified")
+        assert "NotSafeVerdict (#4, tokens)" in str(err)
+
+    @pytest.mark.parametrize(
+        "function", ["has_license", "is_verified_token", "get_token", "total_supply",
+                     "set_minter_role", "owner_of"],
+    )
+    def test_every_tokens_entrypoint_resolves_to_the_tokens_abi(self, function):
+        assert onchain.ContractCallError(2, function).contract == "tokens"
+
+    def test_the_tokens_table_matches_the_contract_source(self):
+        """The numbers are ABI; read them from the Rust enum instead of trusting a copy."""
+        import re
+        from pathlib import Path
+
+        src = (Path(__file__).resolve().parents[2] / "contracts/tokens/src/data.rs").read_text()
+        body = src[src.index("pub enum TokenError"):]
+        body = body[: body.index("}")]
+        from_rust = {int(n): name for name, n in re.findall(r"(\w+) = (\d+),", body)}
+        assert from_rust == onchain.TOKENS_ERRORS
+
+    def test_the_registry_table_matches_the_contract_source(self):
+        """STE-44 added 10-13 to the registry; the table had stopped at 9."""
+        import re
+        from pathlib import Path
+
+        src = (Path(__file__).resolve().parents[2] / "contracts/registry/src/data.rs").read_text()
+        body = src[src.index("pub enum RegistryError"):]
+        body = body[: body.index("}")]
+        from_rust = {int(n): name for name, n in re.findall(r"(\w+) = (\d+),", body)}
+        assert from_rust == onchain.REGISTRY_ERRORS
+
+    def test_the_escrow_table_matches_the_contract_source(self):
+        import re
+        from pathlib import Path
+
+        src = (Path(__file__).resolve().parents[2] / "contracts/escrow/src/data.rs").read_text()
+        body = src[src.index("pub enum EscrowError"):]
+        body = body[: body.index("}")]
+        from_rust = {int(n): name for name, n in re.findall(r"(\w+) = (\d+),", body)}
+        assert from_rust == onchain.ESCROW_ERRORS
+
+
+TOKENS_V2 = "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T"
+
+
+class TestSharedEntrypoints:
+    """`get_admin` and the upgrade functions exist on several contracts."""
+
+    def test_a_shared_name_without_a_contract_says_it_cannot_tell(self):
+        msg = str(onchain.ContractCallError(11, "propose_upgrade"))
+        assert "contract not identified" in msg
+        assert "registry NoPendingUpgrade" in msg
+        assert "tokens Unknown" in msg  # tokens has no #11: shown, not guessed away
+
+    def test_naming_the_contract_resolves_a_shared_name(self):
+        err = onchain.ContractCallError(9, "propose_upgrade", contract="tokens")
+        assert str(err) == "propose_upgrade failed: UpgradeAlreadyPending (#9, tokens)"
+
+    def test_an_unknown_function_is_not_labelled_as_registry(self):
+        err = onchain.ContractCallError(5, "some_future_fn")
+        assert err.contract == "contract not identified"
+        assert "registry VersionAlreadyExists" in str(err)
+        assert "tokens NotVerified" in str(err)
+
+    def test_simulate_passes_the_named_contract_to_the_error(self, monkeypatch):
+        class Sim:
+            error = "HostError: Error(Contract, #10)"
+            results = None
+
+        class Server:
+            def simulate_transaction(self, tx):
+                return Sim()
+
+        monkeypatch.setattr(onchain, "_server", lambda cfg: Server())
+        from sterish_pipeline.config import PipelineConfig
+
+        with pytest.raises(onchain.ContractCallError) as info:
+            onchain.simulate(PipelineConfig(), TOKENS_V2, "execute_upgrade", contract="tokens")
+        assert "UpgradeNotReady (#10, tokens)" in str(info.value)
