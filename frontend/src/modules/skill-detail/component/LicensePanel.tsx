@@ -17,7 +17,8 @@ import { useLicense } from "@/hooks/useLicense";
 import { usePurchase, type PurchaseState } from "@/hooks/usePurchase";
 import { useWallet } from "@/hooks/useWallet";
 import { ApiError } from "@/lib/api";
-import type { SkillArtifact, Verdict } from "@/lib/types";
+import { downloadArtifact } from "@/lib/artifact";
+import type { Verdict } from "@/lib/types";
 import { EXPLORER_BASE } from "@/lib/wallet";
 import { SETUP_AVAILABLE } from "@/lib/testnetSetup";
 import { formatBaseUnits, type PaymentFailure } from "@/lib/x402";
@@ -46,18 +47,6 @@ function TxLink({ hash, label }: { hash: string; label: string }) {
       <ExternalLink className="size-3" aria-hidden />
     </a>
   );
-}
-
-function download(skillId: string, version: string, artifact: SkillArtifact) {
-  const blob = new Blob([JSON.stringify(artifact, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${skillId}@${version}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 /** What to tell the buyer about a failure, and whether money may have moved. */
@@ -393,7 +382,9 @@ function Flow({
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() => download(skillId, version, outcome.artifact)}
+              onClick={() =>
+                downloadArtifact(skillId, version, outcome.artifact)
+              }
             >
               <Download data-icon="inline-start" />
               Download

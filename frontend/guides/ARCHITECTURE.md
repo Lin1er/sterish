@@ -34,6 +34,8 @@ frontend/
 │   ├── globals.css                       tailwind + tokens (NABIL'S)
 │   ├── activity/page.tsx                 /activity            → <Activity />
 │   ├── check/page.tsx                    /check               → <Check />
+│   ├── licences/page.tsx                 /licences            → <Licences /> (mine, or a lookup form)
+│   ├── licences/[address]/page.tsx       /licences/:address   → <Licences />
 │   ├── skills/[skillId]/
 │   │   ├── page.tsx                      /skills/:id          → <SkillDetail />
 │   │   └── not-found.tsx                 skill is not registered
@@ -65,6 +67,8 @@ frontend/
     │   │       ├── RegistryTable.tsx
     │   │       ├── RegistryPagination.tsx
     │   │       └── RegistrySkeleton.tsx
+    │   ├── licences/
+    │   │   └── Licences.tsx              every licence one address holds, verdict per version
     │   ├── check/
     │   │   ├── Check.tsx                 rendered by app/check/page.tsx
     │   │   ├── readFiles.ts              picker and drop to the hashed file set
@@ -84,7 +88,8 @@ frontend/
     │   ├── useWallet.tsx                 WalletProvider + useWallet
     │   ├── useLicense.ts                 licence for one version and one wallet
     │   ├── usePurchase.ts                402 -> sign -> pay -> 200, as states
-    │   └── useTestnetSetup.ts            where a wallet stands on the way to paying
+    │   ├── useTestnetSetup.ts            where a wallet stands on the way to paying
+    │   └── useLicences.ts                licences of an address, and each version's verdict
     │
     ├── lib/
     │   ├── api.ts                        the only door to the API
@@ -93,6 +98,8 @@ frontend/
     │   ├── x402.ts                       buyer side of x402, lazily loaded
     │   ├── contentHash.ts                content_hash v1 on WebCrypto
     │   ├── testnetSetup.ts               Horizon account read, Friendbot, trustline
+    │   ├── tokens.ts                     licences read from the tokens contract (until STE-46)
+    │   ├── artifact.ts                   save a delivered skill as one JSON file
     │   ├── fixtures.ts                   4 verdict cases
     │   ├── mockApi.ts                    mock logic, outside app/
     │   └── utils.ts                      shadcn's `cn()`
@@ -197,6 +204,12 @@ red-green colour-blind eyes.
   trustline to Circle's USDC, and the Circle faucet link. The trustline asset is checked by
   deriving its SAC address and comparing it with the 402's `asset`, because testnet is full of
   other tokens called USDC. None of it renders on a mainnet build.
+- **Licences per address are read from the tokens contract (STE-47).** The API has no list
+  endpoint yet (STE-46), so `lib/tokens.ts` reads `total_supply` and then `get_token` for every
+  id, eight at a time, and keeps the `License` records owned by the address. `total_supply` is the
+  exact count and ids run from 1; a `TokenNotFound` (`Error(Contract, #2)`) is skipped, any other
+  failure throws, so an empty list only ever means "read, and holds nothing". Swap to the API
+  endpoint when STE-46 lands; the page already says the read is temporary.
 - **Wallet errors are classified by message, never by code.** The kit's `parseError` fills in
   `code: -1` for any error without one, so "Freighter is not connected" and a closed modal look
   the same by code.
