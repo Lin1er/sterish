@@ -1,0 +1,290 @@
+{
+  "api": "https://api-sterish.jameshub.fun",
+  "date": "2026-09-17",
+  "deployed": "main after PR #44",
+  "check": "for each audited version: /check verdict, score and audit_tx equal the run log, and sha256(/reports bytes) == on-chain evidence_hash",
+  "matched": "25/25",
+  "use_unpaid": {
+    "com.fixtures.safe.price-checker@0.9.0": 402,
+    "org.stellar.skills.cross-chain.cctp@2026.8.31": 402
+  },
+  "publish_artifacts": "18 for sale (2 newly published: cctp, price-checker), 4 not SAFE",
+  "verify_sh": "all checks passed, 17 SAFE rows for sale, 0 undeliverable priced",
+  "rows": [
+    {
+      "skill_id": "com.fixtures.demo.changelog-writer",
+      "version": "1.0.0",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "f6cafc56937619cddd5d4d24e4016330f95c28b008c59683339b95b056ecd9cb",
+      "sha256_served_report": "f6cafc56937619cddd5d4d24e4016330f95c28b008c59683339b95b056ecd9cb",
+      "audit_tx": "21dfe988fe20550bbe85b4a4043c5d393d0377bd4137b6883d2b4b17716d8a9e",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.demo.ledger-inspector",
+      "version": "1.0.0",
+      "verdict": "WARNING",
+      "trust_score": 60,
+      "is_verified": false,
+      "evidence_hash": "e37561b331ff69f6ee789ae056c08a777069b0e4d4ef4b9abb8dc94ee71ead1d",
+      "sha256_served_report": "e37561b331ff69f6ee789ae056c08a777069b0e4d4ef4b9abb8dc94ee71ead1d",
+      "audit_tx": "0f00199c1d69be6b3f99c25ec91ce3b3542793bae8e5155104990d68c0d230bd",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "1.0.0",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "5c2a02f07cd3be09382b42f5a41c1892bfcaefc7c9fd778df3942e2e44b8b59e",
+      "sha256_served_report": "5c2a02f07cd3be09382b42f5a41c1892bfcaefc7c9fd778df3942e2e44b8b59e",
+      "audit_tx": "820c4a6f81a97988b2018d3a045f036cb302d22f5311b5e326cf68aa2cfdd61c",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.demo.release-notes",
+      "version": "2.0.0",
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "evidence_hash": "7b6c09fd6bc7241d537cfdd4c7b23ce21bd26f57308527f217e86320a8151777",
+      "sha256_served_report": "7b6c09fd6bc7241d537cfdd4c7b23ce21bd26f57308527f217e86320a8151777",
+      "audit_tx": "e6326778586faa23bfd353da56a36a59a41d6157ed599bb76255582405d8bdf3",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.demo.table-formatter",
+      "version": "1.0.0",
+      "verdict": "WARNING",
+      "trust_score": 78,
+      "is_verified": false,
+      "evidence_hash": "143a05c445a22fcf2b672b74e547fd3a2c93c1b4a363291b40a56dac24ad9df2",
+      "sha256_served_report": "143a05c445a22fcf2b672b74e547fd3a2c93c1b4a363291b40a56dac24ad9df2",
+      "audit_tx": "f6a55da7d8abc590b8ac126c05ed5ab42867cdcbf25cb127096f702e78ab2d52",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.invoice-helper",
+      "version": "1.0.0",
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "evidence_hash": "54614c6386ae6b8956a8d3087b00190446366aa3f0f20d0bf27a31c7c0acfd85",
+      "sha256_served_report": "54614c6386ae6b8956a8d3087b00190446366aa3f0f20d0bf27a31c7c0acfd85",
+      "audit_tx": "bdbaa1f65224b3abcc6f94cf620e9e77a69eccfed25610f5496d049da11d9557",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.markdown-linter",
+      "version": "2.0.1",
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "evidence_hash": "d8f4fdf5357966d17a592598b076f3c7e93b556677514783e9fb9f49812f62d8",
+      "sha256_served_report": "d8f4fdf5357966d17a592598b076f3c7e93b556677514783e9fb9f49812f62d8",
+      "audit_tx": "fff2d307e5e77b645176e012ee46940beec1fffb950f81fb8dffa26136fbf533",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.pdf-summarizer",
+      "version": "1.4.0",
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "evidence_hash": "e0a6942fa9d074371625b9b191a3a61e47ba6e80b5fdbadad525a473cf6f92c5",
+      "sha256_served_report": "e0a6942fa9d074371625b9b191a3a61e47ba6e80b5fdbadad525a473cf6f92c5",
+      "audit_tx": "5da9e2d938b9873218ae2c0a32ef374a08d7e8bc55467da23625343b3545eb68",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.poisoned.token-drainer",
+      "version": "1.0.0",
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "evidence_hash": "4b89d4cb531b37b1a4a856be7c3e4ecd1bf72390cd3485af2b0f1038a9d03613",
+      "sha256_served_report": "4b89d4cb531b37b1a4a856be7c3e4ecd1bf72390cd3485af2b0f1038a9d03613",
+      "audit_tx": "c23780e0a58476d109a0ad560f06aec5c87379a5ef66f4f06054c2d45c657d5f",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.safe.premium-pdf-suite",
+      "version": "3.1.0",
+      "verdict": "SAFE",
+      "trust_score": 94,
+      "is_verified": true,
+      "evidence_hash": "b346dda994628dc9b3dc9b016ce391126da10da200158f2192563f2ac5144020",
+      "sha256_served_report": "b346dda994628dc9b3dc9b016ce391126da10da200158f2192563f2ac5144020",
+      "audit_tx": "960f2ca7a508d86421fb2a519a6e39c2783da26ba13ffffca05a335bc537d40a",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.safe.price-checker",
+      "version": "0.9.0",
+      "verdict": "SAFE",
+      "trust_score": 90,
+      "is_verified": true,
+      "evidence_hash": "14d8ba4758c0b5b93bb92c723a770e6e8a6248475d43a9afaae67be844fc23e6",
+      "sha256_served_report": "14d8ba4758c0b5b93bb92c723a770e6e8a6248475d43a9afaae67be844fc23e6",
+      "audit_tx": "3bd64c68d2231c8fb887bc3fc4b0196b49c680688e03dc71a86c4e4f170ab3a3",
+      "match": true
+    },
+    {
+      "skill_id": "com.fixtures.safe.weather-lookup",
+      "version": "1.2.0",
+      "verdict": "SAFE",
+      "trust_score": 90,
+      "is_verified": true,
+      "evidence_hash": "dc1f24952059d5247a14058fe19946396007f6f5015eb58153cc80d2edd76cf0",
+      "sha256_served_report": "dc1f24952059d5247a14058fe19946396007f6f5015eb58153cc80d2edd76cf0",
+      "audit_tx": "914a5a9706002dd805cf0d33c6fc435d1077c518b44ba22b76b20e42ffeb2163",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.mpp",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "2da9cf3ed1c7b0fd10a8e0a23be53124feeeb55160aaa77a6d7b8361d1062316",
+      "sha256_served_report": "2da9cf3ed1c7b0fd10a8e0a23be53124feeeb55160aaa77a6d7b8361d1062316",
+      "audit_tx": "1d620bee8ef5cf77fe7f7a48f7ba3222edd5548c56af56e9c571507312ae1af8",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.agentic-payments.x402",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "857306844ae2e1efa583c7461bda41b7586d4d72a8e04d8451e9b6b368558303",
+      "sha256_served_report": "857306844ae2e1efa583c7461bda41b7586d4d72a8e04d8451e9b6b368558303",
+      "audit_tx": "0724147d2a102f0e11f251e01c3d707d5072cb54b0d0cb02ce1656fc2d67a195",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.axelar",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "d47504d41e3a6d4ce230fab9d8655aa49597a6eb4f7b49e5936ddd1e9b449c64",
+      "sha256_served_report": "d47504d41e3a6d4ce230fab9d8655aa49597a6eb4f7b49e5936ddd1e9b449c64",
+      "audit_tx": "00aa73a61fa4021748ca342c11258f25bb61784511fc0480412f4435cb66b686",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.cross-chain.cctp",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "6513a8c7d3b84b11b9530e73b5a3f5589d6b11cf01ce5348b8717301373379f7",
+      "sha256_served_report": "6513a8c7d3b84b11b9530e73b5a3f5589d6b11cf01ce5348b8717301373379f7",
+      "audit_tx": "3490559a37fa8c2b54e5acbb48064a5172fce4a1e315f924fae0c1abf767df22",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.data-fetching",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "6169aa460f61a791b3009a4870683bbd22505051a02ec6c8c55d2f997b37d33c",
+      "sha256_served_report": "6169aa460f61a791b3009a4870683bbd22505051a02ec6c8c55d2f997b37d33c",
+      "audit_tx": "ebfa1f9d1a5763bd408db013effec25e74c1248857151ef80018cd1aeb3d4bb9",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.react",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "fa501ad7605a40639101405070340606d322bf39d184cf4974b4079af7e73db5",
+      "sha256_served_report": "fa501ad7605a40639101405070340606d322bf39d184cf4974b4079af7e73db5",
+      "audit_tx": "7e077b38d80323785dc43dbcf1f2273871b636707acdba01693d0397d2b6fc77",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.dapp.smart-accounts",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "81430b01ff965d7f225658c5c6034316091b50c4092139b92ba346671259b320",
+      "sha256_served_report": "81430b01ff965d7f225658c5c6034316091b50c4092139b92ba346671259b320",
+      "audit_tx": "7080b3432880718d556ddd5b23c8cce77b546d459a4fbd60456ab866b5a9fa09",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.data.horizon",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "f33518443f7ff0c1192c5ea5c70c005aef7f3420b761d32314498a7e44483e90",
+      "sha256_served_report": "f33518443f7ff0c1192c5ea5c70c005aef7f3420b761d32314498a7e44483e90",
+      "audit_tx": "c400fc4d1148cabd0620f96f19875325921a80208d98e3715dc33d6aeef71efd",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.development",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "03fc421f7572cbada4a29f5c42420c7d2cb75b723f1dcc2ca2788b6797cc1c11",
+      "sha256_served_report": "03fc421f7572cbada4a29f5c42420c7d2cb75b723f1dcc2ca2788b6797cc1c11",
+      "audit_tx": "1aa984acbb37a2756cfe5352f6f7500137508fe8dfe051f9ae24abebc2071b2f",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.security",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "bf5d2c8d58d6ce7715e6834c751b14eddf7386daa1f17da2a99cfc3a4d8c6bd9",
+      "sha256_served_report": "bf5d2c8d58d6ce7715e6834c751b14eddf7386daa1f17da2a99cfc3a4d8c6bd9",
+      "audit_tx": "17188f4d017d21c9020354c8192a1f94bb0e2cc659197a5d381a5c448f9a15e9",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.smart-contracts.testing",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "e9cedd836fddeda466e6a9b823fee2a476dd1ada64de2a95b2ff3ae91c16528b",
+      "sha256_served_report": "e9cedd836fddeda466e6a9b823fee2a476dd1ada64de2a95b2ff3ae91c16528b",
+      "audit_tx": "5af4b0df44b7e7d5a28b69be5e5aa96da797fa61dd9ae730928262fa2d1feeae",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.ecosystem",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "02d533d6632e10a5dfd0b7c8b93088b11c5b516b9479a91519c39c16ce475264",
+      "sha256_served_report": "02d533d6632e10a5dfd0b7c8b93088b11c5b516b9479a91519c39c16ce475264",
+      "audit_tx": "ced195be6bbfede779399491248ee1085037d3b0f9452e58b60a716a731b2dc9",
+      "match": true
+    },
+    {
+      "skill_id": "org.stellar.skills.standards.resources",
+      "version": "2026.8.31",
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "evidence_hash": "c5dde8f1623f03ec35a42241cb461828a4c8195cabd1e5f5437f7fa9116cbb15",
+      "sha256_served_report": "c5dde8f1623f03ec35a42241cb461828a4c8195cabd1e5f5437f7fa9116cbb15",
+      "audit_tx": "e96a6a352beae9190b0078f24be00f029c9a09fb0f33dac72562e253cf056cd0",
+      "match": true
+    }
+  ]
+}
