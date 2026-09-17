@@ -11,6 +11,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from . import chain, indexer, payments, proofs, x402
 from .chain import ChainError, ContractError, NotConfiguredError
@@ -96,6 +97,11 @@ app.add_middleware(
     ],
 )
 app.add_middleware(RateLimitMiddleware)
+# Added last so it runs first: the client address and scheme are restored from the
+# trusted proxy chain BEFORE the rate limiter keys on the address and before any route
+# builds a URL from the request (STE-53). uvicorn's own proxy handling is switched off
+# in the Dockerfile so there is exactly one place that decides whom to believe.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.trusted_proxies)
 
 app.add_exception_handler(ApiError, api_error_handler)
 app.add_exception_handler(ContractError, contract_error_handler)

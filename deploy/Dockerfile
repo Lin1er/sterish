@@ -65,4 +65,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=8).status==200 else 1)"
 
-CMD ["uvicorn", "sterish_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --no-proxy-headers: the app applies the trusted-proxy chain itself (STE-53,
+# STERISH_TRUSTED_PROXIES), so the rule is testable and lives in one place.
+CMD ["uvicorn", "sterish_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

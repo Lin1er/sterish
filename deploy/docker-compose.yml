@@ -24,6 +24,10 @@ services:
       STELLAR_NETWORK_PASSPHRASE: ${STELLAR_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
       INDEXER_ENABLED: ${INDEXER_ENABLED:-1}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-100}
+      # Proxies whose forwarding headers are believed (STE-53): cloudflared and Caddy on
+      # this compose network, tailscale serve via the host gateway. Per-IP rate limiting
+      # and the https URLs in x402 challenges depend on it.
+      STERISH_TRUSTED_PROXIES: ${STERISH_TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fd00::/8}
       # Per-row chain reads a single /skills request may have in flight (STE-33).
       # Lower it if the RPC node starts rate-limiting; the page just gets slower.
       STERISH_CHAIN_CONCURRENCY: ${STERISH_CHAIN_CONCURRENCY:-20}

@@ -1,0 +1,35 @@
+{
+  "ticket": "STE-53",
+  "date": "2026-09-17",
+  "production_before_fix": {
+    "api_log_client_addresses_last_400_lines": {
+      "127.0.0.1 (healthcheck)": 74,
+      "172.18.0.3 (caddy container)": 165
+    },
+    "x402_resource_url": "http://api-sterish.jameshub.fun/use/org.stellar.skills.cross-chain.cctp/2026.8.31",
+    "429_in_last_24h": 0
+  },
+  "e2e": {
+    "setup": "caddy:2-alpine (host network, :8095) in front of this branch's API (uvicorn --no-proxy-headers, RATE_LIMIT_PER_MINUTE=3); requests carry X-Forwarded-For + X-Forwarded-Proto: https as cloudflared sends them",
+    "old_caddyfile": {
+      "resource_url": "http://api-sterish.jameshub.fun/use/org.stellar.skills.cross-chain.cctp/2026.8.31",
+      "client_A_3_requests": [
+        200,
+        200,
+        200
+      ],
+      "client_B_first_request": 429
+    },
+    "new_caddyfile": {
+      "resource_url": "https://api-sterish.jameshub.fun/use/org.stellar.skills.cross-chain.cctp/2026.8.31",
+      "client_A_3_requests": [
+        200,
+        200,
+        200
+      ],
+      "client_B_first_request": 200
+    },
+    "api_log_with_new_caddyfile": "client addresses 203.0.113.10 and 198.51.100.20 (the real visitors), not the proxy"
+  },
+  "caddy_validate": "Valid configuration (caddy:2-alpine)"
+}
