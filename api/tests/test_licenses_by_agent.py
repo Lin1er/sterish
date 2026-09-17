@@ -241,3 +241,54 @@ class TestValidation:
             assert r.status_code == 503
         finally:
             object.__setattr__(settings, "tokens_contract_id", previous)
+
+
+def test_one_poll_stores_registry_and_licence_events_once_each(client, monkeypatch, _isolated_db):
+    """STE-46 and STE-34 both changed the poll loop. Each event lands exactly once, a
+    registry event drops the /skills snapshot, and a licence event alone does not."""
+    from sterish_api import indexer, registry_snapshot
+
+    dropped = []
+    monkeypatch.setattr(registry_snapshot, "invalidate", lambda: dropped.append(1))
+
+    class Server:
+        def __init__(self, url):
+            pass
+
+        def get_health(self):
+            return type("H", (), {"oldest_ledger": 10})()
+
+        def get_latest_ledger(self):
+            return type("L", (), {"sequence": 10})()
+
+    registry_row = {
+        "event": "verdict_flipped", "skill_id": "com.acme.weather", "version": "1.0.0",
+        "content_hash": None, "verdict": "DANGEROUS", "trust_score": 5, "owner": None,
+        "auditor": None, "ledger": 10, "tx_hash": "e" * 64, "occurred_at": 1,
+    }
+    licence_row = {"_license": {
+        "tokens_contract_id": settings.tokens_contract_id, "agent": AGENT,
+        "skill_id": "com.acme.weather", "version": "2.0.0", "ledger": 10,
+        "tx_hash": "cd" * 32, "occurred_at": 1,
+    }}
+    decoded = iter([dict(registry_row), dict(licence_row)])
+    monkeypatch.setattr(indexer, "SorobanServer", Server)
+    monkeypatch.setattr(
+        indexer, "_get_events", lambda server, start: type("R", (), {"events": [1, 2]})()
+    )
+    monkeypatch.setattr(indexer, "_decode_event", lambda ev: next(decoded))
+
+    assert indexer.poll_once() == 2
+    with sqlite3.connect(_isolated_db) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM license_events").fetchone()[0] == 1
+    assert dropped == [1]
+
+    # A poll that brings only a licence event must not drop the registry snapshot.
+    decoded = iter([dict(licence_row, _license=dict(licence_row["_license"], tx_hash="ab" * 32))])
+    monkeypatch.setattr(indexer, "_decode_event", lambda ev: next(decoded))
+    monkeypatch.setattr(
+        indexer, "_get_events", lambda server, start: type("R", (), {"events": [3]})()
+    )
+    indexer.poll_once()
+    assert dropped == [1]
