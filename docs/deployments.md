@@ -941,13 +941,18 @@ connector. Record: [`evidence/ste-54-vps-migration-2026-09-17.json`](evidence/st
 | ledger continuity | 9 rows after the purchase: the 8 migrated plus the new one |
 | API log | real visitor addresses, 0 5xx, **0 warnings** — the IPv6→IPv4 RPC retries seen on CT 204 are gone |
 
-**`api.sterish.xyz`:** the tunnel ingress for it is live on the VPS, but the DNS record is not yet
-created. The Cloudflare origin certificate available (`cert.pem`) is scoped to the `jameshub.fun`
-zone, and `cloudflared tunnel route dns` with it created a stray `api.sterish.xyz.jameshub.fun`
-record instead — to be deleted in the dashboard, along with adding a proxied CNAME
-`api` → `0cce8c0e-6239-4454-9ec6-a2a4515e4c9d.cfargotunnel.com` in the `sterish.xyz` zone. Until
-then `REPORT_BASE_URL` stays `https://api-sterish.jameshub.fun`, so no response links to a hostname
-that does not resolve.
+**`api.sterish.xyz` — live the same evening.** The Cloudflare origin certificate available (`cert.pem`)
+turned out to be scoped to the `jameshub.fun` zone: `cloudflared tunnel route dns` with it created a
+stray `api.sterish.xyz.jameshub.fun` record instead. That record was deleted in the dashboard, and a
+proxied CNAME `api` → `0cce8c0e-6239-4454-9ec6-a2a4515e4c9d.cfargotunnel.com` was added in the
+`sterish.xyz` zone (the stray name now returns NXDOMAIN). `REPORT_BASE_URL` then moved to
+`https://api.sterish.xyz`; for a few minutes earlier it had been set there before the record existed
+and was reverted, so `report_uri` briefly pointed at an unresolvable name.
+
+Verified through `https://api.sterish.xyz`: `deploy/verify.sh` all pass; `report_uri`, the x402
+`resource.url` and the STE-48 `challenge_url` all use `https://api.sterish.xyz`; the old hostname
+still answers; and the D3 flow transcript was regenerated through the new hostname, **15/15**
+([`evidence/d3-flow-transcript-2026-09-17.md`](evidence/d3-flow-transcript-2026-09-17.md)).
 
 ## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
 

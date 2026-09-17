@@ -36,5 +36,16 @@
     "note": "the IPv6 RPC retry warnings seen on CT 204 (no IPv6 route) are gone: the VPS has a working IPv6 route"
   },
   "old_host": "stack stopped, not deleted; ctredeploy scripts renamed *.DISABLED-moved-to-vps; /opt/sterish/MOVED-TO-VPS.txt",
-  "api.sterish.xyz": "ingress configured on the VPS; DNS CNAME in the sterish.xyz zone still to be created (the tunnel cert on hand is scoped to jameshub.fun)"
+  "api.sterish.xyz": {
+    "dns": "proxied CNAME api -> 0cce8c0e-6239-4454-9ec6-a2a4515e4c9d.cfargotunnel.com in the sterish.xyz zone (added in the dashboard); stray api.sterish.xyz.jameshub.fun deleted (NXDOMAIN)",
+    "report_base_url": "https://api.sterish.xyz",
+    "verify_sh": "all checks passed via https://api.sterish.xyz",
+    "urls_built_by_api": {
+      "report_uri": "https://api.sterish.xyz/reports/...",
+      "x402_resource_url": "https://api.sterish.xyz/use/...",
+      "ownership_challenge_url": "https://api.sterish.xyz/use/.../challenge?agent=..."
+    },
+    "old_hostname": "api-sterish.jameshub.fun still 200",
+    "d3_transcript": "regenerated through api.sterish.xyz, 15/15"
+  }
 }
