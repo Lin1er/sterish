@@ -1,0 +1,15 @@
+{
+  "ticket": "STE-53",
+  "date": "2026-09-17",
+  "api": "https://api-sterish.jameshub.fun",
+  "deployed": "467f29e",
+  "x402_resource_url": "https://api-sterish.jameshub.fun/use/org.stellar.skills.cross-chain.cctp/2026.8.31",
+  "ownership_challenge_url": "https://api-sterish.jameshub.fun/use/org.stellar.skills.agentic-payments.x402/2026.8.31/challenge?agent=GAISQEDZDZO3ZODO6DRDD3DV5VKMVNOULTU7B4VASXSXH56BUOAIPXAG",
+  "api_log_client_addresses_15min_after_deploy": {
+    "public visitor (the operator running the e2e)": 140,
+    "another public visitor": 2,
+    "127.0.0.1 (container healthcheck)": 5,
+    "172.18.0.3 (caddy active health check only)": 5
+  },
+  "before": "every public request logged as 172.18.0.3 (caddy)"
+}
