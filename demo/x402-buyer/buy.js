@@ -14,6 +14,10 @@
 //                           verify, which is the only source it trusts after payment.
 //   EXPECT_LICENSE=held     the paid request is expected to be served as an existing
 //                           licence WITHOUT settling (the agent already holds one).
+//   STOP_AFTER_PAYMENT=1    stop after the paid request (step 2). Used by
+//                           api/scripts/d3_flow_transcript.py, which records the repeat
+//                           call itself so it can adapt to whether the deployment
+//                           requires an ownership proof yet (STE-48).
 import { x402Client, x402HTTPClient } from "@x402/fetch";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
@@ -75,6 +79,11 @@ console.log(`   settle tx ${paid.headers.get("X-STERISH-SETTLEMENT-TX")}`);
 if (licence !== EXPECT) {
   console.log(`   expected licence ${EXPECT}`);
   process.exit(1);
+}
+
+if (process.env.STOP_AFTER_PAYMENT === "1") {
+  console.log(`\nOK: 402 -> pay -> licence ${EXPECT} (stopping after payment as asked).`);
+  process.exit(0);
 }
 
 // 3. The licence is on chain now, so the next call is free — for the holder. Naming the

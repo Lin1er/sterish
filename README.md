@@ -318,24 +318,24 @@ convention.
 
 ### Deliverable 1: Soroban Registry + Escrow Contracts
 - [x] Public GitHub repository with CI passing
-- [ ] Registry contract deployed to testnet (contract ID recorded)
-- [ ] USDC escrow contract deployed to testnet
-- [ ] Unit tests passing
-- [ ] Transaction links on stellar.expert
+- [x] Registry contract deployed to testnet (contract ID recorded) — Registry v2 `CCZJN366…` and Tokens v2 `CB6VK4EX…`, upgradeable behind a timelock ([`docs/deployments.md`](docs/deployments.md))
+- [x] USDC escrow contract deployed to testnet — `CCVCNFXK…`, non-upgradeable by design ([`docs/deployments.md`](docs/deployments.md))
+- [x] Unit tests passing — the `Contracts` CI workflow is green on `main`
+- [x] Transaction links on stellar.expert — per deploy and per verdict ([`docs/deployments.md`](docs/deployments.md), [`docs/audit-evidence.md`](docs/audit-evidence.md))
 
 ### Deliverable 2: Audit Pipeline + Verification API
-- [ ] 10+ real skills audited end-to-end
-- [ ] Poisoned/demo skill correctly flagged as DANGEROUS
-- [ ] Audit verdicts posted on-chain
-- [ ] REST API serving `/check/{skill_id}` and `/skills`
-- [ ] Audit reports with evidence hashes
+- [x] 10+ real skills audited end-to-end — all 13 `skills.stellar.org` catalogue skills, SAFE on chain ([`docs/audit-evidence.md`](docs/audit-evidence.md))
+- [x] Poisoned/demo skill correctly flagged as DANGEROUS — 4/4 poisoned fixtures; measured false positives 0/16, false negatives 0/4
+- [x] Audit verdicts posted on-chain — Registry v2 `CCZJN366…`, transaction per verdict ([`docs/audit-evidence.md`](docs/audit-evidence.md))
+- [x] REST API serving `/check/{skill_id}/{version}` (and `/check/by-hash/{content_hash}`) and `/skills` — live at `https://api-sterish.jameshub.fun` ([`docs/api-spec.md`](docs/api-spec.md))
+- [x] Audit reports with evidence hashes — `GET /reports/{skill_id}/{version}`; `sha256(report) == evidence_hash` verified for all 25 reports on 17 Sep 2026
 
 ### Deliverable 3: Dashboard + x402 Licensing Demo
-- [ ] Live x402 pay-per-use payment on testnet
-- [ ] Working verification API
-- [ ] Dashboard deployed on dev URL
-- [ ] 3-minute demo video
-- [ ] Screenshots of full flow
+- [x] Live x402 pay-per-use payment on testnet — 402 → USDC payment → soulbound licence → 200, recorded against production with every tx linked ([`docs/evidence/d3-flow-transcript-2026-09-17.md`](docs/evidence/d3-flow-transcript-2026-09-17.md))
+- [x] Working verification API — same transcript; `deploy/verify.sh` passes against production ([`docs/deployments.md`](docs/deployments.md))
+- [ ] Dashboard deployed on dev URL — built and tested against the production API, not yet publicly reachable (STE-26)
+- [ ] 3-minute demo video (STE-28)
+- [ ] Screenshots of full flow — the API side is recorded step by step in the transcript above; dashboard screenshots pending (STE-28)
 
 ---
 
