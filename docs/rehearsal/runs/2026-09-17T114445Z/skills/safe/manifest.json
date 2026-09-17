@@ -1,0 +1,41 @@
+{
+  "skill_id": "com.sterish.e2e-rehearsal-unit-converter-1789645485",
+  "name": "Unit Converter",
+  "version": "1.0.0",
+  "description": "Convert a quantity between metric and imperial units of length, mass and temperature. Pure arithmetic: it makes no network requests, reads no files and stores nothing.",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "convert",
+      "description": "Convert a numeric value from one unit to another within the same dimension, for example 12 inches to centimetres. Returns the converted value as a number. Performs no requests.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number"
+          },
+          "from_unit": {
+            "type": "string"
+          },
+          "to_unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ]
+      },
+      "capabilities": []
+    },
+    {
+      "name": "list_units",
+      "description": "Return the units this skill understands, grouped by dimension. Takes no arguments and performs no requests.",
+      "input_schema": {
+        "type": "object"
+      },
+      "capabilities": []
+    }
+  ]
+}

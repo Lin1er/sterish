@@ -1,0 +1,36 @@
+{
+  "com.sterish.e2e-rehearsal-pdf-summarizer-1789645485@1.0.0": {
+    "register_skill": {
+      "detail": "",
+      "status": "done",
+      "step": "register_skill",
+      "tx_hash": "4b74006b0687deaee1df3e270ea4f18822d61fea936a832c2577b77a1fe776b6"
+    },
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "318f3f1d6212b546df49f7cbba231cd63ce6a432bfde26c4362310ca24e8731d"
+    }
+  },
+  "com.sterish.e2e-rehearsal-unit-converter-1789645485@1.0.0": {
+    "mint_verified": {
+      "detail": "",
+      "status": "done",
+      "step": "mint_verified",
+      "tx_hash": "3964de6dc3f53a54032070afe81fa60e679bf0e801f8381596d483614770b4e4"
+    },
+    "register_skill": {
+      "detail": "",
+      "status": "done",
+      "step": "register_skill",
+      "tx_hash": "5f06d4a5d9d5dc8d3237739e0db9222e7473529309767e9c1ec640eca494f3b3"
+    },
+    "submit_verdict": {
+      "detail": "",
+      "status": "done",
+      "step": "submit_verdict",
+      "tx_hash": "354b6afd29300320d001a34f5946ea9a87eea76d4450abfa211413c59b72a191"
+    }
+  }
+}
