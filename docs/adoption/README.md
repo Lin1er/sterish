@@ -53,12 +53,19 @@ licences run on. Nothing to integrate conceptually; they need the missing half.
 ### 2. RouteDock — `winsznx/routedock` · routedock.xyz
 
 **Last commit 7 Sep 2026.** Published on npm as `@routedock/routedock`.
+**[Tim](https://github.com/winsznx)**, Twitter [@winsznx](https://twitter.com/winsznx) — the only
+target with an open public channel.
 
-One `client.pay()` that routes across the three Stellar agent-payment protocols. They are the
-payment layer for autonomous agents; we are the trust layer for what those agents run. Adjacent,
-not competing, and they already ship to real users through npm.
+Their README states the problem for us, unprompted:
 
-**Opening line:** you route the payment — do you know what the agent on the other side actually does?
+> *"The one-way-channel Soroban contract is **unaudited** and has no safe integration path."*
+
+They already treat "unaudited" as a defect worth writing in their own README. That is the opener —
+quote their sentence back, and note that the same gap exists one layer up, in the skills the agent
+runs.
+
+**Opening line:** your README says the channel contract is unaudited. The skills your agents execute
+have the same problem, and that one we can fix today.
 
 ### 3. x402 MCP Stellar Template — `ffarinas/x402-mcp-stellar-template`
 
@@ -71,26 +78,30 @@ reaches every builder downstream of it.
 
 **Opening line:** a VERIFIED badge on a paid MCP server is a reason to install it over the other one.
 
-### 4. CredioLabs.AI — crediolabs.ai
+### 4. CredioLabs.AI — crediolabs.ai · **team@crediolabs.ai**
 
-Types: **AI + Security**. *"An MCP server and Claude skill for composing smart-account policies."*
+Verified against the live site on 17 Sep 2026, not the directory. This is the most institutional
+name on the list and the **easiest to contact**.
 
-**They publish a Claude skill.** That is literally the artefact Sterish audits, and they are already
-a security-minded team — they will scrutinise the method rather than accept a badge, which makes
-them the most useful sceptic on this list.
+> *"Credio brings over a decade of tokenization experience and purpose-built AI agents… From RWA
+> tokenization to on-chain risk monitoring and stablecoin compliance."*
 
-**Opening line:** we audit Claude skills for prompt injection and capability overreach. Yours is the
-kind we would like to be checked against.
+Partners shown on their own homepage: **Untangled, Fasanara, Moody's, Ethena**. Their current banner
+reads **"Account permissioning agents on Stellar"**, and they publish a post titled *"Smart account
+policy: letting an agent transact without handing over your wallet"* — the same problem space as
+CleverCon, approached from the institutional side.
 
-### 5. TollPay — `rajkaria/toll`
+**Contact:** `team@crediolabs.ai` (direct), [LinkedIn](https://www.linkedin.com/company/crediolabs),
+docs at `docs.crediolabs.ai`.
 
-Middleware and SDKs for monetizing MCP tools, **on mainnet**. Last commit 18 Apr 2026, so confirm
-it is still live before writing.
+**Angle:** they build agents that act under policy for institutions handling real assets. Policy
+bounds *what an agent may do*; an audited skill registry says *whether what it runs was poisoned*.
+For a compliance-facing buyer, "we can show the skill was checked, on chain" is a procurement
+argument, not a nice-to-have.
 
-### 6. Stellar AI Agent Kit — `JoseCToscano/stellar-mcp`
-
-MCP integration and CLI for AI agents on Stellar. Last commit 26 Mar 2026 — oldest here, lowest
-priority, but squarely in the right category.
+**Expect scrutiny.** A team with Moody's on its homepage will interrogate the method rather than
+accept a badge — so lead with the measured numbers (0/16 false positives, 0/4 false negatives) and
+the `cctp` self-correction, not with the badge.
 
 ### Deliberately not on this list
 
