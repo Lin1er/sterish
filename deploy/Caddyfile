@@ -11,6 +11,16 @@
 # are issued fine without a contact address; to add one, put `tls you@example.com`
 # inside the site block below.
 
+# STE-53: keep the client's address and scheme from the proxies in front of Caddy
+# (cloudflared on the compose network, tailscale serve via the host gateway), instead of
+# replacing them with Caddy's own view. Only private-range peers are trusted, so a client
+# on the internet cannot set its own X-Forwarded-For.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 {$STERISH_DOMAIN} {
 	encode gzip
 

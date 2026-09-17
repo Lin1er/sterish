@@ -161,6 +161,28 @@ that restarts forever while every other service looks healthy.
 `*.jameshub.fun` — a single level. `api.sterish.jameshub.fun` would need a
 wildcard that is not covered, so the name is `api-sterish.jameshub.fun`.
 
+## Client address and scheme behind the proxies (STE-53)
+
+Requests arrive as **Cloudflare → cloudflared → Caddy → API**. Two settings make the API see the
+visitor rather than the last proxy, and both are needed:
+
+- `Caddyfile` sets `trusted_proxies static private_ranges`, so Caddy keeps the `X-Forwarded-For`
+  and `X-Forwarded-Proto` that cloudflared (or `tailscale serve`) sends instead of overwriting them
+  with its own view.
+- The API applies those headers only when its direct peer is in `STERISH_TRUSTED_PROXIES`
+  (private ranges by default) — uvicorn's own handling is off (`--no-proxy-headers`), so there is
+  one rule in one place.
+
+Without the first, every public request reaches the API from Caddy's container address: the
+per-IP rate limit becomes a single bucket for the whole internet, and the x402 challenge advertises
+`http://`. Measured on 17 Sep 2026 with a real Caddy in front of the API: with the old Caddyfile a
+second visitor got `429` because of the first visitor's traffic and `resource.url` was `http://`;
+with the new one, `200` and `https://`.
+
+Trust is limited to private ranges, so it also covers anything on the LAN that can reach the
+published port 80 directly. That is acceptable on the homelab network; tighten
+`STERISH_TRUSTED_PROXIES` to the compose subnet if the host moves somewhere shared.
+
 ## Two things that will bite otherwise
 
 **The build context is the repo root.** Without `.dockerignore` every build ships

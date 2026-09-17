@@ -677,7 +677,12 @@ storage; only `evidence_hash` is on the ledger.
   skill can be registered at any moment.
 - **Fan-out cap.** `GET /skills/{skill_id}` needs one `get_version` per version; cap it at 50
   versions per response and paginate beyond that.
-- **Rate limiting.** 100 req/min per IP by default (configurable).
+- **Rate limiting.** 100 req/min per client IP by default (configurable). The client IP is the
+  real visitor's, taken from `X-Forwarded-For` **only when the direct peer is a trusted proxy**
+  (`STERISH_TRUSTED_PROXIES`, private ranges by default), so a caller cannot choose its own bucket.
+  Until STE-53 the limiter keyed on the proxy's address, so every public visitor shared one bucket.
+  The same rule sets the scheme of URLs the API builds from a request (the x402 `resource.url`,
+  the STE-48 `challenge_url`): `https` when the proxy chain says so.
 - **CORS.** Open — everything served is public ledger data.
 - **Config.** `REGISTRY_CONTRACT_ID` (or `REGISTRY_CA`, the name the deploy scripts write),
   `STELLAR_RPC_URL`, `STELLAR_NETWORK_PASSPHRASE`. Full list with defaults in

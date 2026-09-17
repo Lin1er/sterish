@@ -64,6 +64,12 @@ class Settings:
     # human to approve a wallet prompt, short enough that a captured signature is
     # worthless soon after. Clamped to [30, 900].
     proof_ttl_seconds: int
+    # Peers whose X-Forwarded-For / X-Forwarded-Proto are believed (STE-53). The API runs
+    # behind Cloudflare -> cloudflared -> Caddy; without this every public request looks
+    # like it came from Caddy's container address, so all visitors shared one rate-limit
+    # bucket and generated URLs said http://. Only proxies are trusted, never clients:
+    # the port is not published outside the compose network.
+    trusted_proxies: str
 
     @property
     def network(self) -> str:
@@ -132,6 +138,10 @@ def load_settings() -> Settings:
         indexer_chunk_ledgers=_env_int("INDEXER_CHUNK_LEDGERS", 4000),
         report_base_url=os.getenv("REPORT_BASE_URL", "").rstrip("/"),
         proof_ttl_seconds=min(900, max(30, _env_int("STERISH_PROOF_TTL_SECONDS", 300))),
+        trusted_proxies=os.getenv(
+            "STERISH_TRUSTED_PROXIES",
+            "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fd00::/8",
+        ).strip(),
     )
 
 
