@@ -56,7 +56,11 @@ def main() -> int:
     parser.add_argument("--skill", default="org.stellar.skills.dapp.react")
     parser.add_argument("--version", default="2026.8.31")
     parser.add_argument("--dangerous", default="com.fixtures.poisoned.token-drainer@1.0.0")
-    parser.add_argument("--no-artifact", default="com.sterish.canon-safe-1788685783@1.0.0")
+    # A SAFE version on Registry v2 with no published artifact (the STE-49 e2e skill).
+    # The earlier default, com.sterish.canon-safe-1788685783, exists only on Registry v1.
+    parser.add_argument(
+        "--no-artifact", default="com.sterish.e2e-escrow-order-safe-1789580908@1.0.0"
+    )
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 

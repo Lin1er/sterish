@@ -27,6 +27,7 @@ record is the ledger, and every step that touched it carries its transaction has
 
 from __future__ import annotations
 
+import base64
 import collections
 import logging
 import threading
@@ -41,7 +42,7 @@ from typing import Any
 import httpx
 from stellar_sdk import Asset, Keypair, Server, TransactionBuilder
 
-from . import chain, x402, x402_client
+from . import chain, proofs, x402, x402_client
 from .config import settings
 from .errors import ApiError
 
@@ -453,9 +454,27 @@ class DemoBuyer:
 
     def _step_repeat_free(self, job: Job, step: Step, ctx: dict) -> None:
         agent: Keypair = ctx["agent"]
+        # Since STE-48 naming the holder is not enough: the free path wants a SEP-53
+        # signature over a single-use challenge. The demo holds the agent's key, so it
+        # proves ownership exactly as an outside agent would.
+        challenge = ctx["http"].get(
+            f"/use/{job.skill_id}/{job.version}/challenge",
+            params={"agent": agent.public_key},
+        )
+        if challenge.status_code != 200:
+            raise DemoStepFailed(
+                "REPEAT_NOT_FREE",
+                f"ownership challenge answered {challenge.status_code}",
+            )
+        body = challenge.json()
+        signature = base64.b64encode(agent.sign(proofs.sep53_digest(body["message"]))).decode()
         response = ctx["http"].get(
             f"/use/{job.skill_id}/{job.version}",
-            headers={"X-AGENT-ADDRESS": agent.public_key},
+            headers={
+                "X-AGENT-ADDRESS": agent.public_key,
+                proofs.NONCE_HEADER: body["nonce"],
+                proofs.SIGNATURE_HEADER: signature,
+            },
         )
         if response.status_code != 200 or response.headers.get("X-STERISH-LICENSE") != "held":
             raise DemoStepFailed(
@@ -463,7 +482,7 @@ class DemoBuyer:
                 f"expected 200 held, got {response.status_code} "
                 f"licence={response.headers.get('X-STERISH-LICENSE')}",
             )
-        step.detail = "HTTP 200, served from the licence, no payment"
+        step.detail = "HTTP 200, served from the licence with a SEP-53 ownership proof, no payment"
         step.data = {"status": 200, "licence": "held"}
 
 
