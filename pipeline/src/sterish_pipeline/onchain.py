@@ -46,10 +46,22 @@ _CONTRACT_ERR_RE = re.compile(r"Error\(Contract, #(\d+)\)")
 # once the caller says which contract answered: escrow #3 is NotOpen, registry #3
 # is SkillNotFound. Labelling everything with the registry's names (as this module
 # first did) turns a real escrow failure into "Unknown".
+# contracts/registry/src/data.rs::RegistryError (10-13 added by STE-44)
 REGISTRY_ERRORS = {
     1: "NotInitialized", 2: "NotAuthorized", 3: "SkillNotFound",
     4: "VersionNotFound", 5: "VersionAlreadyExists", 6: "HashAlreadyRegistered",
     7: "InvalidInput", 8: "InvalidTrustScore", 9: "InvalidVerdict",
+    10: "UpgradeabilityRenounced", 11: "NoPendingUpgrade", 12: "UpgradeAlreadyPending",
+    13: "UpgradeNotReady",
+}
+
+# contracts/tokens/src/data.rs::TokenError (STE-50). Before this table existed, a Tokens
+# refusal was named from the registry's table: mint_license #5 NotVerified — the gate
+# refusing to licence a DANGEROUS version — read as "VersionAlreadyExists".
+TOKENS_ERRORS = {
+    1: "NotInitialized", 2: "TokenNotFound", 3: "AlreadyMinted", 4: "NotSafeVerdict",
+    5: "NotVerified", 6: "InvalidInput", 7: "UpgradeabilityRenounced",
+    8: "NoPendingUpgrade", 9: "UpgradeAlreadyPending", 10: "UpgradeNotReady",
 }
 
 # contracts/escrow/src/data.rs
@@ -69,7 +81,40 @@ SAC_ERRORS = {
 ERROR_TABLES = {
     "registry": REGISTRY_ERRORS,
     "escrow": ESCROW_ERRORS,
+    "tokens": TOKENS_ERRORS,
 }
+
+# Entrypoints per contract, from each contract's `pub fn` list. A name that belongs to one
+# contract resolves by itself; a name several contracts export (`get_admin`, the STE-44
+# upgrade functions) cannot, so the caller has to say which contract it called.
+_ENTRYPOINTS = {
+    "registry": (
+        "register_skill", "submit_verdict", "lookup_by_hash", "get_version", "get_latest",
+        "is_verified", "query_skill", "query_all_skills", "set_auditor",
+        "update_trust_score_config", "get_trust_score_config", "get_auditor", "get_admin",
+        "get_skill_count",
+    ),
+    "tokens": (
+        "mint_verified", "mint_license", "has_license", "is_verified_token", "owner_of",
+        "get_token", "total_supply", "get_admin", "get_registry", "get_auditor_role",
+        "get_minter_role", "set_auditor_role", "set_minter_role",
+    ),
+    "escrow": (
+        "create_audit_request", "post_bond", "settle", "slash", "claim_forfeited",
+        "get_request", "get_usdc_token", "get_admin", "get_request_count",
+    ),
+}
+_UPGRADE_ENTRYPOINTS = (
+    "propose_upgrade", "execute_upgrade", "cancel_upgrade", "renounce_upgradeability",
+    "get_pending_upgrade", "get_upgrade_delay", "is_upgradeable",
+)
+_ENTRYPOINTS["registry"] += _UPGRADE_ENTRYPOINTS
+_ENTRYPOINTS["tokens"] += _UPGRADE_ENTRYPOINTS
+
+
+def contracts_exporting(function: str) -> tuple[str, ...]:
+    """Which of our contracts export `function`, in a stable order."""
+    return tuple(name for name, fns in _ENTRYPOINTS.items() if function in fns)
 
 
 class OnChainError(Exception):
@@ -84,17 +129,21 @@ class ContractCallError(OnChainError):
     reports the SAC's meaning when that is what came back.
     """
 
-    _FUNCTION_CONTRACT = {
-        "register_skill": "registry", "submit_verdict": "registry",
-        "query_skill": "registry", "get_version": "registry",
-        "lookup_by_hash": "registry", "is_verified": "registry",
-        "create_audit_request": "escrow", "post_bond": "escrow",
-        "settle": "escrow", "slash": "escrow", "claim_forfeited": "escrow",
-    }
-
     def __init__(self, code: int, function: str, raw: str = "", contract: str | None = None):
-        which = contract or self._FUNCTION_CONTRACT.get(function, "registry")
-        name = ERROR_TABLES.get(which, {}).get(code) or SAC_ERRORS.get(code) or "Unknown"
+        if contract is None:
+            owners = contracts_exporting(function)
+            # One owner: unambiguous. Several, or a function we do not know: say so,
+            # instead of silently borrowing the registry's names (the STE-50 bug).
+            contract = owners[0] if len(owners) == 1 else None
+        if contract is not None:
+            which = contract
+            name = ERROR_TABLES.get(which, {}).get(code) or SAC_ERRORS.get(code) or "Unknown"
+        else:
+            candidates = contracts_exporting(function) or tuple(ERROR_TABLES)
+            which = "contract not identified"
+            name = " / ".join(
+                f"{c} {ERROR_TABLES[c].get(code, 'Unknown')}" for c in candidates
+            )
         super().__init__(f"{function} failed: {name} (#{code}, {which})")
         self.code = code
         self.function = function
@@ -119,10 +168,10 @@ def _decode(xdr_str: str) -> Any:
     return scval.to_native(stellar_xdr.SCVal.from_xdr(xdr_str))
 
 
-def _raise_for_error(error: Any, function: str) -> None:
+def _raise_for_error(error: Any, function: str, contract: str | None = None) -> None:
     match = _CONTRACT_ERR_RE.search(str(error))
     if match:
-        raise ContractCallError(int(match.group(1)), function, str(error))
+        raise ContractCallError(int(match.group(1)), function, str(error), contract)
     raise OnChainError(f"{function} simulation failed: {error}")
 
 
@@ -153,8 +202,18 @@ def hash_scval(hex_hash: str) -> stellar_xdr.SCVal:
 # --- reads ------------------------------------------------------------------
 
 
-def simulate(cfg: PipelineConfig, contract_id: str, function: str, args: list | None = None) -> Any:
-    """Read-only contract call. Returns the decoded native value."""
+def simulate(
+    cfg: PipelineConfig,
+    contract_id: str,
+    function: str,
+    args: list | None = None,
+    *,
+    contract: str | None = None,
+) -> Any:
+    """Read-only contract call. Returns the decoded native value.
+
+    `contract` ("registry" / "tokens" / "escrow") names which ABI a typed error is read
+    against; only needed for a function several contracts export."""
     try:
         tx = (
             TransactionBuilder(Account(NULL_ACCOUNT, 0), cfg.network_passphrase, base_fee=100)
@@ -167,7 +226,7 @@ def simulate(cfg: PipelineConfig, contract_id: str, function: str, args: list | 
         raise OnChainError(f"RPC call to {function} failed: {exc}") from exc
 
     if sim.error:
-        _raise_for_error(sim.error, function)
+        _raise_for_error(sim.error, function, contract)
     if not sim.results:
         return None
     return _decode(sim.results[0].xdr)
@@ -185,6 +244,7 @@ def invoke(
     *,
     timeout_s: int = 60,
     retries: int = 3,
+    contract: str | None = None,
 ) -> TxResult:
     """Sign, submit and confirm one contract call. Returns the transaction hash.
 
@@ -198,7 +258,8 @@ def invoke(
     for attempt in range(1, retries + 1):
         try:
             return _invoke_once(
-                cfg, contract_id, function, args, keypair, timeout_s=timeout_s
+                cfg, contract_id, function, args, keypair, timeout_s=timeout_s,
+                contract=contract,
             )
         except ContractCallError:
             raise
@@ -233,6 +294,7 @@ def _invoke_once(
     keypair: Keypair,
     *,
     timeout_s: int,
+    contract: str | None = None,
 ) -> TxResult:
     server = _server(cfg)
 
@@ -256,7 +318,7 @@ def _invoke_once(
         detail = _prepare_error_detail(exc)
         match = _CONTRACT_ERR_RE.search(detail)
         if match:
-            raise ContractCallError(int(match.group(1)), function, detail) from exc
+            raise ContractCallError(int(match.group(1)), function, detail, contract) from exc
         raise OnChainError(f"preparing {function} failed: {detail}") from exc
 
     prepared.sign(keypair)

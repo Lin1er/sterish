@@ -1,0 +1,20 @@
+{
+  "ticket": "STE-50",
+  "date": "2026-09-17",
+  "network": "testnet",
+  "tokens_contract": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
+  "method": "read-only simulate against Tokens v2 of two calls the contract must refuse; nothing signed",
+  "calls": [
+    {
+      "call": "mint_license(GAISQEDZDZO3ZODO6DRDD3DV5VKMVNOULTU7B4VASXSXH56BUOAIPXAG, com.fixtures.demo.release-notes, 2.0.0)",
+      "why_refused": "release-notes 2.0.0 is DANGEROUS on Registry v2, so it has no VERIFIED badge",
+      "main_before_fix": "mint_license failed: VersionAlreadyExists (#5, registry)",
+      "this_branch": "mint_license failed: NotVerified (#5, tokens)"
+    },
+    {
+      "call": "mint_verified(com.fixtures.demo.release-notes, 2.0.0, GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU)",
+      "why_refused": "the version is not SAFE",
+      "this_branch": "mint_verified failed: NotSafeVerdict (#4, tokens)"
+    }
+  ]
+}
