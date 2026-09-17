@@ -494,6 +494,15 @@ on the dashboard is better than an invisible false claim. Until the deploy is re
 `docs/deployments.md`, production still has the gap described above. Any redeploy of the API from
 `main` also ships the fix.
 
+**Update, 17 September 2026 (~12:00 UTC): closed in production.** Deployed the same day it was
+merged, ahead of the dashboard UI, on the ACC's reasoning that a visible degradation beats an invisible
+false claim. Proven on production with a real purchase: the holder with a proof is served, and the
+address alone, a proof signed by another key, a replayed proof, a stranger's proof presented for the
+holder, a proof for another version and an expired proof are all refused
+([`evidence/ste-48-e2e-ownership-proof-prod-2026-09-17.json`](evidence/ste-48-e2e-ownership-proof-prod-2026-09-17.json);
+deploy record in `docs/deployments.md`). From 16 September, when the gap was found, to this deploy,
+the claim *soulbound* was not enforced by the API.
+
 **Residual limit, stated rather than implied away.** A signed x402 payment header is still accepted
 as proof of the payer when that payer already holds the licence. It is a bearer credential until
 its auth entry expires (`maxTimeoutSeconds`, 300 s) — proof of payment, not proof of possession.

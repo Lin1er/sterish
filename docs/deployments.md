@@ -896,6 +896,24 @@ Checked through `https://api-sterish.jameshub.fun`, for every audited version:
 | `deploy/verify.sh` | all checks pass; 17 SAFE rows for sale, 0 undeliverable priced |
 
 Record: [`evidence/ste-37-public-reports-check-2026-09-17.json`](evidence/ste-37-public-reports-check-2026-09-17.json).
+### Redeploy 2026-09-17 (third) — licences need proof of ownership, visitors are seen, filters work (STE-48, STE-53, STE-34, STE-46)
+
+`467f29e` on CT 204 (PRs #50, #53, #54, #55, #56), ~12:00 UTC. `ctredeploy`, then the index volume
+dropped and rebuilt (a cache; STE-46 backfills `mint_tx` from it), Caddy restarted to load the new
+`Caddyfile`, `publish-artifacts` (18 for sale, 0 newly published). The payments volume was kept.
+
+| Ticket | Checked through the public URL | Result |
+|---|---|---|
+| — | `deploy/verify.sh` | all pass; 17 SAFE rows for sale, 0 undeliverable priced, `sha256(report) == evidence_hash` |
+| **STE-48** | real purchase by a fresh agent `GCLFME6G…` (`dapp.react`, settle [`92a64981…`](https://stellar.expert/explorer/testnet/tx/92a64981a142f8d0481a63e35262640018fa146425b45cc3cf9e6d458e253e2a), mint [`da0d2a93…`](https://stellar.expert/explorer/testnet/tx/da0d2a93b7e95141ae328057b4b3c2c36d068817c05d83247db66aced2d65558)), then `api/scripts/e2e_paid_path.py --expiry-wait` | holder **with** a SEP-53 proof → `200 held`, bytes match `content_hash`; address only, `?agent=`, another key's signature, replayed proof, a stranger's proof for the holder, another version's proof, and an **expired** proof (after 303 s) → all `401`, no artifact, no challenge; a stranger proving its own address → `402` ([`evidence`](evidence/ste-48-e2e-ownership-proof-prod-2026-09-17.json)) |
+| **STE-53** | x402 challenge, 401 body, API logs | `resource.url` and `challenge_url` are `https://`; the API log shows the real visitor addresses, and `172.18.0.3` (Caddy) only for its own health checks ([`evidence`](evidence/ste-53-proxy-aware-prod-2026-09-17.json)) |
+| **STE-34** | `api/scripts/verify_skills_filters.py` | PASS, 57 checks; `?verdict=SAFE` returns 17 SAFE rows only, `?verified=true` → `400 INVALID_PARAMETER` ([`evidence`](evidence/ste-34-e2e-skills-filters-prod-2026-09-17.json)) |
+| **STE-46** | `GET /licenses?agent=GAISQEDZ…` | 200, the licence listed with its `mint_tx` backfilled by the rebuilt index |
+| **STE-52** | `api/scripts/d3_flow_transcript.py` regenerated | 15/15, now recording the ownership-proof path ([`transcript`](evidence/d3-flow-transcript-2026-09-17.md)) |
+
+**Expected side effect, announced on STE-48:** the dashboard's `200 held` path answers `401
+OWNERSHIP_PROOF_REQUIRED` until its SEP-43 signing UI lands. New purchases are unaffected.
+
 ## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
 
 The first run of the whole loop against Registry v2 + Tokens v2 + the unchanged Escrow — the
