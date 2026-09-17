@@ -133,3 +133,54 @@ to the pipeline's label.
   [STE-28](https://linear.app/sterish/issue/STE-28) and STE-24 is the polish pass.
 * Re-running steps 3–5 after STE-26 and STE-42 land. The ticket asks for failed steps to be
   repeated until green; that cannot happen in this run because both fixes belong to other owners.
+
+---
+
+# Run 2 — 17 September 2026 (`runs/2026-09-17T114445Z`)
+
+Re-run after STE-42, STE-49, STE-50 and STE-37 landed. **4 / 7 GREEN — the same score as run 1, for
+a completely different and much better reason.**
+
+| # | Step | Run 1 | Run 2 |
+|---|---|---|---|
+| 1 | new skill, escrow locks fee + bond | GREEN | **GREEN** (request #22) |
+| 2 | audit → SAFE → VERIFIED → settle | GREEN | **GREEN** |
+| 3 | fresh agent checks via dashboard | PARTIAL | **PARTIAL** (still no dashboard, STE-26) |
+| 4 | 402 → pay → licence → 200 | **RED — agent paid and got nothing** | **RED — nothing was charged** |
+| 5 | second call → 200 | RED | BLOCKED (depends on 4) |
+| 6 | poisoned → DANGEROUS, blocked, unbuyable | GREEN | **GREEN** |
+| 7 | slash: bond → reporter | GREEN | **GREEN** (request #23, reporter +0.2) |
+
+## Step 4 is red, and the system was right
+
+```
+GET /use  →  HTTP 404, PAYMENT-REQUIRED present=False, price 0.0000000 USDC
+```
+
+In run 1 this step charged the agent 0.1 USDC, minted a licence, then answered `404`. In run 2
+**no price was offered and no money moved.** That is the STE-42 fix working exactly as designed:
+a price is only quoted for something the server can actually deliver.
+
+So the red is now **the rehearsal's own fault, not the product's.** Every run registers a
+brand-new skill (`com.sterish.e2e-rehearsal-*`) whose artifact has never been published to the
+server, so `/use` correctly refuses to sell it. Steps 4 and 5 cannot go green while the runner
+registers a skill it never publishes an artifact for.
+
+**This also settles the over-broad claim in F1 above.** Run 1's failure was the brand-new skill,
+not the registry — exactly as the 17 September correction says.
+
+**Fix (owner: Axel, this script):** either publish the new skill's artifact as part of step 2, or
+point steps 4–5 at an already-published catalogue version. The first is truer to the loop the
+ticket describes, because a developer submitting a skill does expect it to become buyable.
+
+## Step 6 gained a detail worth keeping
+
+The mint refusal now reads `NotVerified (#5, tokens)` instead of the registry's error name. That is
+STE-50 live: the same refusal, finally labelled with the contract it came from.
+
+## What is still not exercised
+
+* **Step 3 dashboard** — STE-26, nothing is publicly openable.
+* **STE-48 ownership proof** — merged but not deployed, so this run did not exercise the challenge
+  flow at all. `GET …/challenge` is still `404` in production. Until the deploy, a licence can still
+  be borrowed by anyone who reads the ledger.
