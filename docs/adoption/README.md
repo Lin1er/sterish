@@ -156,6 +156,13 @@ Send this only when they say yes. Nobody reads a quickstart before agreeing.
 | Browse what is already audited | `GET /skills` — 24 shown, test namespaces hidden and counted |
 | Evidence | `docs/audit-evidence.md` |
 
+> ⚠️ **Do not add `?verdict=` or any filter to a link you send someone.** Measured against
+> production on 17 Sep 2026: `GET /skills?verdict=SAFE` returns **200 with every skill** — 17 SAFE,
+> 5 DANGEROUS, 2 WARNING. The filter is accepted and silently ignored, because STE-34 has not
+> merged. A builder who tries it gets a confident wrong answer, which is worse than an error, and
+> worse still coming from a product that sells verifiable verdicts. The examples below avoid
+> filters on purpose. Revisit once STE-34 is live.
+
 A live example to paste, verified working on 17 Sep 2026:
 
 ```
