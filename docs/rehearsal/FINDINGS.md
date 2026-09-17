@@ -66,6 +66,22 @@ deliberately did not migrate. So on the live stack every purchase currently ends
 payment, not only the catalogue skills. No second, "control" purchase was made for that reason —
 it could only have repeated the same loss.
 
+> **Correction, 17 September 2026.** The paragraph above was too broad, and it is left in place
+> rather than rewritten so the record shows what was believed at the time.
+>
+> It was true of the **brand-new skill this rehearsal registered minutes earlier** — that artifact
+> had never been published, so of course the server did not hold it. It was **not** true of the
+> registry as a whole, and the sweeping form of the claim was not tested before it was written.
+>
+> @m.ulinasidiki pointed this out, and the STE-42 redeploy on 17 Sep published artifacts for the
+> migrated entries: **16 for sale, 6 correctly refused as not SAFE, 0 failed.** Verified against
+> production the same day: `GET /use/org.stellar.skills.dapp.react/2026.8.31` answers **402**, not
+> 404 — under the STE-42 fix a price is only offered for something that can actually be delivered,
+> so a 402 is positive proof the artifact is there.
+>
+> What remains true from F1: the agent in this run **did** pay, receive a licence, and get a 404.
+> That is the bug STE-42 fixed, and this run is how it was caught on the live stack.
+
 Evidence added to STE-42 as a comment. Not patched here: `api/` is James's.
 
 ### F2 — no public dashboard (step 3) · STE-26 · Ancung
