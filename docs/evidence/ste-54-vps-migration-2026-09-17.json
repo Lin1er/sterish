@@ -1,0 +1,40 @@
+{
+  "ticket": "STE-54",
+  "date": "2026-09-17",
+  "from": "Proxmox pve02 LXC CT 204 (homelab)",
+  "to": "VPS 187.53.142.100 (Ubuntu 26.04, 2 vCPU / 8 GB / 96 GB, IPv4+IPv6)",
+  "tunnel": "sterish-api 0cce8c0e-6239-4454-9ec6-a2a4515e4c9d (unchanged; the VPS is now its only connector, origin IP 187.53.142.100)",
+  "cutover_utc": {
+    "start": "13:49:02",
+    "end": "13:49:16"
+  },
+  "payments_ledger": {
+    "sha256_prefix_old_host": "058a002ed05e74d0",
+    "sha256_prefix_copied": "058a002ed05e74d0",
+    "sha256_prefix_on_vps": "058a002ed05e74d0",
+    "rows_at_cutover": 8,
+    "owed_at_cutover": 0,
+    "rows_after_e2e": 9
+  },
+  "index": "rebuilt from chain on the VPS (cache)",
+  "publish_artifacts": "18 for sale (18 newly published), 4 not SAFE, 0 failed",
+  "verify_sh": "all checks passed via https://api-sterish.jameshub.fun (17 SAFE rows for sale, 0 undeliverable priced)",
+  "e2e_paid_path": {
+    "api": "https://api-sterish.jameshub.fun",
+    "skill": "org.stellar.skills.standards.ecosystem",
+    "agent": "GC6VEHOETZU4G6SUVT2JCLQHRUZSN57R6JM65VXHEQ6EIWLEAWL7PV2O",
+    "funding_tx": "04ce8d6c45bdea7c2a9695166ab3e16bb433065fc614189e404a00ef48080833",
+    "settle_tx": "54d18460153bc4bcc6c51229898c138a4591be9f5b8a681fbcde4346f8d4b170",
+    "mint_tx": "2eb739eeaeddbb7b344fd2bb539ff7681a069447f6318fe2f1641cdb961e047c",
+    "ownership_proof": "held with proof 200; address-only, forged, replayed, borrowed, wrong-version all 401",
+    "result": "pass"
+  },
+  "api_log_after_cutover": {
+    "real visitor addresses logged": true,
+    "5xx": 0,
+    "warnings": 0,
+    "note": "the IPv6 RPC retry warnings seen on CT 204 (no IPv6 route) are gone: the VPS has a working IPv6 route"
+  },
+  "old_host": "stack stopped, not deleted; ctredeploy scripts renamed *.DISABLED-moved-to-vps; /opt/sterish/MOVED-TO-VPS.txt",
+  "api.sterish.xyz": "ingress configured on the VPS; DNS CNAME in the sterish.xyz zone still to be created (the tunnel cert on hand is scoped to jameshub.fun)"
+}

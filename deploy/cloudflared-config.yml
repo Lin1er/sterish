@@ -20,6 +20,12 @@ ingress:
   # issues certificates for `jameshub.fun` and `*.jameshub.fun` only — a single
   # level. A two-level name like `api.sterish.jameshub.fun` would need
   # `*.sterish.jameshub.fun`, which Universal SSL does not cover.
+  # Canonical hostname since STE-54. Needs a proxied CNAME to
+  # 0cce8c0e-6239-4454-9ec6-a2a4515e4c9d.cfargotunnel.com in the sterish.xyz zone.
+  - hostname: api.sterish.xyz
+    service: http://caddy:80
+
+  # Original hostname, kept so nothing that already points at it breaks.
   - hostname: api-sterish.jameshub.fun
     # `caddy` is the compose service name, NOT localhost: cloudflared runs in its
     # own container, so localhost there is itself.
