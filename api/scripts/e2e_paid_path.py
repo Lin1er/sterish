@@ -20,6 +20,9 @@ What it proves, in order:
    has to take the payer from the facilitator's verify. Its USDC balance drops by
    exactly the price and `has_license` becomes true on chain.
 4. The bytes served hash to the on-chain content_hash.
+4b. STE-48: the holder's address alone, a proof signed by another key, a replayed proof,
+   a stranger's proof presented for the holder, and a proof for another version are all
+   401 with no artifact and no payment challenge (and, with --expiry-wait, an expired one).
 5. The same agent signs a SECOND payment for the licence it now holds; the API must
    serve it as held and its USDC balance must not move.
 
@@ -117,6 +120,30 @@ def run_buyer(api: str, agent: Keypair, skill_id: str, version: str, **env: str)
     }
 
 
+def sep53_sign(keypair: Keypair, message: str) -> str:
+    """SEP-53, as a wallet's signMessage and `stellar message sign` produce it."""
+    import base64
+    import hashlib
+
+    digest = hashlib.sha256(b"Stellar Signed Message:\n" + message.encode("utf-8")).digest()
+    return base64.b64encode(keypair.sign(digest)).decode()
+
+
+def proof_headers(
+    http: httpx.Client, api: str, skill: str, version: str, agent: str, signer: Keypair
+) -> tuple[dict, dict]:
+    challenge = http.get(f"{api}/use/{skill}/{version}/challenge", params={"agent": agent})
+    if challenge.status_code != 200:
+        raise E2EFailure(f"challenge endpoint answered {challenge.status_code}: {challenge.text}")
+    body = challenge.json()
+    headers = {
+        "X-AGENT-ADDRESS": agent,
+        "X-STERISH-PROOF-NONCE": body["nonce"],
+        "X-STERISH-PROOF-SIGNATURE": sep53_sign(signer, body["message"]),
+    }
+    return headers, body
+
+
 def content_hash_of_served(body: bytes) -> str:
     sys.path.insert(0, str(REPO / "pipeline" / "src"))
     from sterish_pipeline.content_hash import content_hash
@@ -133,6 +160,11 @@ def main() -> int:
     parser.add_argument("--dangerous", default="com.fixtures.poisoned.token-drainer@1.0.0")
     parser.add_argument("--funder-env", default="AUDITOR_SECRET")
     parser.add_argument("--out", default=None)
+    parser.add_argument(
+        "--expiry-wait", action="store_true",
+        help="also wait out one challenge and prove an expired proof is refused "
+        "(takes STERISH_PROOF_TTL_SECONDS of the target API)",
+    )
     args = parser.parse_args()
 
     api = args.api.rstrip("/")
@@ -224,12 +256,12 @@ def main() -> int:
 
     # --- 4. the bytes -------------------------------------------------------------------
     print("\n4. the bytes served are the bytes the registry pinned")
-    served = http.get(
-        f"{api}/use/{args.skill}/{args.version}", headers={"X-AGENT-ADDRESS": agent.public_key}
-    )
+    use_url = f"{api}/use/{args.skill}/{args.version}"
+    proven, _ = proof_headers(http, api, args.skill, args.version, agent.public_key, agent)
+    served = http.get(use_url, headers=proven)
     check(
         served.status_code == 200 and served.headers["X-STERISH-LICENSE"] == "held",
-        "licence holder served without payment",
+        "licence holder served without payment, with a SEP-53 ownership proof",
     )
     onchain = http.get(f"{api}/check/{args.skill}/{args.version}").json()["content_hash"]
     check(
@@ -237,6 +269,60 @@ def main() -> int:
         "content_hash(served bytes) == on-chain content_hash",
     )
     evidence["content_hash"] = onchain
+
+    # --- 4b. the licence cannot be borrowed (STE-48) ------------------------------------
+    print("\n4b. naming the holder is not enough: every forged or reused proof is refused")
+    stranger = Keypair.random()
+    evidence["stranger"] = stranger.public_key
+
+    def refused(response: httpx.Response, code: str, what: str) -> None:
+        body = response.json() if response.headers.get("content-type", "").startswith(
+            "application/json"
+        ) else {}
+        check(
+            response.status_code == 401
+            and body.get("error") == code
+            and "PAYMENT-REQUIRED" not in response.headers
+            and "X-STERISH-LICENSE" not in response.headers,
+            f"{what} -> 401 {code}, no artifact, no payment challenge",
+        )
+
+    refused(
+        http.get(use_url, headers={"X-AGENT-ADDRESS": agent.public_key}),
+        "OWNERSHIP_PROOF_REQUIRED", "holder's address only",
+    )
+    refused(
+        http.get(use_url, params={"agent": agent.public_key}),
+        "OWNERSHIP_PROOF_REQUIRED", "holder's address as ?agent=",
+    )
+    forged, _ = proof_headers(http, api, args.skill, args.version, agent.public_key, stranger)
+    refused(http.get(use_url, headers=forged), "INVALID_OWNERSHIP_PROOF",
+            "holder's challenge signed by another key")
+    refused(http.get(use_url, headers=proven), "INVALID_OWNERSHIP_PROOF",
+            "the proof that was already used, replayed")
+    own, _ = proof_headers(http, api, args.skill, args.version, stranger.public_key, stranger)
+    refused(http.get(use_url, headers=dict(own, **{"X-AGENT-ADDRESS": agent.public_key})),
+            "INVALID_OWNERSHIP_PROOF", "a stranger's valid proof presented for the holder")
+    other_version, _ = proof_headers(
+        http, api, args.skill, args.version + ".other", agent.public_key, agent
+    )
+    refused(http.get(use_url, headers=other_version), "INVALID_OWNERSHIP_PROOF",
+            "a proof for another version")
+    stranger_paying = http.get(use_url, headers=own)
+    check(stranger_paying.status_code == 402 and "PAYMENT-REQUIRED" in stranger_paying.headers,
+          "a stranger proving its OWN address, with no licence, is asked to pay (402)")
+
+    if args.expiry_wait:
+        pending, challenge = proof_headers(
+            http, api, args.skill, args.version, agent.public_key, agent
+        )
+        wait = max(0, challenge["expires_at"] - int(time.time())) + 3
+        print(f"       waiting {wait}s for the challenge to expire")
+        time.sleep(wait)
+        refused(http.get(use_url, headers=pending), "INVALID_OWNERSHIP_PROOF",
+                "a correctly signed proof after its challenge expired")
+    evidence["ownership_proof"] = "held with proof 200; address-only, forged, replayed, " \
+        "borrowed, wrong-version" + (", expired" if args.expiry_wait else "") + " all 401"
 
     # --- 5. a second payment for a held licence is not charged ---------------------------
     print("\n5. a second signed payment for a licence already held is not charged")

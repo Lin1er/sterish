@@ -17,6 +17,7 @@
 import { x402Client, x402HTTPClient } from "@x402/fetch";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
+import { proofHeaders } from "./prove.js";
 
 const API = process.env.STERISH_API ?? "http://127.0.0.1:8000";
 const NETWORK = "stellar:testnet";
@@ -76,9 +77,19 @@ if (licence !== EXPECT) {
   process.exit(1);
 }
 
-// 3. The licence is on chain now, so the next call is free.
-const again = await fetch(url, { headers: agentHeaders });
-console.log(`\n3. second request (free) -> ${again.status}`);
+// 3. The licence is on chain now, so the next call is free — for the holder. Naming the
+//    address is not enough (STE-48): first show the API refuses it, then prove control.
+const bare = await fetch(url, { headers: agentHeaders });
+console.log(`\n3. free request, address only -> ${bare.status}`);
+if (bare.status !== 401) {
+  console.log("   expected 401 OWNERSHIP_PROOF_REQUIRED; body:", (await bare.text()).slice(0, 300));
+  process.exit(1);
+}
+const proven = await proofHeaders({
+  api: API, skillId: SKILL, version: VERSION, secret: process.env.AGENT_SECRET,
+});
+const again = await fetch(url, { headers: proven });
+console.log(`   free request, SEP-53 proof  -> ${again.status}`);
 console.log(`   licence   ${again.headers.get("X-STERISH-LICENSE")}`);
 if (again.status !== 200 || again.headers.get("X-STERISH-LICENSE") !== "held") {
   console.log("   expected a held licence and no payment");

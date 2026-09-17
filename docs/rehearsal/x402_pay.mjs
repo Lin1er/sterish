@@ -12,10 +12,14 @@
 //
 //   STERISH_API, AGENT_SECRET, SKILL_ID, SKILL_VERSION, STELLAR_RPC_URL
 //   MODE = "buy"  -> unpaid request, then pay and retry (steps 4)
-//   MODE = "held" -> one request carrying only X-AGENT-ADDRESS (step 5)
+//   MODE = "held" -> the free licence-holder request (step 5). Since STE-48 an address
+//                    alone is refused (401), so this records that refusal and then the
+//                    same request with a SEP-53 ownership proof.
 import { x402Client, x402HTTPClient } from "@x402/fetch";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
+import { createHash } from "node:crypto";
+import { Keypair } from "@stellar/stellar-sdk";
 
 const API = process.env.STERISH_API;
 const RPC = process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
@@ -56,7 +60,20 @@ async function record(label, response) {
 
 try {
   if (MODE === "held") {
-    await record("held", await fetch(url, { headers: agentHeaders }));
+    await record("held_address_only", await fetch(url, { headers: agentHeaders }));
+    // Inlined rather than imported from demo/x402-buyer/prove.js: this file is piped to
+    // node on stdin, where a relative import has no file to resolve against.
+    const keypair = Keypair.fromSecret(process.env.AGENT_SECRET);
+    const challenge = await (await fetch(`${url}/challenge?agent=${signer.address}`)).json();
+    const digest = createHash("sha256")
+      .update("Stellar Signed Message:\n" + challenge.message, "utf8").digest();
+    await record("held", await fetch(url, {
+      headers: {
+        ...agentHeaders,
+        "X-STERISH-PROOF-NONCE": challenge.nonce,
+        "X-STERISH-PROOF-SIGNATURE": keypair.sign(digest).toString("base64"),
+      },
+    }));
   } else {
     const first = await fetch(url, { headers: agentHeaders });
     const firstHeaders = first.headers;

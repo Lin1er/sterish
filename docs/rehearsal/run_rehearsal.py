@@ -599,10 +599,21 @@ class Rehearsal:
         before = usdc_balance(self.cfg, agent.public_key)
         out = x402_call(self.env, "held", agent.secret, skill_id, version)
         (self.run_dir / "x402-step5.json").write_text(self.ev.scrub(json.dumps(out, indent=2)) + "\n")
-        held = (out.get("requests") or [{}])[0]
+        by_label = {r.get("label"): r for r in out.get("requests") or []}
+        # STE-48: naming the holder's address is not proof of being the holder. The bare
+        # request must be refused (401, never 402), and the proven one served.
+        bare = by_label.get("held_address_only", {})
+        bare_ok = bare.get("status") == 401 and not bare.get("payment_required")
+        self.ev.log(n, "GET /use with X-AGENT-ADDRESS only (no ownership proof)",
+                    "ok" if bare_ok else "fail", url=out.get("url"),
+                    detail=f"HTTP {bare.get('status')}, PAYMENT-REQUIRED={bare.get('payment_required')}, "
+                           f"body: {str(bare.get('body_excerpt'))[:200]}")
+        held = by_label.get("held", {})
         after = usdc_balance(self.cfg, agent.public_key)
-        good = held.get("status") == 200 and held.get("license") == "held" and after == before
-        self.ev.log(n, "GET /use with X-AGENT-ADDRESS only", "ok" if good else "fail", url=out.get("url"),
+        good = (bare_ok and held.get("status") == 200 and held.get("license") == "held"
+                and after == before)
+        self.ev.log(n, "GET /use with X-AGENT-ADDRESS + SEP-53 ownership proof", "ok" if good else "fail",
+                    url=out.get("url"),
                     detail=f"HTTP {held.get('status')}, X-STERISH-LICENSE={held.get('license')}, "
                            f"PAYMENT-REQUIRED={held.get('payment_required')}, agent balance unchanged="
                            f"{after == before}, body: {str(held.get('body_excerpt'))[:200]}")

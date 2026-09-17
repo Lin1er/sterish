@@ -8,8 +8,10 @@ Checked in this order:
 1. the version is SAFE on chain, else 403 — never offered for sale;
 2. the artifact is on disk and hashes to the on-chain `content_hash`, else 404/500 —
    checked *before* the 402, so nothing undeliverable is ever priced;
-3. the caller already holds a licence -> 200, no payment;
-4. the caller has a settled payment still owed a licence -> finish the mint, 200;
+3. the caller already holds a licence -> 200, no payment — **only with a proof that it
+   controls that address** (STE-48), else 401;
+4. the caller has a settled payment still owed a licence -> finish the mint, 200 —
+   same proof required;
 5. no payment attached -> 402 with x402 requirements;
 6. payment attached -> verify (which names the payer) -> held or owed? serve without
    settling -> settle -> record the settlement -> mint -> 200.
@@ -36,7 +38,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request, Response
 from stellar_sdk.strkey import StrKey
 
-from .. import chain, payments, x402
+from .. import chain, payments, proofs, x402
 from ..config import settings
 from ..errors import ApiError
 
@@ -90,6 +92,37 @@ def _agent_hint(request: Request) -> str | None:
             f"agent must be a Stellar account address (G...), got {value!r}",
         )
     return value
+
+
+def _require_ownership_proof(
+    request: Request, agent: str, skill_id: str, version: str, why: str
+) -> None:
+    """The free paths serve bytes to an address. Make the caller prove it is that address.
+
+    Anyone can read who holds a licence (it is on chain), so an address alone proves
+    nothing. Missing or wrong proof is 401 — never 402: this caller may well have paid,
+    and a 402 would invite them to pay again.
+    """
+    nonce = request.headers.get(proofs.NONCE_HEADER)
+    signature = request.headers.get(proofs.SIGNATURE_HEADER)
+    challenge_url = str(request.url_for("use_challenge", skill_id=skill_id, version=version))
+    details = {
+        "challenge_url": f"{challenge_url}?agent={agent}",
+        "signature_scheme": "SEP-53",
+        "headers": [AGENT_HEADER, proofs.NONCE_HEADER, proofs.SIGNATURE_HEADER],
+    }
+    if not nonce or not signature:
+        raise ApiError(
+            401, "OWNERSHIP_PROOF_REQUIRED",
+            f"{agent} {why}; prove you control it: GET the challenge_url, sign its message "
+            f"(SEP-53) with that account's key, and repeat this request with "
+            f"{proofs.NONCE_HEADER} and {proofs.SIGNATURE_HEADER}",
+            details,
+        )
+    try:
+        proofs.verify_and_consume(agent, skill_id, version, nonce, signature)
+    except proofs.ProofInvalid as exc:
+        raise ApiError(401, "INVALID_OWNERSHIP_PROOF", exc.reason, details) from exc
 
 
 def _skill_bytes(skill_id: str, version: str, expected_hash: str) -> bytes:
@@ -212,8 +245,9 @@ def _fulfil(owed_row: dict, skill_id: str, version: str) -> str | None:
 def _mint_pending(settle_tx: str, reason: str) -> ApiError:
     return ApiError(
         502, "LICENSE_MINT_PENDING",
-        "your payment settled but the licence could not be minted yet; retry the same "
-        "request (with X-AGENT-ADDRESS) and it will be finished without charging again. "
+        "your payment settled but the licence could not be minted yet; retry with "
+        "X-AGENT-ADDRESS and an ownership proof (see the challenge endpoint) and it will be "
+        "finished without charging again. "
         f"Cause: {reason}",
         {
             "settlement_tx": settle_tx,
@@ -233,6 +267,48 @@ def _serve_fulfilled(body: bytes, owed_row: dict, mint_tx: str | None) -> Respon
     if mint_tx:
         headers["X-STERISH-LICENSE-TX"] = mint_tx
     return _serve(body, "minted" if mint_tx else "held", headers)
+
+
+@router.get("/use/{skill_id}/{version}/challenge", name="use_challenge")
+def use_challenge(skill_id: str, version: str, request: Request):
+    """Issue a single-use ownership challenge for the free licence-holder path (STE-48).
+
+    Issued for any valid account and any version: whether the address holds a licence
+    is public on chain anyway, and answering differently would only add a round trip.
+    Nothing is served here; the proof is spent on the next `GET /use`.
+    """
+    agent = _agent_hint(request)
+    if not agent:
+        raise ApiError(
+            400, "MISSING_AGENT",
+            f"agent is required: ?agent=G... or {AGENT_HEADER}",
+        )
+    challenge = proofs.issue(agent, skill_id, version)
+    from datetime import UTC, datetime
+
+    body = {
+        "agent": challenge.agent,
+        "skill_id": challenge.skill_id,
+        "version": challenge.version,
+        "nonce": challenge.nonce,
+        "expires_at": challenge.expires_at,
+        "expires_at_iso": datetime.fromtimestamp(challenge.expires_at, UTC)
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "message": challenge.message,
+        "signature_scheme": "SEP-53",
+        "sign": 'ed25519 over SHA-256("Stellar Signed Message:\\n" + message), base64',
+        "send_headers": {
+            AGENT_HEADER: challenge.agent,
+            proofs.NONCE_HEADER: challenge.nonce,
+            proofs.SIGNATURE_HEADER: "<base64 signature>",
+        },
+    }
+    return Response(
+        content=json.dumps(body).encode("utf-8"),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/use/{skill_id}/{version}")
@@ -258,6 +334,9 @@ def use_skill(skill_id: str, version: str, request: Request):
     if not payment_header:
         if agent:
             if _has_license(agent, skill_id, version):
+                _require_ownership_proof(
+                    request, agent, skill_id, version, "holds a licence for this version"
+                )
                 # A mint that landed although its confirmation never reached us leaves
                 # its settlement looking owed; close it so it is never fulfilled twice.
                 stale = payments.owed(agent, skill_id, version)
@@ -266,6 +345,9 @@ def use_skill(skill_id: str, version: str, request: Request):
                 return _serve(body, "held")
             owed_row = payments.owed(agent, skill_id, version)
             if owed_row:
+                _require_ownership_proof(
+                    request, agent, skill_id, version, "is owed a licence for this version"
+                )
                 with _purchase_lock(agent, skill_id, version):
                     owed_row = payments.owed(agent, skill_id, version) or owed_row
                     mint_tx = _fulfil(owed_row, skill_id, version)

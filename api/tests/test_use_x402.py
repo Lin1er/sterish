@@ -11,6 +11,7 @@ import threading
 import time
 
 import pytest
+from stellar_sdk import Keypair
 
 from sterish_api import chain, payments, x402
 from sterish_api.config import settings
@@ -32,11 +33,33 @@ SAFE = {
 DANGEROUS = dict(SAFE, verdict="DANGEROUS", is_verified=False)
 URL = f"/use/{SAFE['skill_id']}/1.0.0"
 
-# Two real ed25519 account addresses: the buyer, and someone else entirely.
-PAYER = "GBFXMHA77OLBYF3JJB43O6CKZ4QR35AAQALJK72MUIHTZNBVAQGTTZWY"
-OTHER = "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU"
+# Two real ed25519 accounts: the buyer, and someone else entirely. Both have keys, so
+# the ownership proofs STE-48 requires can be signed for real rather than stubbed.
+PAYER_KP = Keypair.from_raw_ed25519_seed(bytes([1]) * 32)
+OTHER_KP = Keypair.from_raw_ed25519_seed(bytes([2]) * 32)
+PAYER = PAYER_KP.public_key
+OTHER = OTHER_KP.public_key
 SETTLE_TX = "5" * 64
 MINT_TX = "6" * 64
+
+
+def _sep53_sign(keypair: Keypair, message: str) -> str:
+    """What a wallet's signMessage and `stellar message sign` produce (SEP-53)."""
+    import hashlib
+
+    digest = hashlib.sha256(b"Stellar Signed Message:\n" + message.encode()).digest()
+    return base64.b64encode(keypair.sign(digest)).decode()
+
+
+def _proof(client, signer: Keypair = None, agent: str = PAYER, url: str = URL) -> dict:
+    """Ask for a challenge as `agent`, sign it with `signer`, return the request headers."""
+    signer = signer or PAYER_KP
+    challenge = client.get(f"{url}/challenge", params={"agent": agent}).json()
+    return {
+        "X-AGENT-ADDRESS": agent,
+        "X-STERISH-PROOF-NONCE": challenge["nonce"],
+        "X-STERISH-PROOF-SIGNATURE": _sep53_sign(signer, challenge["message"]),
+    }
 
 
 def _payment_header(payload: dict | None = None) -> str:
@@ -257,7 +280,7 @@ def test_a_contract_address_is_not_an_agent(client, monkeypatch, artifact):
 def test_an_existing_licence_is_served_without_payment(client, monkeypatch, artifact):
     ledger = Ledger(monkeypatch)
     ledger.licences.add((PAYER, SAFE["skill_id"], "1.0.0"))
-    r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+    r = client.get(URL, headers=_proof(client))
     assert r.status_code == 200
     assert r.headers["X-STERISH-LICENSE"] == "held"
     assert json.loads(r.content) == {"manifest.json": '{"skill_id":"com.acme.pdf-suite"}\n'}
@@ -477,7 +500,7 @@ class TestMintAfterSettlement:
         self._pay_with_failing_mint(client, ledger, OnChainError("rpc timeout"))
         ledger.mint_error = None
 
-        r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+        r = client.get(URL, headers=_proof(client))
         assert r.status_code == 200
         assert r.headers["X-STERISH-LICENSE"] == "minted"
         assert r.headers["X-STERISH-SETTLEMENT-TX"] == SETTLE_TX
@@ -506,7 +529,7 @@ class TestMintAfterSettlement:
         ledger.licences.add((PAYER, SAFE["skill_id"], "1.0.0"))  # it landed after all
         ledger.mint_error = AssertionError("must not mint again")
 
-        r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+        r = client.get(URL, headers=_proof(client))
         assert r.status_code == 200
         assert r.headers["X-STERISH-LICENSE"] == "held"
         assert payments.owed(PAYER, SAFE["skill_id"], "1.0.0") is None
@@ -518,7 +541,7 @@ class TestMintAfterSettlement:
         self._pay_with_failing_mint(client, ledger, OnChainError("did not finalise"))
         ledger.mint_error = ContractCallError(3, "mint_license", contract="tokens")
 
-        r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+        r = client.get(URL, headers=_proof(client))
         assert r.status_code == 200
         assert r.headers["X-STERISH-SETTLEMENT-TX"] == SETTLE_TX
         assert payments.owed(PAYER, SAFE["skill_id"], "1.0.0") is None
@@ -575,3 +598,221 @@ def test_settlement_header_is_readable_by_a_browser(client, artifact):
     exposed = r.headers.get("access-control-expose-headers", "")
     assert "X-STERISH-SETTLEMENT-TX" in exposed
     assert "PAYMENT-REQUIRED" in exposed
+
+
+# --- STE-48: a licence cannot be borrowed by naming its holder ------------------------
+
+
+class TestOwnershipProof:
+    """Licence holders are public on chain, so an address alone must never be enough."""
+
+    @pytest.fixture
+    def held(self, monkeypatch, artifact):
+        ledger = Ledger(monkeypatch)
+        ledger.licences.add((PAYER, SAFE["skill_id"], "1.0.0"))
+        return ledger
+
+    def test_naming_a_holder_without_proof_is_401_not_the_artifact(self, client, held):
+        """The finding: anyone sending the holder's address received the bytes."""
+        r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+        assert r.status_code == 401
+        body = r.json()
+        assert body["error"] == "OWNERSHIP_PROOF_REQUIRED"
+        assert body["challenge_url"].endswith(f"{URL}/challenge?agent={PAYER}")
+        assert body["signature_scheme"] == "SEP-53"
+        assert "manifest.json" not in r.text
+        assert "PAYMENT-REQUIRED" not in r.headers  # never 402: this caller may have paid
+        assert held.verifies == held.settles == 0
+
+    def test_the_query_parameter_form_is_refused_the_same_way(self, client, held):
+        r = client.get(URL, params={"agent": PAYER})
+        assert r.status_code == 401
+        assert r.json()["error"] == "OWNERSHIP_PROOF_REQUIRED"
+
+    def test_a_nonce_without_a_signature_is_still_proof_required(self, client, held):
+        headers = _proof(client)
+        del headers["X-STERISH-PROOF-SIGNATURE"]
+        assert client.get(URL, headers=headers).json()["error"] == "OWNERSHIP_PROOF_REQUIRED"
+
+    def test_a_valid_proof_serves_the_artifact(self, client, held):
+        r = client.get(URL, headers=_proof(client))
+        assert r.status_code == 200
+        assert r.headers["X-STERISH-LICENSE"] == "held"
+        assert held.settles == 0
+
+    def test_a_signature_from_another_key_is_refused(self, client, held):
+        """The attacker controls a key, just not the holder's."""
+        r = client.get(URL, headers=_proof(client, signer=OTHER_KP, agent=PAYER))
+        assert r.status_code == 401
+        assert r.json()["error"] == "INVALID_OWNERSHIP_PROOF"
+        assert "does not verify" in r.json()["detail"]
+        assert "manifest.json" not in r.text
+
+    def test_a_proof_cannot_be_replayed(self, client, held):
+        headers = _proof(client)
+        assert client.get(URL, headers=headers).status_code == 200
+        again = client.get(URL, headers=headers)
+        assert again.status_code == 401
+        assert again.json()["error"] == "INVALID_OWNERSHIP_PROOF"
+        assert "already been used" in again.json()["detail"]
+
+    def test_an_expired_challenge_is_refused(self, client, held, monkeypatch):
+        from sterish_api import proofs
+
+        headers = _proof(client)
+        real_time = time.time
+        later = real_time() + settings.proof_ttl_seconds + 5
+        monkeypatch.setattr(proofs.time, "time", lambda: later)
+        r = client.get(URL, headers=headers)
+        assert r.status_code == 401
+        assert "expired" in r.json()["detail"]
+
+    def test_a_failed_signature_does_not_burn_the_holders_nonce(self, client, held):
+        headers = _proof(client)
+        forged = dict(headers, **{"X-STERISH-PROOF-SIGNATURE": _sep53_sign(OTHER_KP, "anything")})
+        assert client.get(URL, headers=forged).status_code == 401
+        assert client.get(URL, headers=headers).status_code == 200
+
+    def test_a_challenge_for_another_agent_cannot_be_reused(self, client, held):
+        """OTHER asks for its own challenge and signs it correctly, then claims PAYER."""
+        own = _proof(client, signer=OTHER_KP, agent=OTHER)
+        stolen = dict(own, **{"X-AGENT-ADDRESS": PAYER})
+        r = client.get(URL, headers=stolen)
+        assert r.status_code == 401
+        assert "different agent" in r.json()["detail"]
+
+    def test_a_challenge_for_another_version_cannot_be_reused(self, client, held):
+        headers = _proof(client, url=f"/use/{SAFE['skill_id']}/2.0.0")
+        r = client.get(URL, headers=headers)
+        assert r.status_code == 401
+        assert "different skill or version" in r.json()["detail"]
+
+    def test_the_signed_message_is_rebuilt_server_side(self, client, held):
+        """Signing some other text containing the same nonce proves nothing."""
+        challenge = client.get(f"{URL}/challenge", params={"agent": PAYER}).json()
+        tampered = challenge["message"].replace("version: 1.0.0", "version: 9.9.9")
+        headers = {
+            "X-AGENT-ADDRESS": PAYER,
+            "X-STERISH-PROOF-NONCE": challenge["nonce"],
+            "X-STERISH-PROOF-SIGNATURE": _sep53_sign(PAYER_KP, tampered),
+        }
+        assert client.get(URL, headers=headers).status_code == 401
+
+    def test_a_raw_ed25519_signature_without_the_sep53_prefix_is_refused(self, client, held):
+        """One format, locked: a signature over the bare message is not SEP-53."""
+        challenge = client.get(f"{URL}/challenge", params={"agent": PAYER}).json()
+        raw = base64.b64encode(PAYER_KP.sign(challenge["message"].encode())).decode()
+        headers = {
+            "X-AGENT-ADDRESS": PAYER,
+            "X-STERISH-PROOF-NONCE": challenge["nonce"],
+            "X-STERISH-PROOF-SIGNATURE": raw,
+        }
+        assert client.get(URL, headers=headers).status_code == 401
+
+    @pytest.mark.parametrize("bad", ["not base64!!", base64.b64encode(b"short").decode()])
+    def test_a_malformed_signature_is_401_not_500(self, client, held, bad):
+        headers = dict(_proof(client), **{"X-STERISH-PROOF-SIGNATURE": bad})
+        r = client.get(URL, headers=headers)
+        assert r.status_code == 401
+        assert r.json()["error"] == "INVALID_OWNERSHIP_PROOF"
+
+    def test_an_unknown_nonce_is_refused(self, client, held):
+        headers = dict(_proof(client), **{"X-STERISH-PROOF-NONCE": "0" * 32})
+        assert "unknown nonce" in client.get(URL, headers=headers).json()["detail"]
+
+    def test_an_owed_settlement_also_needs_proof(self, client, monkeypatch, artifact):
+        """The owed path mints and serves bytes too; naming the payer must not do it."""
+        ledger = Ledger(monkeypatch)
+        payments.record_settlement(PAYER, SAFE["skill_id"], "1.0.0", SETTLE_TX, "1000000")
+        r = client.get(URL, headers={"X-AGENT-ADDRESS": PAYER})
+        assert r.status_code == 401
+        assert ledger.mints == []
+        assert payments.owed(PAYER, SAFE["skill_id"], "1.0.0") is not None
+
+    def test_a_non_holder_still_gets_402_with_or_without_proof(self, client, monkeypatch, artifact):
+        """Proof only matters when there is something to prove; a buyer is asked to pay."""
+        Ledger(monkeypatch)
+        assert client.get(URL, headers={"X-AGENT-ADDRESS": PAYER}).status_code == 402
+        assert client.get(URL, headers=_proof(client)).status_code == 402
+
+    def test_the_paid_path_needs_no_proof(self, client, monkeypatch, artifact):
+        """The x402 payment is signed by the payer, and the payer comes from /verify."""
+        ledger = Ledger(monkeypatch)
+        r = client.get(URL, headers={"X-PAYMENT": _payment_header()})
+        assert r.status_code == 200
+        assert r.headers["X-STERISH-LICENSE"] == "minted"
+        assert ledger.settles == 1
+
+
+class TestChallengeEndpoint:
+    def test_the_challenge_names_everything_it_binds(self, client):
+        body = client.get(f"{URL}/challenge", params={"agent": PAYER}).json()
+        assert body["agent"] == PAYER and body["skill_id"] == SAFE["skill_id"]
+        assert body["version"] == "1.0.0"
+        assert len(body["nonce"]) == 32
+        assert body["signature_scheme"] == "SEP-53"
+        lines = body["message"].split("\n")
+        assert lines == [
+            "Sterish licence ownership proof",
+            f"agent: {PAYER}",
+            f"skill: {SAFE['skill_id']}",
+            "version: 1.0.0",
+            f"nonce: {body['nonce']}",
+            f"expires: {body['expires_at']}",
+            "network: Test SDF Network ; September 2015",
+        ]
+        assert 0 < body["expires_at"] - time.time() <= settings.proof_ttl_seconds
+
+    def test_every_challenge_is_a_fresh_nonce(self, client):
+        a = client.get(f"{URL}/challenge", params={"agent": PAYER}).json()["nonce"]
+        b = client.get(f"{URL}/challenge", params={"agent": PAYER}).json()["nonce"]
+        assert a != b
+
+    def test_the_challenge_is_never_cached(self, client):
+        r = client.get(f"{URL}/challenge", params={"agent": PAYER})
+        assert r.headers["Cache-Control"] == "no-store"
+
+    def test_the_header_form_works(self, client):
+        r = client.get(f"{URL}/challenge", headers={"X-AGENT-ADDRESS": PAYER})
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize(
+        "agent, code",
+        [
+            (None, "MISSING_AGENT"),
+            ("not-an-address", "INVALID_AGENT"),
+            ("CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T", "INVALID_AGENT"),
+            (
+                "MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAAAAGZFQ",
+                "INVALID_AGENT",
+            ),
+        ],
+    )
+    def test_the_agent_is_validated(self, client, agent, code):
+        params = {"agent": agent} if agent else {}
+        r = client.get(f"{URL}/challenge", params=params)
+        assert r.status_code == 400
+        assert r.json()["error"] == code
+
+    def test_a_proof_signed_with_the_stellar_cli_format_verifies(self):
+        """Pin the digest to SEP-53 independently of our own signing helper."""
+        import hashlib
+
+        from sterish_api import proofs
+
+        message = "hello"
+        assert proofs.sep53_digest(message) == hashlib.sha256(
+            b"Stellar Signed Message:\nhello"
+        ).digest()
+
+
+def test_a_signature_made_by_the_stellar_cli_verifies():
+    """Known answer, captured from `stellar message sign "hello" --sign-with-key <seed 0x01*32>`
+    (stellar-cli, 2026-09-17). The same bytes came out of demo/x402-buyer/prove.js. If this
+    ever fails, the server and every real signer disagree about SEP-53."""
+    from sterish_api import proofs
+
+    signature = base64.b64decode(
+        "u5X4XThfRD8os95F82YDnzd/ow2uGibbTlisjIHkxaoEfgI7K4QN/oz9K5Vm9dut9zcT8kUJydc2VqonO0cWAQ=="
+    )
+    PAYER_KP.verify(proofs.sep53_digest("hello"), signature)

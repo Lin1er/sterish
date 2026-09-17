@@ -374,8 +374,8 @@ it twice.** Checked in this order — each step runs only if every step above it
 | 1 | version is not `SAFE` on chain | `403 NOT_VERIFIED`, no challenge |
 | 2 | no artifact on disk for this version | `404 ARTIFACT_NOT_FOUND`, no challenge |
 | 2 | artifact bytes do not hash to the on-chain `content_hash` | `500 ARTIFACT_HASH_MISMATCH`, no challenge |
-| 3 | `X-AGENT-ADDRESS` holds a licence for this exact version | `200` + artifact, `X-STERISH-LICENSE: held` |
-| 4 | `X-AGENT-ADDRESS` has a settled payment still owed a licence | mint → `200`, `X-STERISH-LICENSE: minted` + `X-STERISH-SETTLEMENT-TX` |
+| 3 | `X-AGENT-ADDRESS` holds a licence for this exact version | **with a valid ownership proof** (STE-48): `200` + artifact, `X-STERISH-LICENSE: held`; without one `401 OWNERSHIP_PROOF_REQUIRED`, with a bad one `401 INVALID_OWNERSHIP_PROOF` |
+| 4 | `X-AGENT-ADDRESS` has a settled payment still owed a licence | same proof required; then mint → `200`, `X-STERISH-LICENSE: minted` + `X-STERISH-SETTLEMENT-TX` |
 | 5 | no `X-PAYMENT` | `402` + `PAYMENT-REQUIRED` header, empty body |
 | 6 | `X-PAYMENT` attached | verify → (payer holds or is owed? serve, **no settle**) → settle → record → mint → `200`, `X-STERISH-LICENSE: minted` |
 
@@ -393,6 +393,52 @@ defence in depth and a clearer error than a contract revert.
 a client that wants the "already licensed" shortcut sends `X-AGENT-ADDRESS: G…` (or `?agent=`). A
 malformed value is `400 INVALID_AGENT`.
 
+**Proving the caller is that address (STE-48).** Who holds a licence is public: `license_minted`
+events, `get_token`, and the dashboard's `/licences/[address]` page. Until STE-48 the address alone
+unlocked steps 3 and 4, so anyone could name a holder and receive the artifact without paying — a
+soulbound licence that anyone could borrow. The free paths now require a signature from the
+address's own key over a single-use challenge:
+
+1. `GET /use/{skill_id}/{version}/challenge?agent=G…` (or `X-AGENT-ADDRESS`) →
+
+   ```json
+   {"agent": "G…", "skill_id": "…", "version": "…",
+    "nonce": "32 hex chars", "expires_at": 1789600000, "expires_at_iso": "…Z",
+    "message": "Sterish licence ownership proof\nagent: G…\nskill: …\nversion: …\nnonce: …\nexpires: 1789600000\nnetwork: Test SDF Network ; September 2015",
+    "signature_scheme": "SEP-53", "send_headers": {…}}
+   ```
+
+   `400 MISSING_AGENT` / `400 INVALID_AGENT` (a `C…` or `M…` address is refused). `Cache-Control:
+   no-store`. Issued for any valid account and version: whether an address holds a licence is public
+   anyway, so answering differently would reveal nothing and cost a round trip.
+2. Sign `message` exactly as returned with **SEP-53**: ed25519 over
+   `SHA-256("Stellar Signed Message:\n" + message)`, base64. That is what a wallet's SEP-43
+   `signMessage` returns and what `stellar message sign "<message>" --sign-with-key …` prints. A
+   signature over the bare message, without the prefix, is refused — one format, locked.
+3. Repeat `GET /use/{skill_id}/{version}` with `X-AGENT-ADDRESS`, `X-STERISH-PROOF-NONCE` and
+   `X-STERISH-PROOF-SIGNATURE`.
+
+The server rebuilds the message from its own record of the nonce; nothing the client sends is
+trusted as the signed text. A nonce is bound to one agent, one skill and one version, lives
+`STERISH_PROOF_TTL_SECONDS` (default 300, clamped to 30–900 — long enough to approve a wallet prompt),
+and is consumed by the first request that proves with it. A **failed** signature does not consume it,
+so nobody can burn another caller's challenge. Nonces are stored beside the payments ledger, so a
+restart does not reopen a used one.
+
+| Proof | Response |
+|---|---|
+| none, or nonce without signature | `401 OWNERSHIP_PROOF_REQUIRED` + `challenge_url`, `signature_scheme`, `headers` |
+| unknown nonce, other agent's / other version's nonce, used, expired, not base64 / not 64 bytes, signature does not verify | `401 INVALID_OWNERSHIP_PROOF`, `detail` names which |
+| valid | step 3 or 4 proceeds |
+
+Always `401`, never `402`: this caller may already have paid, and a `402` would invite a second
+payment. A caller that proves its address but holds no licence gets the ordinary `402`. **The paid
+path (step 6) needs no separate proof**: the x402 payment is signed by the payer, and the payer is
+taken from the facilitator's `/verify`.
+
+Reference clients: `demo/x402-buyer/prove.js` (terminal agent; `AGENT_SECRET` from the environment,
+never printed) and `api/scripts/e2e_paid_path.py`.
+
 **Identifying the payer.** After payment the payer is **the account the facilitator's `/verify`
 names** — the `from` of the signed SAC `transfer` — and nothing else. `X-AGENT-ADDRESS` is ignored
 for this. Before STE-42 the payer was read from the payment payload and then the header; the
@@ -405,7 +451,7 @@ sent someone else's address had the licence minted to that address. A verify res
 first landed. The settlement is recorded first (payer, skill, version, settlement tx) in a ledger
 that is **not** the index cache (`STERISH_PAYMENTS_DB_PATH`). A failed mint answers
 `502 LICENSE_MINT_PENDING` carrying `settlement_tx` and `settlement_tx_url`. The payer's next
-request — with `X-AGENT-ADDRESS`, or with a fresh payment — finishes the mint **without settling
+request — with `X-AGENT-ADDRESS` plus an ownership proof, or with a fresh payment — finishes the mint **without settling
 again**. Before minting, the licence is read from chain: a mint whose confirmation timed out but
 landed is closed out rather than minted twice (the contract would refuse it with `AlreadyMinted`
 anyway, and that refusal is also treated as fulfilled).
@@ -449,7 +495,13 @@ listed in CORS `expose_headers`, so a browser client can read them.
 **Errors:** `403 NOT_VERIFIED`, `404 ARTIFACT_NOT_FOUND`, `500 ARTIFACT_HASH_MISMATCH`,
 `400 INVALID_AGENT`, `400 INVALID_PAYMENT`, `402 PAYMENT_REJECTED` (carries the facilitator's own
 reason), `503 FACILITATOR_UNAVAILABLE`, `502 FACILITATOR_BAD_RESPONSE`, `502 LICENSE_READ_FAILED`,
-`502 LICENSE_MINT_PENDING`.
+`502 LICENSE_MINT_PENDING`, `401 OWNERSHIP_PROOF_REQUIRED`, `401 INVALID_OWNERSHIP_PROOF`;
+on the challenge endpoint `400 MISSING_AGENT`, `400 INVALID_AGENT`.
+
+**Known limit (STE-48).** A signed x402 payment header is itself accepted as proof of the payer
+when that payer already holds the licence (it is served `held` without settling). The header is a
+bearer credential until its auth entry expires (`maxTimeoutSeconds`, 300 s), so a client must not
+leak it — the same exposure any signed payment already has.
 
 **Known limit.** If the version is re-audited away from `SAFE` between settlement and mint, the mint
 is refused (`NotSafeVerdict`) and the version now answers `403`. The settlement stays recorded as

@@ -465,6 +465,39 @@ The 47 `com.sterish.it-*` / `e2e-*` / `canon-*` test entries were **not** migrat
 skills and their 26 versions were, in the old registry's registration order, so
 `query_all_skills` pages identically.
 
+## Licences could be borrowed: the soulbound claim the API did not enforce (STE-48)
+
+**Recorded 17 September 2026, before the fix is live, on purpose.**
+
+A licence is a soulbound token: minted to one account, with no transfer entrypoint. The *contract*
+holds that promise. The *API* did not. Until STE-48, `GET /use/{skill_id}/{version}` served the
+artifact for free to any request whose `X-AGENT-ADDRESS` (or `?agent=`) named a licence holder,
+without asking for any proof that the caller controls that address. Holders are public on chain
+(`license_minted` events, `get_token`, `owner_of`, and the dashboard's `/licences/[address]`
+page), so **every licence sold so far could be used by anyone who read the ledger.** No funds could
+be taken, but the word *soulbound* was false in practice: a licence could be borrowed at will.
+
+Found by Ancung while testing a terminal install on 16 September; checked from the code, not by
+using anyone else's licence.
+
+**The fix** (merged 17 September, [STE-48](https://linear.app/sterish/issue/STE-48)): the free paths
+require a SEP-53 signature from the address's own key over a single-use challenge the API issues
+(`api-spec.md` §3.7). Missing or wrong proof is `401`, never `402`. Tested on testnet: the holder with
+a proof is served; the address alone, a proof signed by another key, a replayed proof, a stranger's
+valid proof presented for the holder, a proof for another version, and an expired proof are all
+refused ([`evidence/ste-48-e2e-ownership-proof-local-2026-09-17.json`](evidence/ste-48-e2e-ownership-proof-local-2026-09-17.json)).
+
+**Deploy status.** Merged but **not yet deployed**: until the dashboard can sign a challenge, its
+"Request again" would answer `401` instead of `200 held`. The agreed plan is to deploy as soon as
+that signing UI lands, and **no later than 19 September 2026 either way** — a visible degradation
+on the dashboard is better than an invisible false claim. Until the deploy is recorded in
+`docs/deployments.md`, production still has the gap described above. Any redeploy of the API from
+`main` also ships the fix.
+
+**Residual limit, stated rather than implied away.** A signed x402 payment header is still accepted
+as proof of the payer when that payer already holds the licence. It is a bearer credential until
+its auth entry expires (`maxTimeoutSeconds`, 300 s) — proof of payment, not proof of possession.
+
 ## Limits worth stating
 
 * **Stage 2 did not run for the 25 entries above, and that is correct.** The seed run passed
