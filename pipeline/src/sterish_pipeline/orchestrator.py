@@ -75,6 +75,11 @@ class OrchestratorConfig:
     #                     by the request_id the journal recorded. Never guessed.
     escrow_lock: str = "after_verdict"
     # Who a slashed bond goes to. Empty = the admin, and the step says so explicitly.
+    #
+    # That fallback is an operational convenience for our own runs (seed, rehearsal), NOT
+    # product behaviour: in a real report-and-slash flow there is always a reporter, and if
+    # there is none, nobody reported anything and the slash path should not have been
+    # reached. Callers running the product flow should always set this.
     reporter_address: str = ""
 
     @property
