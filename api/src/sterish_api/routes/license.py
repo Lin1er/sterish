@@ -24,10 +24,10 @@ a failed read.
 from fastapi import APIRouter, Query, Request
 from stellar_sdk.strkey import StrKey
 
-from .. import chain
+from .. import chain, licenses
 from ..config import settings
 from ..errors import ApiError
-from ..models import LicenseStatusResponse
+from ..models import LicenseItem, LicensesByAgentResponse, LicenseStatusResponse, iso_or_none
 
 router = APIRouter()
 
@@ -94,6 +94,51 @@ def license_status(
         version=version,
         agent=agent_address,
         held=chain.has_license(agent_address, skill_id, version),
+        tokens_contract_id=settings.tokens_contract_id,
+        contract_url=settings.contract_url(settings.tokens_contract_id),
+    )
+
+
+@router.get("/licenses", response_model=LicensesByAgentResponse)
+def licenses_by_agent(
+    request: Request,
+    agent: str | None = Query(default=None, description="Stellar account address (G...)"),
+    start: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    """Every licence `agent` holds on the tokens contract, newest first (STE-46).
+
+    Built from the contract's own `total_supply` / `get_token` enumeration, not from the
+    event window, so an old licence is never missing (licenses.py). A failed read is
+    502, never an empty list.
+    """
+    agent_address = _agent_address(request, agent)
+
+    if not settings.tokens_contract_id:
+        raise ApiError(503, "NOT_CONFIGURED", "TOKENS_CONTRACT_ID (or TOKENS_CA) is not set")
+
+    supply = licenses.sync()
+    rows = licenses.for_agent(agent_address)
+    page = rows[start : start + limit]
+
+    return LicensesByAgentResponse(
+        agent=agent_address,
+        licenses=[
+            LicenseItem(
+                token_id=r["token_id"],
+                skill_id=r["skill_id"],
+                version=r["version"],
+                minted_at=r["minted_at"],
+                minted_at_iso=iso_or_none(r["minted_at"]),
+                mint_tx=r["mint_tx"],
+                mint_tx_url=settings.tx_url(r["mint_tx"]) if r["mint_tx"] else None,
+            )
+            for r in page
+        ],
+        total=len(rows),
+        start=start,
+        limit=limit,
+        total_supply=supply,
         tokens_contract_id=settings.tokens_contract_id,
         contract_url=settings.contract_url(settings.tokens_contract_id),
     )

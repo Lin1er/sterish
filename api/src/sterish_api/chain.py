@@ -229,3 +229,25 @@ def is_verified_token(skill_id: str, version: str) -> bool:
             [scval.to_string(skill_id), scval.to_string(version)],
         )
     )
+
+
+def total_supply() -> int:
+    """Tokens ever minted on the tokens contract. Ids run 1..total_supply and nothing
+    is ever burned, so this is exact (contracts/tokens/src/lib.rs::total_supply)."""
+    return int(_tokens_invoke("total_supply", []))
+
+
+def get_token(token_id: int) -> dict:
+    """`get_token(u32) -> TokenRecord`, decoded. `kind` is "VERIFIED" or "LICENSE"."""
+    raw = _tokens_invoke("get_token", [scval.to_uint32(token_id)])
+    kind = raw.get("kind")
+    if isinstance(kind, (list, tuple)) and kind:
+        kind = kind[0]
+    return {
+        "token_id": int(raw["token_id"]),
+        "kind": str(kind).upper(),
+        "skill_id": str(raw["skill_id"]),
+        "version": str(raw["version"]),
+        "owner": address_str(raw.get("owner")),
+        "minted_at": int(raw["minted_at"]),
+    }

@@ -664,6 +664,64 @@ in 3.4 — a feed dominated by 47 scaffolding skills shows activity nobody perfo
 
 ---
 
+### 3.10 `GET /licenses?agent=G…` — every licence one address holds (STE-46)
+
+Ownership only, newest first. Like §3.8 it joins in **no verdict**: whether a licensed version is
+still `SAFE` is a separate read (`/check`), and the dashboard's licences page asks both.
+
+**Query parameters**
+
+| Parameter | Type | Default | Notes |
+|---|---|---|---|
+| `agent` | `G…` account address | — | Required. May instead be sent as `X-AGENT-ADDRESS`. `C…` and `M…` are refused. |
+| `start` | integer ≥ 0 | `0` | |
+| `limit` | integer 1–200 | `50` | |
+
+```json
+{
+  "agent": "GAISQEDZDZO3ZODO6DRDD3DV5VKMVNOULTU7B4VASXSXH56BUOAIPXAG",
+  "licenses": [
+    {
+      "token_id": 25,
+      "skill_id": "org.stellar.skills.agentic-payments.x402",
+      "version": "2026.8.31",
+      "minted_at": 1789578660,
+      "minted_at_iso": "2026-09-16T17:11:00Z",
+      "mint_tx": "167557302d8a0d43e75325b012dd4c4a57da82a403a946fb13ac09f0587414b1",
+      "mint_tx_url": "https://stellar.expert/explorer/testnet/tx/167557302d8a0d43e75325b012dd4c4a57da82a403a946fb13ac09f0587414b1"
+    }
+  ],
+  "total": 1,
+  "start": 0,
+  "limit": 50,
+  "total_supply": 28,
+  "tokens_contract_id": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
+  "contract_url": "https://stellar.expert/explorer/testnet/contract/CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T"
+}
+```
+
+**Where the list comes from — and why not the event index alone.** The ticket suggested tailing
+`license_minted`. Built only from events, the list would have the flaw §3.4 describes for `/skills`:
+`getEvents` reaches back only as far as the RPC node retains events (about a week on testnet), so a
+rebuilt index would silently drop every older licence, and an address that bought a month ago would
+be told it holds nothing. So the list is the tokens contract's own enumeration: `total_supply()`,
+then `get_token(id)` for ids `1..total_supply`. Tokens are soulbound and never burned, so a record,
+once read, is cached by id for good, and a request reads only the ids minted since the last one.
+`total_supply` is read **live on every request**, so the list is complete up to the current ledger,
+and `total_supply` in the response says what it was complete up to. VERIFIED badges share the id
+space and are filtered out (`kind = License`).
+
+`license_minted` events are tailed by the indexer too, only to attach `mint_tx`. A licence whose
+mint is older than the event window, or not indexed yet, is listed with `mint_tx: null` — never
+left out. Deleting the index changes nothing but those links.
+
+**Degradation.** If `total_supply` or any not-yet-cached `get_token` cannot be read, the response
+is `502 RPC_UNAVAILABLE` — never a shorter list. A `TokenNotFound` for an id at or below
+`total_supply` is a failed read, not "no such licence": ids are dense. The next request fills the gap.
+
+**Errors:** `400 MISSING_AGENT`, `400 INVALID_AGENT`, `422` (paging bounds), `502 RPC_UNAVAILABLE`,
+`503 NOT_CONFIGURED`.
+
 ## 4. Errors
 
 All error responses share one shape:

@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from . import chain, indexer, payments, proofs, x402
+from . import chain, indexer, licenses, payments, proofs, x402
 from .chain import ChainError, ContractError, NotConfiguredError
 from .config import settings
 from .errors import (
@@ -54,6 +54,7 @@ async def lifespan(app: FastAPI):
     # and the evidence lookups then read an empty index instead of erroring on a
     # missing table.
     indexer.init_db()
+    licenses.init_db()
     # The payments ledger is not a cache (STE-42): created here, never rebuilt.
     payments.init_db()
     proofs.init_db()
