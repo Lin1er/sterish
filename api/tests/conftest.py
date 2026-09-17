@@ -38,7 +38,7 @@ def _isolated_db(tmp_path):
     so the one shared object is mutated in place via `object.__setattr__` and restored
     afterwards — patching `config.settings` itself would not reach those modules.
     """
-    from sterish_api import config, indexer, payments
+    from sterish_api import config, indexer, payments, registry_snapshot
 
     db = tmp_path / "index.db"
     previous = config.settings.db_path
@@ -49,11 +49,15 @@ def _isolated_db(tmp_path):
     object.__setattr__(config.settings, "payments_db_path", str(tmp_path / "payments.db"))
     indexer.init_db()
     payments.init_db()
+    # The /skills snapshot (STE-34) is module state: one test's registry must never
+    # be served to the next.
+    registry_snapshot.invalidate()
     try:
         yield db
     finally:
         object.__setattr__(config.settings, "db_path", previous)
         object.__setattr__(config.settings, "payments_db_path", previous_payments)
+        registry_snapshot.invalidate()
 
 
 @pytest.fixture

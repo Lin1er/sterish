@@ -243,15 +243,62 @@ this (see §6) and, once the indexer (STE-13) exists, serves it from the index i
 
 ### 3.4 `GET /skills`
 
-Paginated catalogue. Backed by `query_all_skills(start, limit)`.
+Paginated catalogue, searchable, filterable and sortable (STE-34).
 
 **Query parameters**
 
 | Parameter | Type | Default | Notes |
 |---|---|---|---|
-| `start` | integer ≥ 0 | `0` | Offset into the **filtered** list, not into the raw on-chain index. |
+| `start` | integer ≥ 0 | `0` | Offset into the **filtered** (and, with `sort`, sorted) list, not into the raw on-chain index. |
 | `limit` | integer 1–100 | `20` | Clamped to 100. |
-| `include_test` | boolean | `false` | Include skills registered under a test namespace. |
+| `include_test` | boolean | `false` | Include skills registered under a test namespace. Applies to both listings. |
+| `verdict` | `SAFE` \| `WARNING` \| `DANGEROUS` \| `UNAUDITED` | — | Verdict of the **latest audited** version. `UNAUDITED` = no audited version. Uppercase only. |
+| `q` | string, 1–200 chars | — | Case-insensitive substring of `skill_id`, trimmed. `skill_id` is the only text the registry holds: there is no name, description, category or tag, on chain or here. |
+| `stale_audit` | `true` \| `false` | — | `true`: `latest_version` is not `latest_audited_version` (never-audited rows included). |
+| `sort` | `registered_at` \| `trust_score` \| `skill_id` | `registered_at` | |
+| `order` | `asc` \| `desc` | `desc` | Applies to the default sort when `sort` is omitted. |
+
+**Two listings.** With **none** of `verdict`, `q`, `stale_audit`, `sort`, `order`, the response is
+the STE-18 listing unchanged: registration order, test namespaces hidden unless `include_test`,
+`as_of: null`. Clients that page the plain catalogue see no change. With **any** of them, the
+filtered listing below applies. Both hide test namespaces the same way and share one scan
+(`skills.scan_registry`, capped at `MAX_SCAN`), so a filter can never surface a row the plain
+listing hides, and `chain_total` is the same number in both.
+
+**Filtered listing.**
+
+- Filter and sort run over the **whole registry, before paging**. `total` is the number of rows
+  after filtering — never the contract's skill count, or a client would offer empty pages.
+- Test namespaces are removed after the other filters, so `hidden_test_entries` on a filtered page
+  counts only test rows that **matched** every other filter (e.g. `verdict=SAFE` with one SAFE test
+  row hidden → `1`), not every test row on chain. `include_test=true` puts them back and makes it `0`.
+- Ties always break on `skill_id` ascending, so pages are stable.
+- `sort=trust_score`: rows with no trust score (never audited, or unreadable) come **last in both
+  directions**. "Lowest trust first" must not open with rows that have no trust score at all.
+- A row whose latest audited record could not be read matches **no** `verdict` value — not even
+  `UNAUDITED`, because unknown is not a claim the registry made. Without a `verdict` filter it is
+  listed with null verdict fields, as in the plain listing.
+
+**Where rows come from — and why not the index.** Rows are chosen from a view of the whole registry
+**read from chain** (`registry_snapshot.py`): every `SkillEntry` plus the record of each latest
+audited version. It is at most `STERISH_SKILLS_SNAPSHOT_TTL` seconds old (default 30, within the
+60 s caching §6 allows) and is dropped early whenever the indexer stores a new registry event. The
+SQLite index was considered and rejected: it is filled from `getEvents`, which only reaches back as
+far as the RPC node retains events, so a rebuilt index silently lacks every older skill and
+`verdict=SAFE` would return fewer rows than exist — breaking the rule that deleting the cache never
+changes an answer.
+
+**Displayed values are live.** The rows of the returned page are re-read from chain on every
+request; the verdict, score and verified flag in the response are those live reads. When the view
+and the chain disagree — a row chosen as `SAFE` now reads `DANGEROUS` — **the chain wins and the row
+is left out** of a `verdict`-filtered page, counted in `excluded_stale`, and the view is dropped so
+the next request agrees with the chain. `total` on that response still reflects the view it was
+cut from. Sorting and the `q` / `stale_audit` filters use the view's values.
+
+**Rejected parameters** answer `400 INVALID_PARAMETER` with a reason, never a silently unfiltered
+page: `verified` (identical to `verdict=SAFE` by invariant R7), `owner` (one owner on the registry
+today; a drill-down, if built, is its own ticket). `sort=verdict` is not offered: the verdict enum
+has no meaningful order. Any invalid value of a supported parameter is also `400`.
 
 ```json
 {
@@ -273,7 +320,9 @@ Paginated catalogue. Backed by `query_all_skills(start, limit)`.
   "limit": 20,
   "chain_total": 66,
   "hidden_test_entries": 47,
-  "include_test": false
+  "include_test": false,
+  "as_of": null,
+  "excluded_stale": 0
 }
 ```
 
@@ -308,6 +357,11 @@ An id is test scaffolding when it starts with `com.sterish.it-`, `com.sterish.e2
 shared with the tests that generate the ids — a filter and a test that disagree about the prefix
 produce exactly the junk the filter exists to remove. `com.fixtures.*` is **not** on it: those are
 published demo data, and hiding them would empty the dashboard of what it is meant to show.
+
+`as_of` (unix seconds) is when the registry view a filtered page was chosen from was read from
+chain, and is `null` for the plain listing. `excluded_stale` is how many rows that view chose were
+left out because their live verdict no longer matched; both fields were added in STE-34 and are
+additive.
 
 ### 3.5 `GET /health`
 

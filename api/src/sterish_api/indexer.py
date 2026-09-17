@@ -33,6 +33,7 @@ from stellar_sdk import xdr as stellar_xdr
 from stellar_sdk.soroban_rpc import EventFilter, EventFilterType
 from sterish_pipeline.namespaces import LEGACY_TEST_SKILL_IDS, TEST_SKILL_ID_PREFIXES
 
+from . import registry_snapshot
 from .chain import address_str, decode_verdict
 from .config import settings
 
@@ -319,7 +320,12 @@ def poll_once() -> int:
             break
 
         rows = [r for r in (_decode_event(e) for e in res.events) if r]
-        stored += _store(rows)
+        new_rows = _store(rows)
+        if new_rows:
+            # A registration, a new version or a verdict landed: the filtered /skills
+            # view (STE-34) may now be wrong, so drop it rather than wait out its TTL.
+            registry_snapshot.invalidate()
+        stored += new_rows
         start = min(start + chunk, latest + 1)
         _meta_set("last_indexed_ledger", str(min(start - 1, latest)))
 

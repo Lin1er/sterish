@@ -6,9 +6,9 @@ content_hash. No endpoint here returns a verdict keyed on skill_id alone.
 
 import re
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
-from .. import chain, fanout, indexer, skills
+from .. import chain, fanout, indexer, registry_snapshot, skills
 from ..config import settings
 from ..errors import ApiError
 from ..models import (
@@ -196,8 +196,26 @@ def skill_detail(skill_id: str):
     )
 
 
+VERDICTS = ("SAFE", "WARNING", "DANGEROUS", "UNAUDITED")
+SORTS = ("registered_at", "trust_score", "skill_id")
+ORDERS = ("asc", "desc")
+MAX_QUERY_LENGTH = 200
+
+# Parameters the ticket considered and rejected. Answered with a pointer to what to
+# use instead, rather than silently ignored and returning an unfiltered page.
+REJECTED_PARAMETERS = {
+    "verified": "is_verified is true exactly when the verdict is SAFE; use verdict=SAFE",
+    "owner": "the registry has one owner today; filtering by owner is not supported",
+}
+
+
+def _invalid(detail: str) -> ApiError:
+    return ApiError(400, "INVALID_PARAMETER", detail)
+
+
 @router.get("/skills", response_model=SkillListResponse)
 def list_skills(
+    request: Request,
     start: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     include_test: bool = Query(
@@ -206,7 +224,156 @@ def list_skills(
         "default; `hidden_test_entries` says how many, and `chain_total` is always "
         "the real on-chain count.",
     ),
+    verdict: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    stale_audit: str | None = Query(default=None),
+    sort: str | None = Query(default=None),
+    order: str | None = Query(default=None),
 ):
+    for name, why in REJECTED_PARAMETERS.items():
+        if name in request.query_params:
+            raise _invalid(f"{name} is not a supported parameter: {why}")
+
+    if all(p is None for p in (verdict, q, stale_audit, sort, order)):
+        return _list_plain(start, limit, include_test)
+    return _list_filtered(start, limit, include_test, verdict, q, stale_audit, sort, order)
+
+
+def _list_filtered(
+    start: int,
+    limit: int,
+    include_test: bool,
+    verdict: str | None,
+    q: str | None,
+    stale_audit: str | None,
+    sort: str | None,
+    order: str | None,
+) -> SkillListResponse:
+    """Filter and sort the whole registry, then page (STE-34, api-spec 3.4).
+
+    Rows are chosen from a chain-read snapshot (registry_snapshot.py) and then the
+    returned page is re-read live. A row whose live verdict no longer matches the
+    `verdict` filter is left out and counted in `excluded_stale`, and the snapshot is
+    dropped so the next request agrees with the chain again.
+
+    Test namespaces are hidden exactly as in the plain listing (STE-18), and the three
+    counts stay honest: `total` is what the filters leave, `chain_total` the contract's
+    own count, and `hidden_test_entries` the test-namespace rows that matched every
+    other filter and were hidden only because of their namespace.
+    """
+    if verdict is not None and verdict not in VERDICTS:
+        raise _invalid(f"verdict must be one of {', '.join(VERDICTS)}")
+    if q is not None and not q.strip():
+        raise _invalid("q must not be empty")
+    if q is not None and len(q) > MAX_QUERY_LENGTH:
+        raise _invalid(f"q must be at most {MAX_QUERY_LENGTH} characters")
+    if stale_audit is not None and stale_audit not in ("true", "false"):
+        raise _invalid("stale_audit must be true or false")
+    if sort is not None and sort not in SORTS:
+        raise _invalid(f"sort must be one of {', '.join(SORTS)}")
+    if order is not None and order not in ORDERS:
+        raise _invalid("order must be asc or desc")
+
+    snapshot = registry_snapshot.get()
+    needle = q.strip().lower() if q is not None else None
+    want_stale = None if stale_audit is None else stale_audit == "true"
+
+    def matches(row: registry_snapshot.Row) -> bool:
+        if needle is not None and needle not in row.skill_id.lower():
+            return False
+        if want_stale is not None and row.stale_audit is not want_stale:
+            return False
+        if verdict is not None:
+            if row.read_failed:
+                return False  # unknown is not UNAUDITED, and not anything else either
+            if (row.verdict or "UNAUDITED") != verdict:
+                return False
+        return True
+
+    matched = [row for row in snapshot.rows if matches(row)]
+    hidden = 0 if include_test else sum(1 for row in matched if row.is_test)
+    rows = matched if include_test else [row for row in matched if not row.is_test]
+    rows = _sorted(rows, sort or "registered_at", order or "desc")
+
+    total = len(rows)
+    page = rows[start : start + limit]
+
+    def live(row: registry_snapshot.Row) -> dict | None:
+        if not row.latest_audited_version:
+            return None
+        return _version_record_or_none(row.skill_id, row.latest_audited_version)
+
+    records = fanout.map_bounded(live, page, settings.chain_concurrency)
+
+    items: list[SkillListItem] = []
+    excluded = 0
+    for row, record in zip(page, records, strict=True):
+        if verdict is not None:
+            live_verdict = record["verdict"] if record else None
+            unreadable = record is None and row.latest_audited_version is not None
+            if unreadable or (live_verdict or "UNAUDITED") != verdict:
+                excluded += 1
+                continue
+        items.append(_list_item(row.as_entry(), record))
+
+    if excluded:
+        registry_snapshot.invalidate()
+
+    return SkillListResponse(
+        skills=items,
+        total=total,
+        start=start,
+        limit=limit,
+        chain_total=snapshot.chain_total,
+        hidden_test_entries=hidden,
+        include_test=include_test,
+        as_of=int(snapshot.built_at),
+        excluded_stale=excluded,
+    )
+
+
+def _sorted(
+    rows: list[registry_snapshot.Row], sort: str, order: str
+) -> list[registry_snapshot.Row]:
+    """Stable, deterministic ordering. Ties break on skill_id ascending.
+
+    Rows with no trust score (never audited, or unreadable) sort LAST in both
+    directions: "lowest trust first" must not open with rows that have no trust score.
+    """
+    descending = order == "desc"
+    by_id = sorted(rows, key=lambda r: r.skill_id)
+    if sort == "skill_id":
+        return list(reversed(by_id)) if descending else by_id
+    if sort == "registered_at":
+        return sorted(by_id, key=lambda r: r.registered_at, reverse=descending)
+
+    scored = [r for r in by_id if r.trust_score is not None]
+    unscored = [r for r in by_id if r.trust_score is None]
+    return sorted(scored, key=lambda r: r.trust_score, reverse=descending) + unscored
+
+
+def _list_item(entry: dict, record: dict | None) -> SkillListItem:
+    verdict = score = verified = None
+    if record is not None:
+        verdict = record["verdict"]
+        score = record["trust_score"]
+        verified = record["is_verified"]
+    return SkillListItem(
+        skill_id=entry["skill_id"],
+        owner=entry["owner"],
+        registered_at=entry["registered_at"],
+        version_count=len(entry["versions"]),
+        latest_version=entry["latest_version"],
+        latest_audited_version=entry["latest_audited_version"],
+        latest_audited_verdict=verdict,
+        latest_audited_trust_score=score,
+        latest_audited_is_verified=verified,
+    )
+
+
+def _list_plain(start: int, limit: int, include_test: bool) -> SkillListResponse:
+    """The listing without STE-34 parameters: registration order, test namespaces
+    hidden unless asked for (STE-18). Unchanged by STE-34."""
     entries, total, chain_total, hidden = skills.visible_page(start, limit, include_test)
 
     def _latest_audited_record(entry: dict) -> dict | None:
@@ -219,27 +386,7 @@ def list_skills(
     # trip per row in series (STE-33). Order is preserved, so this zips back cleanly.
     records = fanout.map_bounded(_latest_audited_record, entries, settings.chain_concurrency)
 
-    items: list[SkillListItem] = []
-    for entry, record in zip(entries, records, strict=True):
-        latest_audited = entry["latest_audited_version"]
-        verdict = score = verified = None
-        if record is not None:
-            verdict = record["verdict"]
-            score = record["trust_score"]
-            verified = record["is_verified"]
-        items.append(
-            SkillListItem(
-                skill_id=entry["skill_id"],
-                owner=entry["owner"],
-                registered_at=entry["registered_at"],
-                version_count=len(entry["versions"]),
-                latest_version=entry["latest_version"],
-                latest_audited_version=latest_audited,
-                latest_audited_verdict=verdict,
-                latest_audited_trust_score=score,
-                latest_audited_is_verified=verified,
-            )
-        )
+    items = [_list_item(entry, record) for entry, record in zip(entries, records, strict=True)]
 
     return SkillListResponse(
         skills=items,
