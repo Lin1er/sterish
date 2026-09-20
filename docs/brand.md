@@ -188,6 +188,8 @@ All under `frontend/public/brand/logo/`.
 | `sterish-mark-{cream,navy}-{512,1024}.png` | raster mark |
 | `sterish-avatar-navy-tight-1024.png` | **profile pictures** (see below) |
 | `sterish-header-navy-1500x500.png` | X header |
+| `frontend/app/icon.svg` | browser tab — lens crop, vector |
+| `frontend/app/apple-icon.png` | home-screen icon, 180px, generated from `icon.svg` |
 
 SVG is the master in every case. The PNGs are generated from it, so regenerate rather
 than edit them; a PNG edited by hand becomes a second source of truth that drifts.
@@ -212,12 +214,20 @@ Two consequences:
   `sterish-avatar-navy-tight-1024.png`, which crops to the lens so the eye and starburst
   still read at 48px.
 
-**Known gap, not a solved problem.** There is no purpose-drawn compact form of the mark,
-so every square placement currently works around the band's proportions instead of using
-artwork built for the space. `app/icon.svg` insets the band into a rounded navy square,
-which leaves the artwork small; `sterish-avatar-navy-tight-1024.png` crops into the
-artwork, which is a liberty this document would otherwise tell you not to take. Both are
-stopgaps. The fix is a drawn square mark — see the asset request in §10.
+**Square placements crop to the lens. This is the agreed approach, not a stopgap.**
+Nabil's decision, 20 Sep 2026: the asset set is complete as drawn, and square placements
+should crop rather than wait for a separate square mark. So both the favicon
+(`app/icon.svg`) and the avatar (`sterish-avatar-navy-tight-1024.png`) frame the lens and
+starburst and let the swoosh run out of frame.
+
+The two use different ratios on purpose. The avatar is cropped to a **circle**, which eats
+the corners, so the lens is 55% of the frame. The favicon keeps its **rounded-square**
+corners, and at 55% the lens ran off the right edge, so it is 40%. Candidates at 34, 40,
+46 and 55 percent were rendered at 16, 32 and 48px before picking.
+
+To be exact about what this permits: cropping the **mark**, in a square or circular
+frame, using the measured window. Don't #7 below still stands for the lockup, which is
+never cropped.
 
 ### Clear space
 
@@ -247,8 +257,12 @@ Each of these is a real failure mode, not a formality:
 4. **Do not stretch, skew, rotate or outline.** Scale proportionally.
 5. **Do not add effects** — no shadow, glow, gradient or bevel.
 6. **Do not rebuild the wordmark in Satoshi.** It is drawn artwork, not set type; typing
-   "Sterish" in Satoshi gives a visibly different result.
+   "Sterish" in Satoshi gives a visibly different result. It is also not a separable
+   element: the wordmark was drawn to sit beside the mark and merge with it, so there is
+   no wordmark-only asset and pulling one out means redrawing (§10).
 7. **Do not crop the lockup.** Use the mark when space is tight — that is what it is for.
+   Cropping the *mark* for a square or circular frame is allowed and is how the favicon
+   and avatar are built (§7, above); cropping the lockup is not.
 
 ---
 
@@ -282,51 +296,28 @@ deploy**, not before.
 
 ---
 
-## 10. Assets still needed from the designer
+## 10. Asset decisions (20 Sep 2026)
 
-Everything below is something the brand system needs and that cannot be derived from the
-files already in the repo. Generated derivatives (PNG at other sizes, social crops,
-favicons) are **not** on this list — those are produced from the masters by script, so
-please do not hand-make them.
+Nabil reviewed the asset set and closed this out. Recorded here so it is not reopened by
+someone reading §7 and assuming something is missing.
 
-### Must have
+**The asset set is complete as drawn.** No compact square mark, no separate one-colour
+mark, no editable source hand-off. Square placements crop to the lens instead (§7).
 
-**1. A compact square mark.** The one real gap, and the reason §7 has a "known gap" note.
-The current mark is a 5.2:1 band, so every square or circular placement — favicon, app
-icon, X avatar, OG image, any future chip or badge — is currently a workaround. What is
-needed is the mark redrawn to sit in a **1:1 box**: most likely the lens and starburst
-alone, with the swoosh shortened or dropped, tuned so it still reads at **48px** and at
-**16px**. Deliver as SVG, one file per colourway (cream-on-transparent, navy-on-transparent).
+**There is no wordmark-only lockup, by design.** The wordmark was drawn to sit beside the
+mark and merge with it — they are one composition, not two elements that happen to be
+adjacent. Asking for the wordmark alone asks for a different piece of artwork, not an
+export of this one. Where the lockup will not fit, use the mark.
 
-Everything else on this list is smaller than this one.
+**Consequences worth knowing, so nobody is surprised later:**
 
-**2. The editable source file.** The repo has flattened SVG paths only. A Figma link (or
-`.ai`/`.sketch`) with live shapes means the next change is an edit rather than a redraw.
-If it is Figma, view access to the file is enough.
+- **One-colour contexts are unsolved.** The mark is two-tone: a cream swoosh with a navy
+  lens cut into it. A greyscale print, a stamp, an embroidered patch or a partner's
+  monochrome logo strip has no correct asset today. If one of those comes up, it is a new
+  request to Nabil, not something to improvise.
+- **Edits mean a redraw.** The repo holds flattened SVG paths, not live shapes. A change
+  to the artwork goes back to the designer.
 
-**3. A one-colour version of the mark.** The current mark is two-tone: a cream swoosh with
-a navy lens cut into it. That breaks wherever only a single colour is available — a
-greyscale print, a stamp, an embroidered patch, a partner's monochrome logo strip, a
-sponsor wall. Needed: the mark as a **single solid shape**, SVG, that reads correctly when
-filled entirely with one colour.
-
-### Nice to have
-
-**4. A wordmark-only lockup.** "Sterish" without the mark, SVG, both colourways. For
-places that are wide but short, or where the mark already appears next to it and repeating
-it is noise.
-
-**5. A stacked lockup.** Mark above, wordmark below, SVG, both colourways. For narrow
-columns and square-ish placements where the horizontal lockup has to shrink below its
-120px minimum.
-
-**6. Confirmation or correction of the measured rules.** §7's clear space (0.5x) and
-minimum sizes (lockup 120px / 25mm, mark 24px) were derived by measuring the artwork, not
-handed down by you. If the intent differs, your numbers win and this file should be
-corrected.
-
-### Not needed
-
-- PNG exports at any size — generated from the SVG.
-- Social crops, favicons, app icons — generated.
-- Colour variants beyond cream and navy — the palette is closed on purpose (§7, don't #1).
+Derivatives are still generated, never hand-made: PNG exports, favicons, app icons and
+social crops all come from the SVG masters by script. If the mark artwork ever changes,
+regenerate `icon.svg`'s crop and the tight avatar together, using the measurements in §7.
