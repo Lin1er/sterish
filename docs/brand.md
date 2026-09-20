@@ -212,6 +212,13 @@ Two consequences:
   `sterish-avatar-navy-tight-1024.png`, which crops to the lens so the eye and starburst
   still read at 48px.
 
+**Known gap, not a solved problem.** There is no purpose-drawn compact form of the mark,
+so every square placement currently works around the band's proportions instead of using
+artwork built for the space. `app/icon.svg` insets the band into a rounded navy square,
+which leaves the artwork small; `sterish-avatar-navy-tight-1024.png` crops into the
+artwork, which is a liberty this document would otherwise tell you not to take. Both are
+stopgaps. The fix is a drawn square mark — see the asset request in §10.
+
 ### Clear space
 
 Let **x** = the height of the lockup's ink (`138` units in the lockup's own coordinate
@@ -272,3 +279,54 @@ deploy**, not before.
    follow.
 4. Update this file if a *rule* changed. If only a value changed, `/brand` already tells
    the truth and this file's tables are the thing to correct.
+
+---
+
+## 10. Assets still needed from the designer
+
+Everything below is something the brand system needs and that cannot be derived from the
+files already in the repo. Generated derivatives (PNG at other sizes, social crops,
+favicons) are **not** on this list — those are produced from the masters by script, so
+please do not hand-make them.
+
+### Must have
+
+**1. A compact square mark.** The one real gap, and the reason §7 has a "known gap" note.
+The current mark is a 5.2:1 band, so every square or circular placement — favicon, app
+icon, X avatar, OG image, any future chip or badge — is currently a workaround. What is
+needed is the mark redrawn to sit in a **1:1 box**: most likely the lens and starburst
+alone, with the swoosh shortened or dropped, tuned so it still reads at **48px** and at
+**16px**. Deliver as SVG, one file per colourway (cream-on-transparent, navy-on-transparent).
+
+Everything else on this list is smaller than this one.
+
+**2. The editable source file.** The repo has flattened SVG paths only. A Figma link (or
+`.ai`/`.sketch`) with live shapes means the next change is an edit rather than a redraw.
+If it is Figma, view access to the file is enough.
+
+**3. A one-colour version of the mark.** The current mark is two-tone: a cream swoosh with
+a navy lens cut into it. That breaks wherever only a single colour is available — a
+greyscale print, a stamp, an embroidered patch, a partner's monochrome logo strip, a
+sponsor wall. Needed: the mark as a **single solid shape**, SVG, that reads correctly when
+filled entirely with one colour.
+
+### Nice to have
+
+**4. A wordmark-only lockup.** "Sterish" without the mark, SVG, both colourways. For
+places that are wide but short, or where the mark already appears next to it and repeating
+it is noise.
+
+**5. A stacked lockup.** Mark above, wordmark below, SVG, both colourways. For narrow
+columns and square-ish placements where the horizontal lockup has to shrink below its
+120px minimum.
+
+**6. Confirmation or correction of the measured rules.** §7's clear space (0.5x) and
+minimum sizes (lockup 120px / 25mm, mark 24px) were derived by measuring the artwork, not
+handed down by you. If the intent differs, your numbers win and this file should be
+corrected.
+
+### Not needed
+
+- PNG exports at any size — generated from the SVG.
+- Social crops, favicons, app icons — generated.
+- Colour variants beyond cream and navy — the palette is closed on purpose (§7, don't #1).
