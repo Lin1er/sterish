@@ -74,10 +74,26 @@ here so the opener's voice matches the introduction post.
 
 ---
 
+## Verified, 20 Sep 2026
+
+Checked against MCP Stellar Raven before any of this ships. Full record:
+`docs/evidence/ste-7-raven-positioning-2026-09-20.json`.
+
+- **"audit registry" is accurate and unoccupied.** Stellar's security projects audit smart
+  contracts; its agent-skill projects do not audit. Nobody spans both.
+- **"x402" is correct usage**, documented by Stellar at
+  `developers.stellar.org/docs/build/agentic-payments/x402`. Note it sits beside **MPP** in
+  those docs — we use x402, so do not use the two names interchangeably.
+- **⚠️ "Instawards" may be misspelled.** The SDF programme appears as **InstAward /
+  InstAwards** (capital A) in two dated sources. Axel specified the current string and the
+  bio is already live, so it is unchanged here — **confirm before posting**, since all
+  three drafts end with that line.
+
 ## Before publishing
 
 - [ ] The dashboard URL in the profile resolves publicly (blocked on STE-26).
 - [ ] The demo video exists, if the post references it (STE-28).
 - [ ] Re-read for accidental absolutes: "safe", "guaranteed", "official", "verified by
       Stellar". None of those are claims Sterish can make.
+- [ ] **Axel has confirmed the InstAward / Instawards spelling** (see above).
 - [ ] Axel has seen the final text.

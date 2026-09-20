@@ -273,9 +273,33 @@ Live at **[@sterishxyz](https://x.com/sterishxyz)**.
 Bio follows the convention this team already uses on its other projects:
 `Instawards by @StellarOrg.` plus one sentence of positioning.
 
+> **Open question: the spelling.** Verified against MCP Stellar Raven on 20 Sep 2026, the
+> SDF program is spelled **InstAward / InstAwards**, with a capital A — two dated corpus
+> rows use it that way ("Stellar InstAwards program funds 10 Turkish builders", 18 Aug
+> 2026; "13 Proje InstAward Grant", 4 Aug 2026). Our copy uses `Instawards`.
+>
+> Not changed here. Axel specified the string in the STE-7 ticket and it is already live
+> in the bio, so editing public brand copy is the PM's call, and both sources are x.com
+> articles rather than an official programme page. **Confirm before the intro post ships.**
+> Evidence: `docs/evidence/ste-7-raven-positioning-2026-09-20.json`.
+>
+> Worth noting either way: InstAward is a *grant programme*, so this line is an affiliation
+> claim, not a tagline.
+
 Positioning language — audited skills, an audit registry for AI agents on Stellar.
 **Avoid "official app store"** or any phrasing that implies Stellar endorsement or an
-exclusive/official role. Sterish is a registry with an audit pipeline; claiming more is
+exclusive/official role.
+
+The positioning itself was checked against the ecosystem on 20 Sep 2026 and stands: the
+Stellar security projects (Almanax, AnChain.AI, Veridise, Halborn, OtterSec, Komet,
+Inferera) audit **smart contracts**, and the agent-skill projects (Stellar AI Agent Kit,
+CredioLabs.AI, Stellar Agent Wallet Skill) do not audit. Nobody spans the two. Neither
+AgentOracle nor Lumina Skill — the names raised in the SOW appendix — was found in those
+sources at all.
+
+One caveat for outreach copy: **REAPP** (Real Agentic Payment Protocol, live) already
+composes x402 HTTP settlement on Stellar. It overlaps the payments half of the story, not
+the audit half — so do not pitch the agent-payments lane as empty. Sterish is a registry with an audit pipeline; claiming more is
 both untrue and the kind of claim that is expensive to walk back.
 
 Post drafts live in `docs/brand-posts.md`. Per Axel, the introduction post ships **after
