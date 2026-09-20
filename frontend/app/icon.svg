@@ -1,6 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sterish">
+  <!--
+    STE-7. The inner viewBox crops to the lens rather than showing the whole
+    mark. The mark is a 5.2:1 band, so framing all of it in a square left the
+    artwork about 26% of the height: legible in the 512 source, a smudge at the
+    16px a browser tab actually renders.
+
+    The crop is measured, not eyeballed. In the mark's own 400x400 space the
+    navy lens occupies 109.5 x 77.2 at (129.0, 161.4), centre (183.75, 200.0).
+    The window here is the square that makes the lens 40% of its width.
+
+    That 40% is looser than the 55% used by sterish-avatar-navy-tight-1024.png,
+    and deliberately so: the avatar is cropped to a CIRCLE, which eats the
+    corners, so it needs more fill to look right. This badge keeps its corners,
+    and at 55% the lens ran off the right edge. Candidates at 34, 40, 46 and 55
+    percent were rendered at 16, 32 and 48px before picking this one.
+
+    Regenerate both together if the mark artwork ever changes.
+  -->
   <rect width="512" height="512" rx="112" fill="#122C4F"/>
-  <svg x="36" y="188" width="440" height="136" viewBox="-6 148 412 104" preserveAspectRatio="xMidYMid meet">
+  <svg x="48" y="48" width="416" height="416" viewBox="46.88 63.13 273.75 273.75" preserveAspectRatio="xMidYMid meet">
 <g clip-path="url(#clip0_382_2)">
 <path d="M158.614 169.216C193.838 158.037 251.18 158.664 406.215 171.947C331.587 169.991 294.55 173.56 276.293 177.957C306.196 188.588 328.05 201.007 328.168 201.074C328.124 201.1 302.116 216.651 265.167 226.851C225.283 241.792 163.7 242.812 -6.21387 228.255C73.6044 230.347 114.766 225.936 135.984 220.952C114.478 210.319 107.403 197.895 107.403 197.895C107.403 197.895 123.512 179.344 158.614 169.216Z" fill="#FBF9E4"/>
 <mask id="mask0_382_2" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="-7" y="161" width="414" height="78">

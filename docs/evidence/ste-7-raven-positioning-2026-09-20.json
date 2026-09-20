@@ -1,0 +1,112 @@
+{
+  "ticket": "STE-7",
+  "date": "2026-09-20",
+  "task": "Verify positioning and public claims via MCP Stellar Raven before the X copy ships",
+  "tool": {
+    "server": "stellar-raven",
+    "endpoint": "https://raven.stellar.buzz/mcp",
+    "note": "Requires OAuth (401 + WWW-Authenticate Bearer scope=mcp on an unauthenticated call). Registered with `claude mcp add --transport http stellar-raven https://raven.stellar.buzz/mcp`, then authorized interactively.",
+    "operations_used": [
+      "lumenloop.search_directory",
+      "lumenloop.search_content_semantic",
+      "scout.searchProjects",
+      "stellarDocs.search_docs"
+    ],
+    "observed_at": "2026-09-20T13:43:44Z (scout.searchProjects meta.generatedAt)"
+  },
+
+  "q1_named_prior_art": {
+    "question": "Do AgentOracle or Lumina Skill (named in the SOW appendix) already occupy Sterish's position?",
+    "result": "NOT FOUND IN THESE SOURCES. Not the same as 'does not exist'.",
+    "detail": {
+      "AgentOracle": {
+        "lumenloop.search_directory": "match_mode=semantic, count=5 — no substring match; fallback returned oracle projects (Orally, Stellar Oracle Shield, Soracle, Ortege), none named AgentOracle",
+        "scout.searchProjects": "meta.matchMode=semantic, meta.counts.total=0"
+      },
+      "Lumina Skill": {
+        "lumenloop.search_directory": "match_mode=semantic, count=5 — fallback returned Lumen* name-adjacent projects (Lumenscan, Lumenswap, Lumexo, LumosDAO), none named Lumina",
+        "scout.searchProjects": "meta.matchMode=majority, meta.counts.total=6 — all adjacent, none named Lumina Skill"
+      }
+    },
+    "caveat": "A semantic fallback row is a candidate, not identity proof. Both names may exist outside the Lumenloop/Scout corpora."
+  },
+
+  "q2_position_occupied": {
+    "question": "Is 'audit registry for AI agent skills' already claimed by a live Stellar project?",
+    "result": "NO DIRECT OCCUPANT FOUND. The space splits cleanly in two and nobody spans it.",
+    "lanes_searched": [
+      "scout.searchProjects q='AI agent skill registry audit' (total 30)",
+      "scout.searchProjects type=AI (total 59)",
+      "scout.searchProjects type=Security (total 98)"
+    ],
+    "auditors_audit_contracts_not_skills": [
+      { "name": "Almanax", "types": ["Security", "AI"], "desc": "automated security auditor, AI, vulnerabilities in smart contracts" },
+      { "name": "AnChain.AI", "types": ["Security", "AI"], "desc": "open-source catalog of audited smart contracts" },
+      { "name": "Veridise", "types": ["Security"], "desc": "smart contract audits, formal methods" },
+      { "name": "Halborn", "types": ["Security"] },
+      { "name": "OtterSec", "types": ["AI", "Security"] },
+      { "name": "Komet", "types": ["Security"], "desc": "Runtime Verification formal verification for Soroban" },
+      { "name": "Inferera", "types": ["Security"], "desc": "formal specification language for Soroban" }
+    ],
+    "agent_skill_projects_do_not_audit": [
+      { "name": "Stellar AI Agent Kit", "types": ["AI", "SDK"], "status": "Live", "desc": "toolkit for AI agents to interact with Stellar contracts, MCP integration + CLI" },
+      { "name": "CredioLabs.AI", "types": ["AI", "Security"], "status": "Live", "desc": "OpenZeppelin Accounts policy builder — MCP server and Claude skill" },
+      { "name": "Stellar Agent Wallet Skill", "types": ["Wallet", "Payments"], "status": "Development", "desc": "agent skill for USDC balances/transfers, pays x402 or MPP-gated services (MPP Router / Rozo team)" }
+    ],
+    "closest_adjacent": {
+      "name": "REAPP",
+      "types": ["AI", "Payments", "SDK"],
+      "status": "Live",
+      "desc": "Real Agentic Payment Protocol — authorization layer for agentic commerce on Stellar, composes x402 HTTP settlement",
+      "why_it_matters": "Overlaps the x402 half of the Sterish story, not the audit half. Worth knowing before outreach (STE-51) so Sterish is not pitched as if the agent-payments lane were empty."
+    },
+    "conclusion": "Sterish's claim — auditing the SKILL rather than the contract, with the verdict on chain — is not occupied in these sources. The copy does not need to change on positioning grounds."
+  },
+
+  "q3_instawards_spelling": {
+    "question": "Is the bio convention 'Instawards by @StellarOrg.' spelled correctly?",
+    "result": "DISCREPANCY FOUND. The corpus consistently spells it InstAward / InstAwards with a capital A.",
+    "evidence": [
+      {
+        "title": "Türkiye'den 10 Proje Stellar InstAward Granti Aldı",
+        "source": "x.com",
+        "date": "2026-08-18T11:00:00+00",
+        "snippet": "Stellar InstAwards program funds 10 Turkish builders with $50k total."
+      },
+      {
+        "title": "Stellar Türkiye'den Temmuz Ayında 13 Proje InstAward Grant Kazandı!",
+        "source": "x.com",
+        "date": "2026-08-04T09:46:55+00",
+        "snippet": "13 projects after winning InstAward grants in July"
+      }
+    ],
+    "also_established": "InstAward is an SDF grant program, so the bio line is an affiliation claim, not a tagline.",
+    "action_taken": "NOT changed unilaterally. The string was specified by Axel in the STE-7 ticket and is already live in the @sterishxyz bio; changing public-facing brand copy is the PM's call. Flagged in docs/brand.md §8 and docs/brand-posts.md for Axel to confirm.",
+    "caveat": "Both rows are x.com articles in the Lumenloop corpus, not an SDF program page. Confirm against the official program page before editing the live bio."
+  },
+
+  "q4_technical_claims": {
+    "question": "Are 'x402' and the USDC SAC wording accurate enough to ship in public copy?",
+    "result": "ACCURATE. Both are documented Stellar concepts, not borrowed terminology.",
+    "x402": {
+      "sources": [
+        "https://developers.stellar.org/docs/build/agentic-payments/x402#what-is-x402",
+        "https://developers.stellar.org/docs/build/agentic-payments"
+      ],
+      "quote": "turns the old \"402 Payment Required\" HTTP status code into something usable",
+      "note": "Stellar documents x402 under 'agentic payments' alongside MPP (https://developers.stellar.org/docs/build/agentic-payments/mpp). Sterish uses x402; do not conflate the two in copy."
+    },
+    "usdc_sac": {
+      "sources": [
+        "https://developers.stellar.org/docs/build/guides/tokens/stellar-asset-contract#contract-code"
+      ],
+      "quote": "SEP-41 Token Interface ... with CAP-46-6 smart contract standardized asset, the Stellar Asset Contract exposes additional functions",
+      "note": "Confirms the CLAUDE.md decision to use the official USDC SAC rather than issuing an asset."
+    }
+  },
+
+  "outcome": {
+    "copy_changes_required": "none on positioning or technical accuracy",
+    "open_item": "InstAward vs Instawards spelling — needs Axel's confirmation before the live bio or the intro post ships"
+  }
+}
