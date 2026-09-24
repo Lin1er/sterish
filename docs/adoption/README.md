@@ -214,6 +214,9 @@ catalogue, and that is stated in the evidence doc.
 
 ## Tracker
 
+The text actually sent is kept in [`messages.md`](messages.md), so a reply can be read
+against what was said rather than against what we meant to say.
+
 | Date | Target | Channel | Sent | Reply | Outcome |
 | -- | -- | -- | -- | -- | -- |
 | | | | | | |
