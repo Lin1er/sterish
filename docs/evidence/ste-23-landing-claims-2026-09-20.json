@@ -3,14 +3,17 @@
   "date": "2026-09-20",
   "task": "Verify every factual claim on the landing page before it is published",
   "principle": "The page states facts to strangers who cannot check them. Nothing was written from memory; each claim below was read from a source on this date, and the counts are re-read from the live API at render time rather than typed into the copy.",
-
   "live_numbers": {
     "method": "Read from https://api.sterish.xyz/skills?limit=100 at render time (frontend/src/modules/landing/liveStats.ts). The values below are the snapshot used as a labelled fallback when the API does not answer.",
     "observed": {
       "chain_total": 30,
       "shown": 24,
       "hidden_test_entries": 6,
-      "verdicts": { "SAFE": 17, "WARNING": 2, "DANGEROUS": 5 },
+      "verdicts": {
+        "SAFE": 17,
+        "WARNING": 2,
+        "DANGEROUS": 5
+      },
       "verified": 17
     },
     "derived": {
@@ -20,7 +23,6 @@
     },
     "honesty_rule": "CLAUDE.md forbids hiding the test namespaces silently. The page prints 'of 30 on chain' and names the 6 filtered entries, and liveStats falls back to 30 rather than to `total` when an older API omits chain_total, so no code path can assert the chain holds only what is shown. Covered by liveStats.test.ts."
   },
-
   "rug_pull": {
     "claim": "One skill, two versions: v1 Safe and VERIFIED, v2 Dangerous and refused a licence. Same name, different bytes.",
     "skill_id": "com.fixtures.demo.release-notes",
@@ -39,7 +41,6 @@
     },
     "guard": "getRugPull() falls back to the dated snapshot if the chain ever stops saying SAFE and DANGEROUS, rather than rendering a story the chain contradicts."
   },
-
   "cves": {
     "note": "Both are published advisories, not our characterisation. Checked on 2026-09-20 before being put on a public page.",
     "CVE-2025-54136": {
@@ -59,7 +60,6 @@
       "mechanism": "OS command injection; the first documented case of full remote code execution on a client OS triggered by connecting to an untrusted MCP server."
     }
   },
-
   "stellar_claims": {
     "note": "Verified through MCP Stellar Raven during STE-7 on 2026-09-20; see ste-7-raven-positioning-2026-09-20.json for the full record.",
     "x402": {
@@ -73,13 +73,11 @@
     },
     "positioning": "The page says 'an audit registry for agent skills — not an official Stellar product, and not an app store.' Raven found no Stellar project occupying the audit-the-skill position."
   },
-
   "restraint": {
-    "dashboard": "The CTA reads 'Dashboard — coming soon' and is not a link. The dashboard redirects to Vercel SSO (STE-26 is not done), and a CTA that lands on a login wall is worse than an honest label.",
+    "dashboard": "Updated 24 Sep 2026: the dashboard went public at https://app.sterish.xyz (docs/deployments.md), so the CTA now links to it. It previously read 'Dashboard — coming soon' because the deployment redirected to Vercel SSO; STE-23 allowed that only until STE-26 was live, and that condition has expired. Verified HTTP 200 on 24 Sep 2026.",
     "testnet": "Stated on the page, in the hero and again beside the evidence links.",
     "expiry": "The page says Stellar testnet resets to genesis on 16 December 2026, so stellar.expert links carry that expiry rather than an implied permanence."
   },
-
   "tests": {
     "file": "frontend/src/modules/landing/liveStats.test.ts",
     "count": 9,
@@ -94,9 +92,13 @@
       "either read failing falls back"
     ]
   },
-
   "not_verified_here": [
     "Visual check at 375px. The browser harness would not apply a window resize, so mobile layout rests on standard responsive classes (the hero, steps and stat grids all collapse to one column, and both the 64-character hash and the skill id carry break-all). Worth an eyeball in devtools before merge.",
     "The 'Instawards by @StellarOrg.' line, which repeats the wording Axel specified. The InstAward / Instawards spelling question raised in STE-7 is still open and applies to this page too."
-  ]
+  ],
+  "public_urls_2026_09_24": {
+    "api": "https://api.sterish.xyz (HTTP 200)",
+    "dashboard": "https://app.sterish.xyz (HTTP 200, public since 24 Sep)",
+    "landing": "https://sterish.xyz (HTTP 404 — reserved for this page, not yet pointed at it)"
+  }
 }

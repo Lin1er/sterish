@@ -34,6 +34,8 @@ import { RUG_PULL_SKILL, getLandingStats, getRugPull } from "./liveStats";
  */
 
 const X_URL = "https://x.com/sterishxyz";
+/** Public since 24 September 2026 (docs/deployments.md). */
+const DASHBOARD_URL = "https://app.sterish.xyz";
 const REGISTRY_CONTRACT = "CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2";
 const EXPERT = `https://stellar.expert/explorer/testnet/contract/${REGISTRY_CONTRACT}`;
 
@@ -83,12 +85,14 @@ function Hero() {
           >
             Open the live registry
           </a>
-          <span
-            className="rounded-lg border border-hairline-strong px-5 py-3 text-text-tertiary"
-            title="The dashboard is not public yet (STE-26)"
+          <a
+            href={DASHBOARD_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-hairline-strong px-5 py-3 transition-colors hover:border-keyword hover:text-keyword"
           >
-            Dashboard — coming soon
-          </span>
+            Open the dashboard
+          </a>
         </div>
         <p className="mt-4 font-mono text-xs text-text-tertiary">
           Stellar testnet. Real transactions, no mainnet funds.
@@ -410,7 +414,7 @@ function Close() {
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <a
-          href={`${API_BASE_URL}/skills`}
+          href={DASHBOARD_URL}
           target="_blank"
           rel="noreferrer"
           className="rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90"
