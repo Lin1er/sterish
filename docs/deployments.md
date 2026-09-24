@@ -914,6 +914,46 @@ dropped and rebuilt (a cache; STE-46 backfills `mint_tx` from it), Caddy restart
 **Expected side effect, announced on STE-48:** the dashboard's `200 held` path answers `401
 OWNERSHIP_PROOF_REQUIRED` until its SEP-43 signing UI lands. New purchases are unaffected.
 
+### Migration 2026-09-17 — production moves to a VPS, `api.sterish.xyz` (STE-54)
+
+From the homelab LXC (Proxmox pve02, CT 204) to a VPS, `187.53.142.100` (Ubuntu 26.04, 2 vCPU / 8 GB /
+96 GB, IPv4 + IPv6). Same Cloudflare Tunnel (`sterish-api`, `0cce8c0e…`), now with the VPS as its only
+connector. Record: [`evidence/ste-54-vps-migration-2026-09-17.json`](evidence/ste-54-vps-migration-2026-09-17.json).
+
+**Order, so there is never a moment with two ledgers taking payments:**
+
+1. VPS prepared with the tunnel **off**: repo cloned, `.env` and the tunnel credentials copied
+   host-to-host (never printed), Caddy bound to loopback, stack built, `publish-artifacts`
+   (18 for sale, 4 not SAFE), health checked locally.
+2. **13:49:02 UTC** — API stopped on CT 204, freezing the payments ledger.
+3. Ledger copied: `sha256` `058a002e…` identical on the old host, in transit and on the VPS; 8 settlements,
+   0 owed a licence.
+4. VPS API and its tunnel connector started; CT 204's Caddy and connector stopped. **13:49:16 UTC** —
+   `cloudflared tunnel info` lists one connector, origin `187.53.142.100`.
+5. CT 204's redeploy scripts renamed `*.DISABLED-moved-to-vps`; its stack is kept for rollback.
+
+**Verified through `https://api-sterish.jameshub.fun`, now served by the VPS:**
+
+| | |
+|---|---|
+| `deploy/verify.sh` | all pass; 17 SAFE rows for sale, 0 undeliverable priced, `sha256(report) == evidence_hash` |
+| real purchase, `e2e_paid_path.py` | fresh agent `GC6VEHOE…` bought `standards.ecosystem`: exactly 0.1 USDC (settle [`54d18460…`](https://stellar.expert/explorer/testnet/tx/54d18460153bc4bcc6c51229898c138a4591be9f5b8a681fbcde4346f8d4b170), mint [`2eb739ee…`](https://stellar.expert/explorer/testnet/tx/2eb739eeaeddbb7b344fd2bb539ff7681a069447f6318fe2f1641cdb961e047c)); holder served with a SEP-53 proof; address-only, forged, replayed, borrowed and wrong-version proofs all `401`; a second payment settled nothing |
+| ledger continuity | 9 rows after the purchase: the 8 migrated plus the new one |
+| API log | real visitor addresses, 0 5xx, **0 warnings** — the IPv6→IPv4 RPC retries seen on CT 204 are gone |
+
+**`api.sterish.xyz` — live the same evening.** The Cloudflare origin certificate available (`cert.pem`)
+turned out to be scoped to the `jameshub.fun` zone: `cloudflared tunnel route dns` with it created a
+stray `api.sterish.xyz.jameshub.fun` record instead. That record was deleted in the dashboard, and a
+proxied CNAME `api` → `0cce8c0e-6239-4454-9ec6-a2a4515e4c9d.cfargotunnel.com` was added in the
+`sterish.xyz` zone (the stray name now returns NXDOMAIN). `REPORT_BASE_URL` then moved to
+`https://api.sterish.xyz`; for a few minutes earlier it had been set there before the record existed
+and was reverted, so `report_uri` briefly pointed at an unresolvable name.
+
+Verified through `https://api.sterish.xyz`: `deploy/verify.sh` all pass; `report_uri`, the x402
+`resource.url` and the STE-48 `challenge_url` all use `https://api.sterish.xyz`; the old hostname
+still answers; and the D3 flow transcript was regenerated through the new hostname, **15/15**
+([`evidence/d3-flow-transcript-2026-09-17.md`](evidence/d3-flow-transcript-2026-09-17.md)).
+
 ## Full-loop rehearsal against the v2 pair (STE-27, 2026-09-16)
 
 The first run of the whole loop against Registry v2 + Tokens v2 + the unchanged Escrow — the

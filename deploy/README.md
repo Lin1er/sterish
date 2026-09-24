@@ -129,6 +129,26 @@ uv run sterish intake publish-artifacts --corpus corpus --out ../deploy/artifact
 Then check the result from outside: `verify.sh` fails if any SAFE row is priced
 without being deliverable.
 
+## Where production runs (STE-54)
+
+Since 17 September 2026 production runs on a VPS (`187.53.142.100`, Ubuntu, 2 vCPU / 8 GB, IPv4 +
+IPv6), not on the homelab LXC it started on (Proxmox pve02, CT 204). The homelab went down when
+that node was rebuilt, depends on home power and internet, and had no IPv6 route, so RPC calls
+retried from IPv6 to IPv4.
+
+- Redeploy: `sterish-redeploy` on the VPS (`git reset --hard origin/main`, then
+  `docker compose --env-file .env --profile tunnel up -d --build`).
+- Caddy listens on loopback only (`HTTP_PORT=127.0.0.1:8080`); every public request arrives through
+  the Cloudflare Tunnel, so the VPS exposes no HTTP port.
+- Host-local and untracked (they survive the reset): `docker-compose.override.yml` and
+  `cloudflared-config.local.yml`, which carries the ingress until this repo's
+  `cloudflared-config.yml` is on `main`.
+- **`deploy_payments` is the payments ledger, not a cache.** Moving hosts means stopping the API on
+  the old host first, copying the SQLite file, and checking the hash on both sides — two live copies
+  would both accept payments. `deploy_index` is a cache and is simply rebuilt.
+- The old CT 204 stack is stopped and kept for rollback; its redeploy scripts are renamed
+  `*.DISABLED-moved-to-vps` so nobody brings a second connector up by accident.
+
 ## Publishing on a public hostname
 
 Two paths are wired, and they can run together:
