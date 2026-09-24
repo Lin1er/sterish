@@ -151,6 +151,27 @@ export async function signAuthEntry(
 }
 
 /**
+ * Sign a plain message with the connected wallet (SEP-43 `signMessage`).
+ *
+ * Sterish's ownership proof (api-spec §3.7) is SEP-53: ed25519 over
+ * `sha256("Stellar Signed Message:
+" + message)`, base64. That prefixing and
+ * hashing is the wallet's job, which is why the message goes out exactly as the
+ * API returned it and nothing is pre-hashed here.
+ */
+export async function signMessage(
+  message: string,
+  opts: { address: string; networkPassphrase?: string },
+): Promise<string> {
+  const { StellarWalletsKit } = await loadKit();
+  const { signedMessage } = await StellarWalletsKit.signMessage(message, {
+    address: opts.address,
+    networkPassphrase: opts.networkPassphrase ?? NETWORK_PASSPHRASE,
+  });
+  return signedMessage;
+}
+
+/**
  * Sign a whole transaction envelope with the connected wallet.
  *
  * Only the testnet setup uses this, to add a USDC trustline. The x402 payment

@@ -4,6 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import { ApiError, requestSkill, type UseOutcome } from "@/lib/api";
+import {
+  describeProofFailure,
+  requestSkillProving,
+  type ProofFailure,
+} from "@/lib/ownership";
 import { queryKeys } from "@/lib/queryClient";
 import type { PaymentRequired, PaymentRequirement } from "@/lib/types";
 import {
@@ -33,14 +38,15 @@ export type PurchaseState =
       /** Base units, null when the read failed, undefined while it is running. */
       balance: bigint | null | undefined;
     }
+  | { step: "proving" }
   | { step: "signing"; requirement: PaymentRequirement }
   | { step: "settling"; requirement: PaymentRequirement }
   | { step: "granted"; outcome: Extract<UseOutcome, { kind: "granted" }> }
   | {
       step: "failed";
-      error: ApiError | PaymentFailure;
+      error: ApiError | PaymentFailure | ProofFailure;
       /** Where it failed. After a signature, money may have moved. */
-      after: "request" | "signature" | "payment";
+      after: "request" | "signature" | "payment" | "proof";
     };
 
 export function usePurchase(
@@ -71,7 +77,12 @@ export function usePurchase(
     inFlight.current = true;
     setState({ step: "requesting" });
     try {
-      const outcome = await requestSkill(skillId, version, { agent });
+      // The free paths need an ownership proof since STE-48, and the 401 that
+      // asks for one is part of the flow rather than a failure to report.
+      const outcome = await requestSkillProving(skillId, version, {
+        agent,
+        onProving: () => setState({ step: "proving" }),
+      });
       if (outcome.kind === "granted") {
         setState({ step: "granted", outcome });
         refreshLicence();
@@ -105,8 +116,16 @@ export function usePurchase(
           : current,
       );
     } catch (cause) {
-      if (!(cause instanceof ApiError)) throw cause;
-      setState({ step: "failed", after: "request", error: cause });
+      if (cause instanceof ApiError && cause.status !== 401) {
+        setState({ step: "failed", after: "request", error: cause });
+        return;
+      }
+      // A refused or unsigned proof: the wallet's own words, not an API error.
+      setState({
+        step: "failed",
+        after: "proof",
+        error: describeProofFailure(cause),
+      });
     } finally {
       inFlight.current = false;
     }

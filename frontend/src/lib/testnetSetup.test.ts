@@ -82,12 +82,14 @@ describe("parseAccountSetup", () => {
 });
 
 describe("usdcAssetFor", () => {
+  // These two import the Stellar SDK to derive a contract id, which is slow to
+  // load the first time, so they get more than the default five seconds.
   it("recognises the SAC the live 402 names as Circle's USDC", async () => {
     await expect(usdcAssetFor({ asset: USDC_SAC })).resolves.toEqual({
       code: "USDC",
       issuer: TESTNET_USDC_ISSUER,
     });
-  });
+  }, 30_000);
 
   it("offers no trustline for any other asset", async () => {
     await expect(
@@ -95,7 +97,7 @@ describe("usdcAssetFor", () => {
         asset: "CDAYXDIDIINSVQVQRFCH7JSHTFZN4KIZKMNUZRVACHHFLTYGZEZV4OF2",
       }),
     ).resolves.toBeNull();
-  });
+  }, 30_000);
 });
 
 describe("readAccountSetup", () => {

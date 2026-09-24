@@ -14,6 +14,11 @@
  * The paid path is the one place the mock cannot be faithful. There is no
  * facilitator behind it, so a payment is checked for shape only, never
  * verified or settled, and the "mint" is an entry in this process's memory.
+ * The STE-48 ownership proof is checked the same way: the nonce must be one
+ * this process issued for that agent, skill and version, and is consumed on
+ * use, but the signature itself cannot be verified without a wallet, so any
+ * well-formed signature passes. What that does exercise for real is the whole
+ * client dance: the 401, the challenge fetch, the wallet prompt, the retry.
  * What it does exercise for real is everything on the client side: the 402,
  * the decoded terms, the wallet signature over a genuine simulation of the
  * USDC transfer, and the 200 that follows.
@@ -67,9 +72,135 @@ const ACCOUNT = /^G[A-Z2-7]{55}$/;
  */
 const mintedLicences = new Set<string>();
 
-/** Tests start from no licences. Not reachable over HTTP. */
+/**
+ * Ownership challenges this process issued, by nonce (STE-48). Single use and
+ * short lived, the same way the API treats them.
+ */
+const challenges = new Map<
+  string,
+  { agent: string; skillId: string; version: string; expiresAt: number }
+>();
+
+const PROOF_TTL_SECONDS = 300;
+
+/** Tests start from no licences and no challenges. Not reachable over HTTP. */
 export function resetMockLicences(): void {
   mintedLicences.clear();
+  challenges.clear();
+}
+
+function proofMessage(
+  agent: string,
+  skillId: string,
+  version: string,
+  nonce: string,
+  expiresAt: number,
+): string {
+  return [
+    "Sterish licence ownership proof",
+    `agent: ${agent}`,
+    `skill: ${skillId}`,
+    `version: ${version}`,
+    `nonce: ${nonce}`,
+    `expires: ${expiresAt}`,
+    "network: Test SDF Network ; September 2015",
+  ].join("\n");
+}
+
+function handleChallenge(
+  request: Request,
+  url: URL,
+  skillId: string,
+  version: string,
+): Response {
+  const agent = agentOf(request, url);
+  if (!agent) {
+    return fail(400, "MISSING_AGENT", "send ?agent=G... or X-AGENT-ADDRESS");
+  }
+  if (!ACCOUNT.test(agent)) {
+    return fail(400, "INVALID_AGENT", `'${agent}' is not a G... account`);
+  }
+
+  // Issued for any valid account and version: who holds a licence is public
+  // anyway, so answering differently would reveal nothing.
+  const nonce = Array.from({ length: 32 }, () =>
+    Math.floor(Math.random() * 16).toString(16),
+  ).join("");
+  const expiresAt = Math.floor(Date.now() / 1000) + PROOF_TTL_SECONDS;
+  challenges.set(nonce, { agent, skillId, version, expiresAt });
+
+  return Response.json(
+    {
+      agent,
+      skill_id: skillId,
+      version,
+      nonce,
+      expires_at: expiresAt,
+      expires_at_iso: new Date(expiresAt * 1000).toISOString(),
+      message: proofMessage(agent, skillId, version, nonce, expiresAt),
+      signature_scheme: "SEP-53",
+      send_headers: {
+        "X-AGENT-ADDRESS": agent,
+        "X-STERISH-PROOF-NONCE": nonce,
+        "X-STERISH-PROOF-SIGNATURE": "<base64 signature>",
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+/** Null when the proof is good; otherwise the response to send instead. */
+function checkProof(
+  request: Request,
+  url: URL,
+  agent: string,
+  skillId: string,
+  version: string,
+): Response | null {
+  const challengeUrl = `${url.origin}${url.pathname}/challenge?agent=${agent}`;
+  const nonce = request.headers.get("X-STERISH-PROOF-NONCE");
+  const signature = request.headers.get("X-STERISH-PROOF-SIGNATURE");
+
+  if (!nonce || !signature) {
+    return Response.json(
+      {
+        error: "OWNERSHIP_PROOF_REQUIRED",
+        detail: `${agent} holds a licence for this version; prove you control it`,
+        challenge_url: challengeUrl,
+        signature_scheme: "SEP-53",
+      },
+      { status: 401 },
+    );
+  }
+
+  const issued = challenges.get(nonce);
+  const reason =
+    issued === undefined
+      ? "unknown or already used nonce"
+      : issued.agent !== agent ||
+          issued.skillId !== skillId ||
+          issued.version !== version
+        ? "nonce was issued for another agent, skill or version"
+        : issued.expiresAt < Math.floor(Date.now() / 1000)
+          ? "nonce has expired"
+          : !/^[A-Za-z0-9+/]+={0,2}$/.test(signature)
+            ? "signature is not base64"
+            : null;
+  if (reason) {
+    // A failed signature never consumes the nonce, so nobody can burn another
+    // caller's challenge.
+    return Response.json(
+      {
+        error: "INVALID_OWNERSHIP_PROOF",
+        detail: reason,
+        challenge_url: challengeUrl,
+      },
+      { status: 401 },
+    );
+  }
+
+  challenges.delete(nonce);
+  return null;
 }
 
 function licenceKey(agent: string, skillId: string, version: string): string {
@@ -181,6 +312,9 @@ function handleUse(
   const payment = request.headers.get("X-PAYMENT");
 
   if (agent && mintedLicences.has(licenceKey(agent, skillId, version))) {
+    // STE-48: holders are public, so the free path needs a signed challenge.
+    const refusal = checkProof(request, url, agent, skillId, version);
+    if (refusal) return refusal;
     return Response.json(artifact, {
       headers: { "X-STERISH-LICENSE": "held" },
     });
@@ -336,6 +470,49 @@ export function handleMockRequest(request: Request, path: string[]): Response {
       total: FIXTURE_SKILL_LIST.skills.length,
       start,
       limit: clamped,
+    });
+  }
+
+  // GET /use/{skill_id}/{version}/challenge
+  if (path.length === 4 && path[0] === "use" && path[3] === "challenge") {
+    return handleChallenge(request, url, path[1], path[2]);
+  }
+
+  // GET /licenses?agent=
+  if (path.length === 1 && path[0] === "licenses") {
+    const agent = agentOf(request, url);
+    if (!agent) {
+      return fail(400, "MISSING_AGENT", "send ?agent=G... or X-AGENT-ADDRESS");
+    }
+    if (!ACCOUNT.test(agent)) {
+      return fail(400, "INVALID_AGENT", `'${agent}' is not a G... account`);
+    }
+    const licenses = [...mintedLicences]
+      .filter((key) => key.startsWith(`${agent}|`))
+      .map((key, index) => {
+        const [, rest] = key.split("|");
+        const at = rest.lastIndexOf("@");
+        const skillId = rest.slice(0, at);
+        const version = rest.slice(at + 1);
+        return {
+          token_id: index + 1,
+          skill_id: skillId,
+          version,
+          minted_at: 1756810000,
+          minted_at_iso: "2026-09-02T09:26:40Z",
+          mint_tx: fakeTxHash(`mint|${key}`),
+          mint_tx_url: `https://stellar.expert/explorer/testnet/tx/${fakeTxHash(`mint|${key}`)}`,
+        };
+      });
+    return Response.json({
+      agent,
+      licenses,
+      total: licenses.length,
+      start: 0,
+      limit: 50,
+      total_supply: licenses.length,
+      tokens_contract_id: FIXTURE_TOKENS_CONTRACT_ID,
+      contract_url: `https://stellar.expert/explorer/testnet/contract/${FIXTURE_TOKENS_CONTRACT_ID}`,
     });
   }
 

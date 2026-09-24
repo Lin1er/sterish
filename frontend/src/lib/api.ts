@@ -11,7 +11,9 @@ import type {
   ApiErrorCode,
   FeedResponse,
   Health,
+  LicenseList,
   LicenseStatus,
+  OwnershipChallenge,
   PaymentRequired,
   SettlementReceipt,
   SkillArtifact,
@@ -26,7 +28,7 @@ import { decodePaymentRequired, decodeSettlementReceipt } from "./x402";
  * components too, where a relative path has no origin to resolve against.
  */
 export const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+  process.env.NEXT_PUBLIC_API_URL ?? "https://api.sterish.xyz"
 ).replace(/\/+$/, "");
 
 /**
@@ -56,6 +58,11 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode | string | null;
   readonly detail: string;
   readonly url: string;
+  /**
+   * Where to fetch an ownership challenge, carried by a 401 from the paid path
+   * (spec §3.7). Kept as the API gave it so no client ever builds that URL.
+   */
+  readonly challengeUrl: string | null;
 
   constructor(args: {
     message: string;
@@ -63,6 +70,7 @@ export class ApiError extends Error {
     code: ApiErrorCode | string | null;
     detail: string;
     url: string;
+    challengeUrl?: string | null;
   }) {
     super(args.message);
     this.name = "ApiError";
@@ -70,6 +78,7 @@ export class ApiError extends Error {
     this.code = args.code;
     this.detail = args.detail;
     this.url = args.url;
+    this.challengeUrl = args.challengeUrl ?? null;
   }
 
   /** True when the API was never reached, so retrying may genuinely help. */
@@ -133,12 +142,17 @@ async function errorFrom(response: Response, url: string): Promise<ApiError> {
   // exception that hides the real status code.
   const body: unknown = await response.json().catch(() => null);
   const parsed = isErrorBody(body) ? body : null;
+  const challengeUrl =
+    typeof (body as { challenge_url?: unknown })?.challenge_url === "string"
+      ? (body as { challenge_url: string }).challenge_url
+      : null;
   return new ApiError({
     message: parsed?.detail ?? `The API answered ${response.status}`,
     status: response.status,
     code: parsed?.error ?? null,
     detail: parsed?.detail ?? response.statusText,
     url,
+    challengeUrl,
   });
 }
 
@@ -262,11 +276,20 @@ export type UseOutcome =
 export async function requestSkill(
   skillId: string,
   version: string,
-  opts: { agent: string; payment?: string },
+  opts: {
+    agent: string;
+    payment?: string;
+    /** An ownership proof (spec §3.7). Required by the free paths since STE-48. */
+    proof?: { nonce: string; signature: string };
+  },
 ): Promise<UseOutcome> {
   const path = `/use/${encodeURIComponent(skillId)}/${encodeURIComponent(version)}`;
   const headers: Record<string, string> = { "X-AGENT-ADDRESS": opts.agent };
   if (opts.payment) headers["X-PAYMENT"] = opts.payment;
+  if (opts.proof) {
+    headers["X-STERISH-PROOF-NONCE"] = opts.proof.nonce;
+    headers["X-STERISH-PROOF-SIGNATURE"] = opts.proof.signature;
+  }
 
   let sent: { response: Response; url: string };
   try {
@@ -322,4 +345,47 @@ export async function requestSkill(
     ),
     artifact: (await response.json()) as SkillArtifact,
   };
+}
+
+/**
+ * Spec §3.7 step 1: a single-use message for `agent` to sign.
+ *
+ * Takes the absolute `challenge_url` the 401 carried rather than building a
+ * path, so the client never has to know the shape of that URL or which host
+ * serves it.
+ */
+export async function getOwnershipChallenge(
+  challengeUrl: string,
+): Promise<OwnershipChallenge> {
+  let response: Response;
+  try {
+    response = await fetch(challengeUrl, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { accept: "application/json" },
+    });
+  } catch (cause) {
+    throw new ApiError({
+      message: "Could not ask the API for an ownership challenge",
+      status: 0,
+      code: null,
+      detail: cause instanceof Error ? cause.message : String(cause),
+      url: challengeUrl,
+    });
+  }
+  if (!response.ok) throw await errorFrom(response, challengeUrl);
+  return (await response.json()) as OwnershipChallenge;
+}
+
+/** Spec §3.10. Every licence one address holds, newest first. */
+export function listLicenses(
+  agent: string,
+  params: { start?: number; limit?: number } = {},
+): Promise<LicenseList> {
+  const query = new URLSearchParams({
+    agent,
+    start: String(params.start ?? 0),
+    limit: String(params.limit ?? 200),
+  });
+  return apiFetch<LicenseList>(`/licenses?${query}`);
 }
