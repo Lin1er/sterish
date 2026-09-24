@@ -22,6 +22,20 @@ address has not changed and is the same contract it always was — see
 
 ---
 
+## Public URLs (checked 24 September 2026)
+
+| What | URL | Served by | Notes |
+|---|---|---|---|
+| **API** | **https://api.sterish.xyz** | VPS `187.53.142.100` via Cloudflare Tunnel (STE-54) | Canonical. `REPORT_BASE_URL`, the x402 `resource.url` and the STE-48 `challenge_url` all use it |
+| API (alias) | https://api-sterish.jameshub.fun | same stack, same tunnel | Kept so anything already pointing at it keeps working |
+| **Dashboard** | **https://app.sterish.xyz** | Vercel | Public since 24 September; renders live registry data and calls the API at `api.sterish.xyz` |
+| Landing | https://sterish.xyz | — | Reserved for the landing page (STE-23); currently 404 |
+
+The API allows any origin (`api-spec.md` §6): everything it serves is public ledger data, so the
+dashboard moving hostnames needs no change on the API side.
+
+---
+
 ## Testnet — 2026-09-03 (STE-13)
 
 > **Superseded for Registry and Tokens** by the STE-44 redeploy below. Escrow is unchanged.
