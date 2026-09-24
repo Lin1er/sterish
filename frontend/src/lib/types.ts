@@ -106,6 +106,16 @@ export interface SkillList {
   total: number;
   start: number;
   limit: number;
+  /**
+   * Chain reality behind the filtered list. The API hides test namespaces by
+   * default but always reports what it hid (CLAUDE.md: hiding it silently is
+   * forbidden — a reader must never be able to conclude that what is shown is
+   * the whole chain). Optional because older API builds omit them, and a
+   * consumer that needs them must say what it does when they are absent
+   * rather than quietly treating `total` as the chain total.
+   */
+  chain_total?: number;
+  hidden_test_entries?: number;
 }
 
 /** Spec §3.5. Returns 503 rather than 200 when the chain is unreachable. */

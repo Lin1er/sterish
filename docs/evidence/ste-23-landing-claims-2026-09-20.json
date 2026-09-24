@@ -1,0 +1,104 @@
+{
+  "ticket": "STE-23",
+  "date": "2026-09-20",
+  "task": "Verify every factual claim on the landing page before it is published",
+  "principle": "The page states facts to strangers who cannot check them. Nothing was written from memory; each claim below was read from a source on this date, and the counts are re-read from the live API at render time rather than typed into the copy.",
+  "live_numbers": {
+    "method": "Read from https://api.sterish.xyz/skills?limit=100 at render time (frontend/src/modules/landing/liveStats.ts). The values below are the snapshot used as a labelled fallback when the API does not answer.",
+    "observed": {
+      "chain_total": 30,
+      "shown": 24,
+      "hidden_test_entries": 6,
+      "verdicts": {
+        "SAFE": 17,
+        "WARNING": 2,
+        "DANGEROUS": 5
+      },
+      "verified": 17
+    },
+    "derived": {
+      "official_catalogue": "13 of 13 org.stellar.skills.* are SAFE and VERIFIED — zero exclusions",
+      "poisoned_fixtures": "4 of 4 com.fixtures.poisoned.* are DANGEROUS",
+      "fifth_dangerous": "com.fixtures.demo.release-notes v2.0.0 — the rug pull, not a poisoned fixture"
+    },
+    "honesty_rule": "CLAUDE.md forbids hiding the test namespaces silently. The page prints 'of 30 on chain' and names the 6 filtered entries, and liveStats falls back to 30 rather than to `total` when an older API omits chain_total, so no code path can assert the chain holds only what is shown. Covered by liveStats.test.ts."
+  },
+  "rug_pull": {
+    "claim": "One skill, two versions: v1 Safe and VERIFIED, v2 Dangerous and refused a licence. Same name, different bytes.",
+    "skill_id": "com.fixtures.demo.release-notes",
+    "verified_against": "https://api.sterish.xyz/check/com.fixtures.demo.release-notes/{version}",
+    "v1.0.0": {
+      "verdict": "SAFE",
+      "trust_score": 100,
+      "is_verified": true,
+      "content_hash": "e5da489eb751e96fb30bb622602b8ab471de4898f333028aeeb7a36211d341f5"
+    },
+    "v2.0.0": {
+      "verdict": "DANGEROUS",
+      "trust_score": 10,
+      "is_verified": false,
+      "content_hash": "befb592d3cb1afa4c471a7c4ddf2666f1c6ebd0364e76977ecd294be7c01653d"
+    },
+    "guard": "getRugPull() falls back to the dated snapshot if the chain ever stops saying SAFE and DANGEROUS, rather than rendering a story the chain contradicts."
+  },
+  "cves": {
+    "note": "Both are published advisories, not our characterisation. Checked on 2026-09-20 before being put on a public page.",
+    "CVE-2025-54136": {
+      "name": "MCPoison",
+      "product": "Cursor IDE",
+      "cvss": 8.8,
+      "disclosed_by": "Check Point Research, July 2025",
+      "mechanism": "Approval was remembered under an MCP entry's NAME; a later change to its command or arguments executed without a new prompt. An attacker commits a benign config to a shared repo, waits for approval, then swaps the payload.",
+      "fixed_in": "Cursor 1.3, late July 2025",
+      "why_it_is_on_the_page": "It is the argument in one sentence. Approval bound to a name is exactly what Sterish replaces with approval bound to a content hash."
+    },
+    "CVE-2025-6514": {
+      "product": "mcp-remote",
+      "affected_versions": "0.0.5 to 0.1.15",
+      "cvss": 9.6,
+      "downloads_at_disclosure": "437,000+",
+      "mechanism": "OS command injection; the first documented case of full remote code execution on a client OS triggered by connecting to an untrusted MCP server."
+    }
+  },
+  "stellar_claims": {
+    "note": "Verified through MCP Stellar Raven during STE-7 on 2026-09-20; see ste-7-raven-positioning-2026-09-20.json for the full record.",
+    "x402": {
+      "wording_on_page": "x402 turns HTTP 402 into a usable payment step; the agent pays in USDC and receives a soulbound licence.",
+      "source": "https://developers.stellar.org/docs/build/agentic-payments/x402",
+      "caution": "MPP sits beside x402 in Stellar's docs. The page names x402 only and does not use the two interchangeably."
+    },
+    "usdc_sac": {
+      "source": "https://developers.stellar.org/docs/build/guides/tokens/stellar-asset-contract",
+      "note": "SEP-41 Token Interface plus CAP-46-6. Matches the CLAUDE.md decision to use the official USDC SAC rather than issuing an asset."
+    },
+    "positioning": "The page says 'an audit registry for agent skills — not an official Stellar product, and not an app store.' Raven found no Stellar project occupying the audit-the-skill position."
+  },
+  "restraint": {
+    "dashboard": "Updated 24 Sep 2026: the dashboard went public at https://app.sterish.xyz (docs/deployments.md), so the CTA now links to it. It previously read 'Dashboard — coming soon' because the deployment redirected to Vercel SSO; STE-23 allowed that only until STE-26 was live, and that condition has expired. Verified HTTP 200 on 24 Sep 2026.",
+    "testnet": "Stated on the page, in the hero and again beside the evidence links.",
+    "expiry": "The page says Stellar testnet resets to genesis on 16 December 2026, so stellar.expert links carry that expiry rather than an implied permanence."
+  },
+  "tests": {
+    "file": "frontend/src/modules/landing/liveStats.test.ts",
+    "count": 9,
+    "covers": [
+      "catalogue and poisoned fixtures counted separately",
+      "chain total reported rather than the filtered total",
+      "older API omitting chain_total must not imply nothing is filtered",
+      "API failure falls back with live:false so the page can label it",
+      "an empty registry is not-live rather than rendered as zeros",
+      "live figures dated today, snapshot dated 2026-09-20",
+      "rug pull passes through only while the chain still tells the story",
+      "either read failing falls back"
+    ]
+  },
+  "not_verified_here": [
+    "Visual check at 375px. The browser harness would not apply a window resize, so mobile layout rests on standard responsive classes (the hero, steps and stat grids all collapse to one column, and both the 64-character hash and the skill id carry break-all). Worth an eyeball in devtools before merge.",
+    "The 'Instawards by @StellarOrg.' line, which repeats the wording Axel specified. The InstAward / Instawards spelling question raised in STE-7 is still open and applies to this page too."
+  ],
+  "public_urls_2026_09_24": {
+    "api": "https://api.sterish.xyz (HTTP 200)",
+    "dashboard": "https://app.sterish.xyz (HTTP 200, public since 24 Sep)",
+    "landing": "https://sterish.xyz (HTTP 404 — reserved for this page, not yet pointed at it)"
+  }
+}
