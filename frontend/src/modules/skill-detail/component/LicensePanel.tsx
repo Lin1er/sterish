@@ -21,6 +21,7 @@ import { downloadArtifact } from "@/lib/artifact";
 import type { Verdict } from "@/lib/types";
 import { EXPLORER_BASE } from "@/lib/wallet";
 import { SETUP_AVAILABLE } from "@/lib/testnetSetup";
+import type { ProofFailure } from "@/lib/ownership";
 import { formatBaseUnits, type PaymentFailure } from "@/lib/x402";
 import { shortAddress, shortHash } from "@/utils/format";
 import { TestnetSetup } from "./TestnetSetup";
@@ -51,10 +52,23 @@ function TxLink({ hash, label }: { hash: string; label: string }) {
 
 /** What to tell the buyer about a failure, and whether money may have moved. */
 function describeFailure(
-  error: ApiError | PaymentFailure,
-  after: "request" | "signature" | "payment",
+  error: ApiError | PaymentFailure | ProofFailure,
+  after: "request" | "signature" | "payment" | "proof",
 ): { title: string; body: string } {
   if (!(error instanceof ApiError)) {
+    if (after === "proof") {
+      return {
+        title:
+          error.kind === "declined"
+            ? "Signature declined"
+            : error.kind === "wallet_unavailable"
+              ? "Wallet not available"
+              : error.kind === "expired"
+                ? "That challenge is no longer valid"
+                : "Could not prove this licence is yours",
+        body: error.message,
+      };
+    }
     return {
       title:
         error.kind === "declined"
@@ -88,6 +102,26 @@ function describeFailure(
           after === "payment"
             ? "The purchase did not complete. It failed after your payment was sent, so check the licence status above before paying again."
             : "The purchase could not start. Reading verdicts is unaffected; try again later.",
+      };
+    case "OWNERSHIP_PROOF_REQUIRED":
+      return {
+        title: "This licence has to be proved, not just claimed",
+        body: "Licence holders are public on chain, so the API serves a held licence only to a caller that signs a one-off message with that wallet. Try again and approve the signature.",
+      };
+    case "INVALID_OWNERSHIP_PROOF":
+      return {
+        title: "The proof was refused",
+        body: `${error.detail}. A challenge is single use and short lived, so start again to sign a fresh one.`,
+      };
+    case "LICENSE_READ_FAILED":
+      return {
+        title: "Could not read the licence from the chain",
+        body: "The API could not tell whether this wallet holds a licence, so it refused rather than guess. Nothing was charged. Try again in a moment.",
+      };
+    case "FACILITATOR_BAD_RESPONSE":
+      return {
+        title: "The payment service answered with something unusable",
+        body: "The facilitator did not name a payer for this payment, so the API refused before settling. Nothing was charged.",
       };
     case "LICENSE_MINT_PENDING":
       return {
@@ -166,6 +200,7 @@ function toneOf(state: PurchaseState): Tone {
     case "failed":
       return "danger";
     case "quoted":
+    case "proving":
     case "signing":
     case "settling":
       return "active";
@@ -209,6 +244,23 @@ function Flow({
           <Loader2 className="size-4 animate-spin" aria-hidden />
           Asking the API for {version}...
         </p>
+      );
+
+    case "proving":
+      return (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="inline-flex items-center gap-2 text-sm text-text">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Sign the message in your wallet to prove this licence is yours...
+          </p>
+          <span className="text-xs text-text-tertiary">
+            A signature, not a payment: nothing is charged and no transaction is
+            sent.
+          </span>
+          <Button variant="ghost" size="sm" onClick={onReset}>
+            Cancel
+          </Button>
+        </div>
       );
 
     case "quoted": {

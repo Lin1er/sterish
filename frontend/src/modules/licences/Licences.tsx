@@ -26,16 +26,13 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLicences, useLicenceVerdicts } from "@/hooks/useLicences";
 import { useWallet } from "@/hooks/useWallet";
-import { ApiError, requestSkill } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { downloadArtifact } from "@/lib/artifact";
-import {
-  TOKENS_CONTRACT_ID,
-  isAccountAddress,
-  type Licence,
-} from "@/lib/tokens";
-import type { VersionCheck } from "@/lib/types";
+import { describeProofFailure, requestSkillProving } from "@/lib/ownership";
+import type { LicenseRecord, VersionCheck } from "@/lib/types";
 import { EXPLORER_BASE } from "@/lib/wallet";
 import { formatLedgerTime } from "@/utils/format";
+import { isAccountAddress } from "@/utils/stellar";
 
 /**
  * Every licence one address holds, with the verdict of each version today.
@@ -103,12 +100,14 @@ function LicenceRow({
   verdict,
   own,
 }: {
-  licence: Licence;
+  licence: LicenseRecord;
   verdict: { data?: VersionCheck; error: Error | null; isPending: boolean };
   own: boolean;
 }) {
   const wallet = useWallet();
-  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "proving" | "error">(
+    "idle",
+  );
   const [message, setMessage] = useState<string | null>(null);
   const safe = verdict.data?.is_verified === true;
 
@@ -117,11 +116,15 @@ function LicenceRow({
     setState("loading");
     setMessage(null);
     try {
-      const outcome = await requestSkill(licence.skillId, licence.version, {
-        agent: wallet.address,
-      });
+      // Since STE-48 the API serves a held licence only to a caller that signs
+      // a one-off challenge, so a wallet prompt appears mid-flight.
+      const outcome = await requestSkillProving(
+        licence.skill_id,
+        licence.version,
+        { agent: wallet.address, onProving: () => setState("proving") },
+      );
       if (outcome.kind === "granted") {
-        downloadArtifact(licence.skillId, licence.version, outcome.artifact);
+        downloadArtifact(licence.skill_id, licence.version, outcome.artifact);
         setState("idle");
       } else {
         setState("error");
@@ -132,9 +135,9 @@ function LicenceRow({
     } catch (cause) {
       setState("error");
       setMessage(
-        cause instanceof ApiError
+        cause instanceof ApiError && cause.status !== 401
           ? `${cause.message}${cause.code ? ` (${cause.code})` : ""}`
-          : String(cause),
+          : describeProofFailure(cause).message,
       );
     }
   }
@@ -143,19 +146,36 @@ function LicenceRow({
     <li className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <Link
-          href={`/skills/${encodeURIComponent(licence.skillId)}#version-${encodeURIComponent(licence.version)}`}
+          href={`/skills/${encodeURIComponent(licence.skill_id)}#version-${encodeURIComponent(licence.version)}`}
           className="numeric font-mono text-sm break-all hover:text-keyword hover:underline"
         >
-          {licence.skillId}
+          {licence.skill_id}
           {/* The version never splits: "2026.8.3" on one line and "1" on the
               next reads as a different version. The id may wrap, it is long. */}
           <span className="whitespace-nowrap text-text-tertiary">
             @{licence.version}
           </span>
         </Link>
-        <p className="numeric mt-1 text-xs text-text-tertiary">
-          Minted {formatLedgerTime(licence.mintedAt)} UTC, token #
-          {licence.tokenId}
+        <p className="numeric mt-1 flex flex-wrap items-center gap-x-2 text-xs text-text-tertiary">
+          <span>
+            Minted {formatLedgerTime(licence.minted_at)} UTC, token #
+            {licence.token_id}
+          </span>
+          {licence.mint_tx_url ? (
+            <a
+              href={licence.mint_tx_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-keyword hover:underline"
+            >
+              mint transaction
+              <ExternalLink className="size-3" aria-hidden />
+            </a>
+          ) : (
+            // The indexer only reaches back about a week, and the licence is
+            // listed from the contract either way. Saying so beats an empty gap.
+            <span>mint transaction not indexed</span>
+          )}
         </p>
         {message ? <p className="mt-1 text-xs text-danger">{message}</p> : null}
       </div>
@@ -173,14 +193,14 @@ function LicenceRow({
             variant="outline"
             size="sm"
             onClick={() => void getSkill()}
-            disabled={state === "loading"}
+            disabled={state === "loading" || state === "proving"}
           >
-            {state === "loading" ? (
+            {state === "loading" || state === "proving" ? (
               <Loader2 data-icon="inline-start" className="animate-spin" />
             ) : (
               <Download data-icon="inline-start" />
             )}
-            Get the skill
+            {state === "proving" ? "Sign in your wallet..." : "Get the skill"}
           </Button>
         ) : null}
       </div>
@@ -191,7 +211,7 @@ function LicenceRow({
 function LicenceList({ address }: { address: string }) {
   const wallet = useWallet();
   const scan = useLicences(address);
-  const licences = scan.data?.licences ?? [];
+  const licences = scan.data?.licenses ?? [];
   const verdicts = useLicenceVerdicts(licences);
   const own = wallet.status === "connected" && wallet.address === address;
 
@@ -199,7 +219,7 @@ function LicenceList({ address }: { address: string }) {
     return (
       <div className="mt-8 space-y-3" aria-busy aria-label="Reading licences">
         <p className="text-xs text-text-secondary">
-          Reading every token from the tokens contract...
+          Reading the licences this account holds...
         </p>
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className="h-14 w-full" />
@@ -215,7 +235,7 @@ function LicenceList({ address }: { address: string }) {
           <EmptyMedia variant="icon">
             <AlertOctagon />
           </EmptyMedia>
-          <EmptyTitle>Could not read the tokens contract</EmptyTitle>
+          <EmptyTitle>Could not read this account&apos;s licences</EmptyTitle>
           <EmptyDescription>
             {scan.error.message}. This is not the same as holding no licences:
             nothing is listed because nothing could be read.
@@ -241,9 +261,9 @@ function LicenceList({ address }: { address: string }) {
 
   const source = (
     <p className="mt-8 text-xs text-text-tertiary">
-      Read directly from the{" "}
+      Listed by the API from the{" "}
       <a
-        href={`${EXPLORER_BASE}/contract/${TOKENS_CONTRACT_ID}`}
+        href={scan.data.contract_url}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1 text-keyword hover:underline"
@@ -251,9 +271,9 @@ function LicenceList({ address }: { address: string }) {
         tokens contract
         <ExternalLink className="size-3" aria-hidden />
       </a>
-      , {scan.data.scanned} tokens scanned. Verdicts are read per version from
-      the registry. This page reads the chain token by token until the API
-      serves this list itself.
+      , complete up to its supply of {scan.data.total_supply} tokens. Verdicts
+      are a separate read per version against the registry, because holding a
+      licence and a version still being SAFE are two different facts.
     </p>
   );
 
@@ -314,7 +334,7 @@ function LicenceList({ address }: { address: string }) {
       <ol className="mt-2 divide-y divide-border border-y border-border">
         {[...flagged, ...rest].map(({ licence, verdict }) => (
           <LicenceRow
-            key={licence.tokenId}
+            key={licence.token_id}
             licence={licence}
             verdict={verdict}
             own={own}

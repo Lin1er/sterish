@@ -98,7 +98,7 @@ frontend/
     │   ├── x402.ts                       buyer side of x402, lazily loaded
     │   ├── contentHash.ts                content_hash v1 on WebCrypto
     │   ├── testnetSetup.ts               Horizon account read, Friendbot, trustline
-    │   ├── tokens.ts                     licences read from the tokens contract (until STE-46)
+    │   ├── ownership.ts                  the STE-48 proof: challenge, signature, retry
     │   ├── artifact.ts                   save a delivered skill as one JSON file
     │   ├── fixtures.ts                   4 verdict cases
     │   ├── mockApi.ts                    mock logic, outside app/
@@ -204,12 +204,17 @@ red-green colour-blind eyes.
   trustline to Circle's USDC, and the Circle faucet link. The trustline asset is checked by
   deriving its SAC address and comparing it with the 402's `asset`, because testnet is full of
   other tokens called USDC. None of it renders on a mainnet build.
-- **Licences per address are read from the tokens contract (STE-47).** The API has no list
-  endpoint yet (STE-46), so `lib/tokens.ts` reads `total_supply` and then `get_token` for every
-  id, eight at a time, and keeps the `License` records owned by the address. `total_supply` is the
-  exact count and ids run from 1; a `TokenNotFound` (`Error(Contract, #2)`) is skipped, any other
-  failure throws, so an empty list only ever means "read, and holds nothing". Swap to the API
-  endpoint when STE-46 lands; the page already says the read is temporary.
+- **A held licence has to be proved, not claimed (STE-48).** The free paths of `GET /use` answer
+  `401 OWNERSHIP_PROOF_REQUIRED` with a `challenge_url`. `lib/ownership.ts` fetches that exact URL,
+  has the wallet sign the `message` verbatim (SEP-43 `signMessage`, which is SEP-53), and repeats
+  the request with the nonce and signature. `requestSkillProving` wraps all of it, so the 401 is
+  part of the flow and never shown as a failure; a nonce is single use and short lived, so a proof
+  is built immediately before the request it belongs to. Paying is untouched: an x402 payment is
+  already signed by the payer.
+- **Licences per address come from `GET /licenses` (STE-46).** STE-47 read the tokens contract from
+  the browser because no list endpoint existed; the API now builds it from the contract's own
+  enumeration, so a licence older than the RPC event window is still listed and `mint_tx` may be
+  null without the row disappearing.
 - **Wallet errors are classified by message, never by code.** The kit's `parseError` fills in
   `code: -1` for any error without one, so "Freighter is not connected" and a closed modal look
   the same by code.

@@ -52,6 +52,21 @@ beforeEach(() => {
   resetMockLicences();
 });
 
+/** A holder proves ownership before the free path serves them (STE-48). */
+async function proofHeaders(
+  agent: string,
+  skillVersion = SAFE,
+): Promise<Record<string, string>> {
+  const challenge = await (
+    await call(`use/${skillVersion}/challenge`, { query: `?agent=${agent}` })
+  ).json();
+  return {
+    "X-AGENT-ADDRESS": agent,
+    "X-STERISH-PROOF-NONCE": challenge.nonce,
+    "X-STERISH-PROOF-SIGNATURE": Buffer.alloc(64, 1).toString("base64"),
+  };
+}
+
 describe("the licensable fixture", () => {
   it("serves bytes whose content hash is the one the registry holds", async () => {
     // The loop the check page closes: buy, save, drop the files back in, get
@@ -129,12 +144,12 @@ describe("GET /use with a payment", () => {
     );
   });
 
-  it("serves the second request as held, with no payment attached", async () => {
+  it("serves the second request as held, with a proof and no payment", async () => {
     await call(`use/${SAFE}`, {
       headers: { "X-AGENT-ADDRESS": AGENT, "X-PAYMENT": paymentFor() },
     });
     const again = await call(`use/${SAFE}`, {
-      headers: { "X-AGENT-ADDRESS": AGENT },
+      headers: await proofHeaders(AGENT),
     });
     expect(again.status).toBe(200);
     expect(again.headers.get("X-STERISH-LICENSE")).toBe("held");
@@ -146,7 +161,7 @@ describe("GET /use with a payment", () => {
       headers: { "X-AGENT-ADDRESS": AGENT, "X-PAYMENT": paymentFor() },
     });
     const twice = await call(`use/${SAFE}`, {
-      headers: { "X-AGENT-ADDRESS": AGENT, "X-PAYMENT": paymentFor() },
+      headers: { ...(await proofHeaders(AGENT)), "X-PAYMENT": paymentFor() },
     });
     expect(twice.headers.get("X-STERISH-LICENSE")).toBe("held");
     expect(twice.headers.get("X-PAYMENT-RESPONSE")).toBeNull();
@@ -249,5 +264,71 @@ describe("GET /license", () => {
     });
     expect(response.status).toBe(400);
     expect((await response.json()).error).toBe("INVALID_AGENT");
+  });
+});
+
+describe("the ownership proof (STE-48)", () => {
+  async function buy() {
+    await call(`use/${SAFE}`, {
+      headers: { "X-AGENT-ADDRESS": AGENT, "X-PAYMENT": paymentFor() },
+    });
+  }
+
+  it("refuses a holder who only names their address, and points at the challenge", async () => {
+    await buy();
+    const response = await call(`use/${SAFE}`, {
+      headers: { "X-AGENT-ADDRESS": AGENT },
+    });
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body.error).toBe("OWNERSHIP_PROOF_REQUIRED");
+    expect(String(body.challenge_url)).toContain(`/use/${SAFE}/challenge`);
+    // Never 402: this caller may already have paid.
+    expect(response.headers.get("PAYMENT-REQUIRED")).toBeNull();
+  });
+
+  it("issues a challenge bound to one agent, skill and version", async () => {
+    const body = await (
+      await call(`use/${SAFE}/challenge`, { query: `?agent=${AGENT}` })
+    ).json();
+    expect(body.agent).toBe(AGENT);
+    expect(body.skill_id).toBe("com.acme.pdf-suite");
+    expect(body.version).toBe("0.9.0");
+    expect(body.signature_scheme).toBe("SEP-53");
+    expect(body.message).toContain(`nonce: ${body.nonce}`);
+  });
+
+  it("refuses a challenge for an address that cannot hold a licence", async () => {
+    const response = await call(`use/${SAFE}/challenge`, {
+      query: `?agent=${FIXTURE_PAYMENT_TERMS.asset}`,
+    });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("INVALID_AGENT");
+  });
+
+  it("consumes a nonce, so a replay is refused", async () => {
+    await buy();
+    const headers = await proofHeaders(AGENT);
+    expect((await call(`use/${SAFE}`, { headers })).status).toBe(200);
+    const replay = await call(`use/${SAFE}`, { headers });
+    expect(replay.status).toBe(401);
+    expect((await replay.json()).error).toBe("INVALID_OWNERSHIP_PROOF");
+  });
+
+  it("refuses another agent's nonce", async () => {
+    await buy();
+    const stolen = await proofHeaders(OTHER_AGENT);
+    const response = await call(`use/${SAFE}`, {
+      headers: { ...stolen, "X-AGENT-ADDRESS": AGENT },
+    });
+    expect(response.status).toBe(401);
+    expect((await response.json()).detail).toContain("another agent");
+  });
+
+  it("still challenges for payment when the caller holds nothing", async () => {
+    const response = await call(`use/${SAFE}`, {
+      headers: await proofHeaders(OTHER_AGENT),
+    });
+    expect(response.status).toBe(402);
   });
 });

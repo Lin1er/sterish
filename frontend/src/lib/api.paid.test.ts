@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, getLicense, requestSkill } from "./api";
+import {
+  ApiError,
+  getLicense,
+  getOwnershipChallenge,
+  listLicenses,
+  requestSkill,
+} from "./api";
 
 /**
  * The client half of the paid path. What is under test is mostly one
@@ -220,6 +226,95 @@ describe("requestSkill with a payment", () => {
     )) as ApiError;
     expect(error.code).toBeNull();
     expect(error.message).toContain("unreachable");
+  });
+});
+
+describe("the 401 that asks for an ownership proof", () => {
+  it("keeps the challenge_url the API pointed at", async () => {
+    respond(
+      Response.json(
+        {
+          error: "OWNERSHIP_PROOF_REQUIRED",
+          detail: "prove you control it",
+          challenge_url: "https://api.sterish.xyz/use/x/1/challenge?agent=G",
+        },
+        { status: 401 },
+      ),
+    );
+    const error = (await requestSkill("x", "1", { agent: AGENT }).catch(
+      (cause: unknown) => cause,
+    )) as ApiError;
+    expect(error.status).toBe(401);
+    expect(error.challengeUrl).toBe(
+      "https://api.sterish.xyz/use/x/1/challenge?agent=G",
+    );
+  });
+
+  it("leaves challengeUrl null on errors that carry none", async () => {
+    respond(
+      Response.json({ error: "NOT_VERIFIED", detail: "no" }, { status: 403 }),
+    );
+    const error = (await requestSkill("x", "1", { agent: AGENT }).catch(
+      (cause: unknown) => cause,
+    )) as ApiError;
+    expect(error.challengeUrl).toBeNull();
+  });
+
+  it("sends the proof headers when it has them", async () => {
+    const spy = respond(Response.json({ "SKILL.md": "# x" }));
+    await requestSkill("x", "1", {
+      agent: AGENT,
+      proof: { nonce: "n".repeat(32), signature: "sig" },
+    });
+    const headers = spy.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers["X-STERISH-PROOF-NONCE"]).toBe("n".repeat(32));
+    expect(headers["X-STERISH-PROOF-SIGNATURE"]).toBe("sig");
+  });
+});
+
+describe("getOwnershipChallenge", () => {
+  it("fetches exactly the URL it was given", async () => {
+    const spy = respond(Response.json({ nonce: "abc", message: "m" }));
+    const url = "https://api.sterish.xyz/use/x/1/challenge?agent=G";
+    await getOwnershipChallenge(url);
+    expect(String(spy.mock.calls[0][0])).toBe(url);
+    expect(spy.mock.calls[0][1]?.cache).toBe("no-store");
+  });
+
+  it("throws an ApiError when the challenge is refused", async () => {
+    respond(
+      Response.json(
+        { error: "INVALID_AGENT", detail: "not a G account" },
+        { status: 400 },
+      ),
+    );
+    const error = (await getOwnershipChallenge("https://api/x").catch(
+      (cause: unknown) => cause,
+    )) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.code).toBe("INVALID_AGENT");
+  });
+});
+
+describe("listLicenses", () => {
+  it("asks for one agent's licences", async () => {
+    const spy = respond(
+      Response.json({ agent: AGENT, licenses: [], total: 0 }),
+    );
+    await listLicenses(AGENT);
+    const url = String(spy.mock.calls[0][0]);
+    expect(url).toContain("/licenses?");
+    expect(url).toContain(`agent=${AGENT}`);
+  });
+
+  it("throws on a failed chain read rather than reporting an empty list", async () => {
+    respond(
+      Response.json(
+        { error: "RPC_UNAVAILABLE", detail: "rpc down" },
+        { status: 502 },
+      ),
+    );
+    await expect(listLicenses(AGENT)).rejects.toBeInstanceOf(ApiError);
   });
 });
 

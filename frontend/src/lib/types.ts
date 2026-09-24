@@ -168,8 +168,57 @@ export type ApiErrorCode =
   | "LICENSE_MINT_PENDING"
   | "MISSING_AGENT"
   | "INVALID_AGENT"
+  | "OWNERSHIP_PROOF_REQUIRED"
+  | "INVALID_OWNERSHIP_PROOF"
+  | "LICENSE_READ_FAILED"
+  | "FACILITATOR_BAD_RESPONSE"
   | "PAYMENT_OUTCOME_UNKNOWN"
   | "INVALID_CHALLENGE";
+
+/**
+ * Spec §3.7, the ownership challenge (STE-48).
+ *
+ * Who holds a licence is public, so the free path asks the caller to sign a
+ * single-use message with the address's own key. The signed text is `message`
+ * exactly as returned: the server rebuilds it from its own record of the nonce
+ * and trusts nothing the client echoes back.
+ */
+export interface OwnershipChallenge {
+  agent: string;
+  skill_id: string;
+  version: string;
+  nonce: string;
+  expires_at: number;
+  expires_at_iso: string;
+  message: string;
+  /** Always "SEP-53" today: ed25519 over sha256("Stellar Signed Message:\n" + message). */
+  signature_scheme: string;
+}
+
+/** One row of spec §3.10. No verdict: that is a separate read against the registry. */
+export interface LicenseRecord {
+  token_id: number;
+  skill_id: string;
+  version: string;
+  minted_at: number;
+  minted_at_iso: string;
+  /** Null when the mint is older than the indexer's event window, or not indexed yet. */
+  mint_tx: string | null;
+  mint_tx_url: string | null;
+}
+
+/** Spec §3.10. Read from the tokens contract's own enumeration, not from events. */
+export interface LicenseList {
+  agent: string;
+  licenses: LicenseRecord[];
+  total: number;
+  start: number;
+  limit: number;
+  /** What the contract's supply was when this list was built. */
+  total_supply: number;
+  tokens_contract_id: string;
+  contract_url: string;
+}
 
 /**
  * Spec §3.8. Whether one agent holds a licence for one exact version.
