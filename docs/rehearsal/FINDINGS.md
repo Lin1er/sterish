@@ -95,6 +95,17 @@ live stack" did not happen.
 
 Rerun with `--dashboard-url <vercel-url>` once it exists; the step turns green on its own.
 
+> **Corrected 25 September 2026: the dashboard exists and is public.** The paragraph above is kept
+> because it was true when written. `https://app.sterish.xyz` answers 200 with no wallet and no SSO
+> gate, and renders the registry table — skill id, verdict, trust score, latest and latest-audited
+> version — reading 16 Safe and 4 Dangerous on the first page. Read through `r.jina.ai` rather than
+> from a bare status code, because a 200 alone would not have distinguished the page from a login
+> wall. So step 3 can be rerun as `--dashboard-url https://app.sterish.xyz` and should go GREEN.
+>
+> Still missing: `https://sterish.xyz`, the apex, answers **404 from Vercel** — the domain is
+> attached to a project but the STE-23 landing page, merged 20–24 September, is not deployed on it.
+> That is a separate gap from this finding and belongs to whoever owns STE-23's deploy.
+
 ### F3 — the orchestrator cannot express the product's economic order · STE-49 · James
 
 Not a failed step — the runner worked around it — but production code cannot do what steps 1

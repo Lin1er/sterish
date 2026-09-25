@@ -150,7 +150,8 @@ Send this only when they say yes. Nobody reads a quickstart before agreeing.
 | | |
 | -- | -- |
 | Registry (chain) | `CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2` |
-| API | `https://api-sterish.jameshub.fun` |
+| API | `https://api.sterish.xyz` (`https://api-sterish.jameshub.fun` is the same box under its first name and still answers) |
+| Dashboard, no wallet | `https://app.sterish.xyz` |
 | Check a skill, no wallet | `GET /check/{skill_id}/{version}` — version is required |
 | Check bytes you already have | `GET /check/by-hash/{content_hash}` — the primary path |
 | Browse what is already audited | `GET /skills` — 24 shown, test namespaces hidden and counted |
@@ -163,11 +164,23 @@ Send this only when they say yes. Nobody reads a quickstart before agreeing.
 > worse still coming from a product that sells verifiable verdicts. The examples below avoid
 > filters on purpose. Revisit once STE-34 is live.
 
-A live example to paste, verified working on 17 Sep 2026:
+> ✅ **Corrected 25 Sep 2026: STE-34 is live, and the filter works.** The warning above is kept
+> because it was true when written, but do not act on it any more. Re-measured against production
+> the same day: `?verdict=SAFE` returns **20 rows, all SAFE**; `?verdict=DANGEROUS` returns **7 rows,
+> all DANGEROUS**; and `?verdict=NONSENSE` returns **0 rows** rather than quietly falling back to
+> everything. Filtered links are safe to send now.
+
+A live example to paste, re-verified against production on 25 Sep 2026:
 
 ```
-GET https://api-sterish.jameshub.fun/check/org.stellar.skills.dapp.react/2026.8.31
+GET https://api.sterish.xyz/check/org.stellar.skills.dapp.react/2026.8.31
 ```
+
+The **licence ownership proof is live too**, which the earlier note in this repo said was still
+missing. `GET /use/{skill_id}/{version}/challenge?agent=G...` answers 200 with a single-use nonce,
+the exact SEP-53 message to sign, and an expiry; `GET /use/{skill_id}/{version}` without that proof
+answers **402**. Re-verified on both hosts, 25 Sep 2026. An earlier check reported this as 404 — that
+probe used the bare path `/challenge`, which is not a route. The hole it described is closed.
 
 1. `GET /skills` — see what is there and that it is not a mock.
 2. Send us a skill (repo link or the files). We audit it on testnet.
