@@ -95,6 +95,23 @@ live stack" did not happen.
 
 Rerun with `--dashboard-url <vercel-url>` once it exists; the step turns green on its own.
 
+> **Corrected 25 September 2026: the dashboard exists and is public.** The paragraph above is kept
+> because it was true when written. `https://app.sterish.xyz` answers 200 with no wallet and no SSO
+> gate, and renders the registry table — skill id, verdict, trust score, latest and latest-audited
+> version — reading 16 Safe and 4 Dangerous on the first page. Read through `r.jina.ai` rather than
+> from a bare status code, because a 200 alone would not have distinguished the page from a login
+> wall. So step 3 can be rerun as `--dashboard-url https://app.sterish.xyz` and should go GREEN.
+>
+> **The landing page is deployed too — at a path, not the apex.** It serves from
+> `https://app.sterish.xyz/landing`, titled *"Sterish — audited skills for AI agents on Stellar"*.
+> `https://sterish.xyz` and `https://www.sterish.xyz` both answer **404 from Vercel**: the apex is
+> attached to a project but nothing is served on it, even though `docs/deployments.md` records it as
+> "reserved for the landing". So the page exists and can be linked today; what is missing is only the
+> apex mapping, which belongs to whoever owns the Vercel domain config, not to this finding.
+>
+> Stated this way on purpose: "the landing page is not deployed" would have been the easy sentence
+> to write from the apex 404 alone, and it would have been wrong.
+
 ### F3 — the orchestrator cannot express the product's economic order · STE-49 · James
 
 Not a failed step — the runner worked around it — but production code cannot do what steps 1
