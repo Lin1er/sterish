@@ -1,0 +1,27 @@
+{
+  "agent": "GDOORFWCU7W5D3SZJWKBW2TDB6JRBQF5ELHNWV2UWX4T77OAP4OO24IU",
+  "url": "https://api.sterish.xyz/use/com.fixtures.demo.unit-converter-09241812/1.0.0",
+  "mode": "held",
+  "requests": [
+    {
+      "label": "held_address_only",
+      "status": 401,
+      "license": null,
+      "license_tx": null,
+      "payment_required": false,
+      "payment_response": null,
+      "body_excerpt": "{\"error\":\"OWNERSHIP_PROOF_REQUIRED\",\"detail\":\"GDOORFWCU7W5D3SZJWKBW2TDB6JRBQF5ELHNWV2UWX4T77OAP4OO24IU holds a licence for this version; prove you control it: GET the challenge_url, sign its message (SEP-53) with that account's key, and repeat this request with X-STERISH-PROOF-NONCE and X-STERISH-PROOF-SIGNATURE\",\"challenge_url\":\"https://api.sterish.xyz/use/com.fixtures.demo.unit-converter-0924181",
+      "body_bytes": 592
+    },
+    {
+      "label": "held",
+      "status": 200,
+      "license": "held",
+      "license_tx": null,
+      "payment_required": false,
+      "payment_response": null,
+      "body_excerpt": "{\n  \"SKILL.md\": \"# Unit Converter\\n\\nConvert a quantity between metric and imperial units.\\n\\n## Usage\\n\\nCall `convert` with a value, a source unit and a target unit. Call `list_units` to see\\nwhat is supported: length (mm, cm, m, km, in, ft, yd, mi), mass (g, kg, oz, lb) and\\ntemperature (C, F, K).\\n\\n## What it does not do\\n\\nIt is arithmetic only. It opens no network connection, reads no local",
+      "body_bytes": 1837
+    }
+  ]
+}

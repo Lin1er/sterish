@@ -28,6 +28,7 @@ did not produce what this one needs). Only GREEN counts as green.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import shutil
@@ -56,7 +57,9 @@ HERE = Path(__file__).resolve().parent
 # still names the v1 pair, and a rehearsal that silently ran against v1 would prove
 # nothing about the migration it exists to check.
 LIVE = {
-    "api": "https://api-sterish.jameshub.fun",
+    # STE-54: canonical since 17 Sep 2026. The old jameshub.fun name is kept as an alias
+    # on the same box and still answers, so an older checkout is not broken by this.
+    "api": "https://api.sterish.xyz",
     "registry": "CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2",
     "tokens": "CB6VK4EXEN7V6MXLOFUI2ECMLSDUXAUV5EZICWBICKJDL3WPPU3CTP3T",
     "escrow": "CCVCNFXK4YHY3ECPWCXLAMEXT4MI457ZREAZBR57CEJ3GQXONW7HVVDE",
@@ -82,7 +85,8 @@ STEP_TITLES = {
     1: "Developer submits a brand-new skill; escrow locks fee + bond",
     2: "Pipeline audits it -> SAFE on chain -> VERIFIED minted -> settle",
     3: "A fresh agent wallet checks the skill via the dashboard -> SAFE",
-    4: "use without a licence -> 402 -> pay USDC over x402 -> licence minted -> 200",
+    4: "use without a licence -> 402 -> pay USDC over x402 -> licence minted -> 200 "
+       "(on a version the API will sell — see the note in step 4)",
     5: "The second call returns 200 directly",
     6: "Negative path: a poisoned skill -> DANGEROUS, blocked, cannot be bought",
     7: "Slash path on the live stack: bond -> reporter",
@@ -192,6 +196,52 @@ def is_verified_token(cfg: PipelineConfig, skill_id: str, version: str) -> bool:
 
 def api_get(path: str, **kwargs) -> requests.Response:
     return requests.get(f"{LIVE['api']}{path}", timeout=HTTP_TIMEOUT, **kwargs)
+
+
+def is_for_sale(skill_id: str, version: str) -> tuple[bool, int, str]:
+    """Will the API actually sell this version? Returns (yes, price, why).
+
+    Since STE-42 the API refuses to price what it cannot deliver, so a 402 carrying a
+    price is positive proof the artifact is on the server. A 404 means the bytes are
+    not published — the version may still be perfectly SAFE on chain.
+    """
+    try:
+        res = api_get(f"/use/{skill_id}/{version}")
+    except requests.RequestException as exc:
+        return False, 0, f"request failed: {exc}"
+    if res.status_code != 402:
+        return False, 0, f"HTTP {res.status_code} (a 402 is what a deliverable version answers)"
+    price = 0
+    for header in ("x-payment-required", "payment-required"):
+        raw = res.headers.get(header)
+        if not raw:
+            continue
+        try:
+            accepts = json.loads(base64.b64decode(raw).decode())
+        except Exception:
+            continue
+        first = (accepts.get("accepts") or [{}])[0]
+        price = int(first.get("maxAmountRequired") or first.get("amount") or 0)
+        break
+    return True, price, "402 with a price, so the artifact is deliverable"
+
+
+def pick_buyable(candidates: list[tuple[str, str]]) -> tuple[str, str, int, list[str]]:
+    """First version the API will really sell, plus the trail of what was tried.
+
+    Steps 4 and 5 buy something. They cannot buy the skill step 1 registers, because
+    artifacts only reach the API host through `intake publish-artifacts`, run there and
+    fed from the committed corpus — see the note in step 2. So they buy an already
+    published catalogue version instead, chosen by asking the API rather than by
+    trusting a list in this file.
+    """
+    trail: list[str] = []
+    for skill_id, version in candidates:
+        ok, price, why = is_for_sale(skill_id, version)
+        trail.append(f"{skill_id}@{version}: {why}")
+        if ok:
+            return skill_id, version, price, trail
+    return "", "", 0, trail
 
 
 def classic_tx(secret: str, build) -> str:
@@ -544,9 +594,64 @@ class Rehearsal:
 
     # ---- 4
 
+    def buy_target(self, n: int) -> tuple[str, str]:
+        """What steps 4 and 5 buy, and why it is not the skill step 1 registered.
+
+        `--buy-target SKILL@VERSION` pins it. Otherwise the brand-new skill is tried
+        first — if publishing ever reaches it, these steps should buy it and this
+        fallback should quietly stop being used — and then catalogue versions the API
+        is asked about one at a time.
+        """
+        pinned = getattr(self.args, "buy_target", None)
+        if pinned:
+            skill_id, _, version = pinned.partition("@")
+            ok, price, why = is_for_sale(skill_id, version)
+            self.ev.log(n, "buy target pinned by --buy-target", "ok" if ok else "fail",
+                        url=f"{LIVE['api']}/use/{skill_id}/{version}",
+                        detail=f"{skill_id}@{version}: {why}")
+            if not ok:
+                return "", ""
+            self.ctx["bought_id"], self.ctx["bought_version"] = skill_id, version
+            return skill_id, version
+
+        candidates: list[tuple[str, str]] = [(self.ctx["safe_id"], self.ctx["safe_version"])]
+        try:
+            listed = api_get("/skills", params={"verdict": "SAFE", "limit": 25}).json()
+        except Exception:
+            listed = {}
+        for row in (listed.get("skills") or []):
+            version = row.get("latest_audited_version")
+            if row.get("skill_id") and version:
+                candidates.append((row["skill_id"], version))
+
+        skill_id, version, price, trail = pick_buyable(candidates)
+        own = f"{self.ctx['safe_id']}@{self.ctx['safe_version']}"
+        self.ev.log(
+            n, "choosing something the API will actually sell", "ok" if skill_id else "fail",
+            detail="; ".join(trail[:6]) + (f" … {len(trail) - 6} more" if len(trail) > 6 else ""),
+        )
+        if not skill_id:
+            return "", ""
+        if f"{skill_id}@{version}" != own:
+            self.ev.log(
+                n, "NOT the skill step 1 registered, and this is a product gap not a test choice",
+                "info", url=f"{LIVE['api']}/use/{skill_id}/{version}",
+                detail=f"buying {skill_id}@{version} at {fmt_usdc(price)} USDC instead of {own}. "
+                       "The new skill is SAFE on chain with a VERIFIED badge, but its bytes are not "
+                       "on the API host: artifacts get there only through `intake publish-artifacts`, "
+                       "run on the host and fed from the corpus committed in this repo. There is no "
+                       "upload route — every API route is a GET. So a developer who submits a skill "
+                       "today cannot sell it until an operator publishes it by hand. That is what "
+                       "steps 4 and 5 were red on for three runs.",
+            )
+        self.ctx["bought_id"], self.ctx["bought_version"] = skill_id, version
+        return skill_id, version
+
     def s4_buy(self, n: int):
         agent: Keypair = self.ctx["agent"]
-        skill_id, version = self.ctx["safe_id"], self.ctx["safe_version"]
+        skill_id, version = self.buy_target(n)
+        if not skill_id:
+            return "RED", "no version on the live API is deliverable, so nothing could be bought"
         before = usdc_balance(self.cfg, agent.public_key)
         started = datetime.now(timezone.utc)
         out = x402_call(self.env, "buy", agent.secret, skill_id, version)
@@ -595,7 +700,7 @@ class Rehearsal:
 
     def s5_second_call(self, n: int):
         agent: Keypair = self.ctx["agent"]
-        skill_id, version = self.ctx["safe_id"], self.ctx["safe_version"]
+        skill_id, version = self.ctx["bought_id"], self.ctx["bought_version"]
         before = usdc_balance(self.cfg, agent.public_key)
         out = x402_call(self.env, "held", agent.secret, skill_id, version)
         (self.run_dir / "x402-step5.json").write_text(self.ev.scrub(json.dumps(out, indent=2)) + "\n")
@@ -822,7 +927,7 @@ class Rehearsal:
         self.step(2, self.s2_audit_verdict_mint_settle, needs=("safe_request_id",))
         self.step(3, self.s3_agent_checks, needs=("safe_hash",))
         self.step(4, self.s4_buy, needs=("agent", "safe_hash"))
-        self.step(5, self.s5_second_call, needs=("agent", "licensed"))
+        self.step(5, self.s5_second_call, needs=("agent", "licensed", "bought_id"))
         self.step(6, self.s6_poisoned)
         self.step(7, self.s7_slash, needs=("poison_id",))
         checks = self.verify_links()
@@ -840,6 +945,10 @@ def main() -> int:
     parser.add_argument("--dashboard-url", default=None,
                         help="dashboard base URL; no public one is documented, so a local "
                              "`pnpm dev` against the live API is marked PARTIAL, not GREEN")
+    parser.add_argument("--buy-target", default=None, metavar="SKILL_ID@VERSION",
+                        help="what steps 4 and 5 buy. Default: the skill step 1 registered if the "
+                             "API will sell it, else the first catalogue version it will. The new "
+                             "skill is normally NOT for sale — see buy_target() for why")
     return Rehearsal(parser.parse_args()).run()
 
 
