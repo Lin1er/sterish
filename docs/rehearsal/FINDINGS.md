@@ -1,8 +1,40 @@
 # STE-27 rehearsal — findings
 
+> ## Run 4, 27 September 2026: **7 / 7 GREEN** — the loop is whole
+>
+> [`runs/2026-09-27T065414Z`](runs/2026-09-27T065414Z/EVIDENCE.md), against
+> `https://api.sterish.xyz` and the public dashboard `https://app.sterish.xyz`.
+> **16 / 16 transaction links resolve** and all 16 are `successful`.
+>
+> | # | Step | Run 1–3 | Run 4 |
+> |---|---|---|---|
+> | 3 | Fresh agent checks via the dashboard → SAFE | PARTIAL ×3 | **GREEN** |
+> | 4 | 402 → pay → licence → 200 | RED ×3 | **GREEN** — 402, paid 0.1 USDC, licence minted, 200 |
+> | 5 | Second call → 200 | RED ×3 | **GREEN** — served from the held licence, no payment |
+>
+> Steps 1, 2, 6 and 7 were already green and stayed green.
+>
+> **What closed each red.** Step 3: the dashboard is deployed and public (STE-26). Steps 4–5: STE-42
+> stopped pricing what cannot be delivered, STE-48 shipped the ownership proof — and the rehearsal
+> stopped trying to buy a skill nobody had published. That last part is a change in the *test*, not
+> in the product: see F5 below, and STE-56.
+>
+> **STE-48 was exercised for the first time.** Bare `X-AGENT-ADDRESS` → `401
+> OWNERSHIP_PROOF_REQUIRED`; the same call with a SEP-53 signature → `200` with the licence header
+> `held` and the agent's balance unchanged. So a licence can no longer be borrowed by anyone who
+> reads the ledger, which run 2 recorded as the single most important thing outstanding.
+>
+> Run 2 also recorded *"production still answers 404 on `/challenge`"*. **That was wrong, and it was
+> my measurement, not a fact about the deploy:** the route is
+> `/use/{skill_id}/{version}/challenge`, and a bare `/challenge` 404s whether or not the feature
+> exists. Corrected here rather than quietly dropped.
+
 Run [`2026-09-16T143919Z`](runs/2026-09-16T143919Z/EVIDENCE.md), against the live stack on
 16 September 2026: API `https://api-sterish.jameshub.fun`, Registry v2 `CCZJN366…`, Tokens v2
 `CB6VK4EX…`, Escrow v1 `CCVCNFXK…`.
+
+The three sections below are run 1's reading, kept as written. Everything in them that has since
+changed carries a dated correction in place.
 
 The evidence document is generated and untouched. This file is the human reading of it: what
 failed, why, who owns it. Anything below marked **looked up after the run** was not produced by
@@ -127,6 +159,37 @@ The refused mint in step 6 is `TokenError::NotVerified (#5)`, the right refusal.
 error mapper has no Tokens table and printed `VersionAlreadyExists (#5, registry)`, which would
 send an operator looking for a duplicate version. The evidence row states the tokens meaning next
 to the pipeline's label.
+
+### F5 — a developer who pays for an audit cannot sell their skill (run 4) · STE-56 · James
+
+Found while working out why steps 4 and 5 had been red for three runs. The reason was never the
+paid path.
+
+Run 4 registered a brand-new skill, audited it **SAFE score 100**, minted its **VERIFIED** badge on
+Tokens v2 and settled the escrow — every one of those green, on chain. And `/use` on that same
+skill answers a plain **404**, while `/use` on a catalogue version answers **402 with a price**.
+Same registry, same verdict, same badge. The only difference is whether someone had previously
+copied bytes onto the API host.
+
+Artifacts get there exactly one way: `intake publish-artifacts`, run **on the host**, fed from the
+corpus **committed in this repository**. And every route the API exposes is a `GET` — there is no
+upload, publish, or write of any kind. So the on-chain half of the product is complete for a skill
+nobody has published, and the off-chain half is unreachable.
+
+For an external developer, which is what STE-30 is for, the honest sequence today is: hand us the
+skill, we add it to our corpus and commit it, one of us opens a shell on the VPS. That is not a
+product, and it undercuts the "open registry anyone can publish to" line the SOW leans on.
+
+**Why the rehearsal is green anyway, stated plainly so nobody reads more into 7/7 than is there.**
+Steps 4–5 now buy a catalogue version the API will actually sell, chosen by asking the API rather
+than by trusting a list in the runner: since STE-42 a 402 carrying a price is positive proof the
+bytes are on the server. The brand-new skill is still tried first, so if publishing ever reaches it
+the fallback stops being used on its own. **This is a workaround in the test, not a fix in the
+product** — the step's own evidence row says so in as many words, and F5 stays open until STE-56
+closes.
+
+In run 2 I said I would close this by publishing the new skill's artifact as part of step 2. That
+plan cannot work, for the reason above; recorded rather than silently replaced.
 
 ## Notes that are not tickets
 

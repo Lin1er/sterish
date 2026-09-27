@@ -1,0 +1,43 @@
+{
+  "agent": "GDOORFWCU7W5D3SZJWKBW2TDB6JRBQF5ELHNWV2UWX4T77OAP4OO24IU",
+  "url": "https://api.sterish.xyz/use/com.fixtures.demo.unit-converter-09241812/1.0.0",
+  "mode": "buy",
+  "requests": [
+    {
+      "label": "unpaid",
+      "status": 402,
+      "license": null,
+      "license_tx": null,
+      "payment_required": true,
+      "payment_response": null,
+      "body_excerpt": "{}",
+      "body_bytes": 2
+    },
+    {
+      "label": "paid",
+      "status": 200,
+      "license": "minted",
+      "license_tx": "be06c99fc07e868b0b22e069a73560f0b07e33dc5737ce90ea94b3a5401caca7",
+      "payment_required": false,
+      "payment_response": {
+        "network": "stellar:testnet",
+        "payer": "GDOORFWCU7W5D3SZJWKBW2TDB6JRBQF5ELHNWV2UWX4T77OAP4OO24IU",
+        "success": true,
+        "transaction": "a4c64affe48406ac0e20bbc65992c7811edb974f76133fb944a6e68999db97ab"
+      },
+      "body_excerpt": "{\n  \"SKILL.md\": \"# Unit Converter\\n\\nConvert a quantity between metric and imperial units.\\n\\n## Usage\\n\\nCall `convert` with a value, a source unit and a target unit. Call `list_units` to see\\nwhat is supported: length (mm, cm, m, km, in, ft, yd, mi), mass (g, kg, oz, lb) and\\ntemperature (C, F, K).\\n\\n## What it does not do\\n\\nIt is arithmetic only. It opens no network connection, reads no local",
+      "body_bytes": 1837
+    }
+  ],
+  "accepts": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "amount": "1000000",
+    "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "payTo": "GD73M4F7RN74KBLFGJP4WKBMCBJWBOA4SFNOP5HG4NBCDQUQCC2ARSZU",
+    "maxTimeoutSeconds": 300,
+    "extra": {
+      "areFeesSponsored": true
+    }
+  }
+}
