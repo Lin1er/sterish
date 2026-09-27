@@ -147,11 +147,19 @@ everyone** — the specific sentence about their project is the reason it gets r
 
 Send this only when they say yes. Nobody reads a quickstart before agreeing.
 
+> **Lead with the dashboard now, not the API.** @m.ulinasidiki made this point on STE-51 and it
+> changes the shape of a first message: since 24 Sep there is something to *look at* rather than a
+> JSON endpoint to trust. Send `https://app.sterish.xyz` and the target can find their own skill,
+> read its verdict and walk the audit trail without installing anything, signing anything, or
+> reading a single curl example. Keep `GET /check/{skill_id}/{version}` for the ones who would
+> rather use a terminal — offer it second, not first.
+
 | | |
 | -- | -- |
 | Registry (chain) | `CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2` |
 | API | `https://api.sterish.xyz` (`https://api-sterish.jameshub.fun` is the same box under its first name and still answers) |
-| Dashboard, no wallet | `https://app.sterish.xyz` |
+| Dashboard, no wallet | `https://app.sterish.xyz` — **link this first** |
+| Landing page | `https://app.sterish.xyz/landing` (the apex `sterish.xyz` still 404s) |
 | Check a skill, no wallet | `GET /check/{skill_id}/{version}` — version is required |
 | Check bytes you already have | `GET /check/by-hash/{content_hash}` — the primary path |
 | Browse what is already audited | `GET /skills` — 24 shown, test namespaces hidden and counted |

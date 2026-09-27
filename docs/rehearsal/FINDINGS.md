@@ -102,9 +102,15 @@ Rerun with `--dashboard-url <vercel-url>` once it exists; the step turns green o
 > from a bare status code, because a 200 alone would not have distinguished the page from a login
 > wall. So step 3 can be rerun as `--dashboard-url https://app.sterish.xyz` and should go GREEN.
 >
-> Still missing: `https://sterish.xyz`, the apex, answers **404 from Vercel** — the domain is
-> attached to a project but the STE-23 landing page, merged 20–24 September, is not deployed on it.
-> That is a separate gap from this finding and belongs to whoever owns STE-23's deploy.
+> **The landing page is deployed too — at a path, not the apex.** It serves from
+> `https://app.sterish.xyz/landing`, titled *"Sterish — audited skills for AI agents on Stellar"*.
+> `https://sterish.xyz` and `https://www.sterish.xyz` both answer **404 from Vercel**: the apex is
+> attached to a project but nothing is served on it, even though `docs/deployments.md` records it as
+> "reserved for the landing". So the page exists and can be linked today; what is missing is only the
+> apex mapping, which belongs to whoever owns the Vercel domain config, not to this finding.
+>
+> Stated this way on purpose: "the landing page is not deployed" would have been the easy sentence
+> to write from the apex 404 alone, and it would have been wrong.
 
 ### F3 — the orchestrator cannot express the product's economic order · STE-49 · James
 
