@@ -1,0 +1,72 @@
+name: Landing
+
+# The landing is its own deployment (sterish.xyz) and its own pnpm project, so
+# it needs its own gate: the Frontend workflow is filtered to `frontend/**` and
+# would never see a change here.
+#
+# `frontend/**` is in the triggers on purpose, even though nothing in this job
+# builds the dashboard. The landing carries a copy of the design tokens and
+# `tokens.drift.test.ts` compares it against `frontend/app/globals.css`, so a
+# token edit made only on the dashboard side has to run this job — otherwise
+# the guard sits there green while the two apps quietly diverge.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - 'frontend/app/globals.css'
+      - '.github/workflows/landing.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - 'frontend/app/globals.css'
+      - '.github/workflows/landing.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: landing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: landing install + lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node: `cache: pnpm` needs the pnpm binary on PATH to
+      # resolve the store directory. The version comes from `packageManager` in
+      # landing/package.json, pinned in one place.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: landing/package.json
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # Covers the two figures the page states as fact and the token drift
+      # guard, which fails if landing/app/globals.css and
+      # frontend/app/globals.css have stopped agreeing.
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
