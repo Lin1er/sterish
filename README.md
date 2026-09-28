@@ -327,15 +327,15 @@ convention.
 - [x] 10+ real skills audited end-to-end — all 13 `skills.stellar.org` catalogue skills, SAFE on chain ([`docs/audit-evidence.md`](docs/audit-evidence.md))
 - [x] Poisoned/demo skill correctly flagged as DANGEROUS — 4/4 poisoned fixtures; measured false positives 0/16, false negatives 0/4
 - [x] Audit verdicts posted on-chain — Registry v2 `CCZJN366…`, transaction per verdict ([`docs/audit-evidence.md`](docs/audit-evidence.md))
-- [x] REST API serving `/check/{skill_id}/{version}` (and `/check/by-hash/{content_hash}`) and `/skills` — live at `https://api-sterish.jameshub.fun` ([`docs/api-spec.md`](docs/api-spec.md))
-- [x] Audit reports with evidence hashes — `GET /reports/{skill_id}/{version}`; `sha256(report) == evidence_hash` verified for all 25 reports on 17 Sep 2026
+- [x] REST API serving `/check/{skill_id}/{version}` (and `/check/by-hash/{content_hash}`) and `/skills` — live at `https://api.sterish.xyz` ([`docs/api-spec.md`](docs/api-spec.md))
+- [x] Audit reports with evidence hashes — `GET /reports/{skill_id}/{version}`; `sha256(report) == evidence_hash` verified for all **36** reports on 28 Sep 2026, reproducible from a clean clone with `uv run python pipeline/scripts/verify_onchain.py reports`
 
 ### Deliverable 3: Dashboard + x402 Licensing Demo
 - [x] Live x402 pay-per-use payment on testnet — 402 → USDC payment → soulbound licence → 200, recorded against production with every tx linked ([`docs/evidence/d3-flow-transcript-2026-09-17.md`](docs/evidence/d3-flow-transcript-2026-09-17.md))
 - [x] Working verification API — same transcript; `deploy/verify.sh` passes against production ([`docs/deployments.md`](docs/deployments.md))
-- [ ] Dashboard deployed on dev URL — built and tested against the production API, not yet publicly reachable (STE-26)
-- [ ] 3-minute demo video (STE-28)
-- [ ] Screenshots of full flow — the API side is recorded step by step in the transcript above; dashboard screenshots pending (STE-28)
+- [x] Dashboard deployed on a public URL — [`app.sterish.xyz`](https://app.sterish.xyz), public since 24 Sep 2026 (STE-26); the landing page has its own deployment at [`sterish.xyz`](https://sterish.xyz) (STE-23)
+- [x] Demo video of the full loop — 2 min 54 s recorded live on 28 Sep 2026, [`sterish.xyz/demo.mp4`](https://sterish.xyz/demo.mp4); the seven transactions in it were re-checked on Horizon, 7 of 7 successful ([`docs/evidence/demo/`](docs/evidence/demo/README.md))
+- [x] Screenshots of the full flow — nine full-page captures of the live product ([`docs/evidence/demo/screenshots`](docs/evidence/demo/screenshots)), with the API side also recorded step by step in the transcript above
 
 ---
 

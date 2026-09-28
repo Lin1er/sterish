@@ -143,6 +143,12 @@ Rerun with `--dashboard-url <vercel-url>` once it exists; the step turns green o
 >
 > Stated this way on purpose: "the landing page is not deployed" would have been the easy sentence
 > to write from the apex 404 alone, and it would have been wrong.
+>
+> **Corrected 28 September 2026: the apex serves the landing, and the path does not.** The landing
+> was split into its own app and its own Vercel deployment, and `sterish.xyz` now answers 200 with
+> it while `www.sterish.xyz` 308s to the apex. The mapping this finding asked for exists; what
+> flipped with it is that `https://app.sterish.xyz/landing` is now a **404**, so the URL recorded
+> above is dead. `docs/deployments.md` carries the current mapping.
 
 ### F3 — the orchestrator cannot express the product's economic order · STE-49 · James
 
