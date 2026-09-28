@@ -3,7 +3,7 @@
 Recorded **28 September 2026** against the live stack: `api.sterish.xyz`, `app.sterish.xyz`,
 `sterish.xyz` and Stellar testnet. STE-58.
 
-- **Video:** [`sterish-demo.mp4`](sterish-demo.mp4) — 2 min 54 s, 1920×1080, narrated.
+- **Video:** [`sterish-demo.mp4`](sterish-demo.mp4) — 2 min 52 s, 1920×1080, narrated.
   Also served at <https://sterish.xyz/demo.mp4>.
 - **Screenshots:** [`screenshots/`](screenshots) — nine full-page captures at 2× scale.
 - **Raw terminal recordings:** [`terminal-session.cast`](terminal-session.cast) and
@@ -27,9 +27,11 @@ recorded it, and it is said here rather than left for someone to wonder about. W
 narration runs longer than its footage, the last frame is held rather than the sentence cut, which
 is why the poisoned refusal and the 401 sit on screen for several seconds.
 
-Motion and transitions are added too: a slow push on the cards, a few pixels of drift on the
-footage, and a different wipe or dissolve between scenes. None of it changes what is on screen —
-it exists because a static screencast is hard to watch for three minutes.
+Motion and transitions are added too, and none of it changes what is on screen — it exists because
+a static screencast is hard to watch for three minutes. The cards are rendered as animated frame
+sequences rather than stills: headlines and rows slide in one at a time, and the figures on the
+closing card count up to their real values. The footage drifts a few pixels so no shot is frozen,
+every cut uses a different transition, and a progress line runs along the bottom edge.
 
 ## The transactions in the video
 
