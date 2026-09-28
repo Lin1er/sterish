@@ -1,7 +1,8 @@
+import Image from "next/image";
 import { Suspense } from "react";
 
 import { API_BASE_URL } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/Skeleton";
 import { RugPull } from "./component/RugPull";
 import { RUG_PULL_SKILL, getLandingStats, getRugPull } from "./liveStats";
 
@@ -48,6 +49,7 @@ export function Landing() {
       <WhyStellar />
       <Evidence />
       <Close />
+      <SiteFooter />
     </div>
   );
 }
@@ -65,6 +67,14 @@ function Hero() {
   return (
     <section className="grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-2 lg:gap-14">
       <div>
+        <Image
+          src="/brand/logo/sterish-lockup-cream.svg"
+          alt="Sterish"
+          width={692}
+          height={138}
+          priority
+          className="mb-10 h-7 w-auto sm:h-8"
+        />
         <h1 className="text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl lg:text-6xl">
           Your agent trusts the name.
           <br />
@@ -464,6 +474,40 @@ function StatsSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+/** The dashboard's footer does not reach this deployment, so it has its own. */
+function SiteFooter() {
+  return (
+    <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline py-8 font-mono text-xs text-text-tertiary">
+      <span>© {new Date().getFullYear()} Sterish</span>
+      <span>Stellar testnet</span>
+      <a
+        href={DASHBOARD_URL}
+        className="hover:text-keyword"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Dashboard
+      </a>
+      <a
+        href={X_URL}
+        className="hover:text-keyword"
+        target="_blank"
+        rel="noreferrer"
+      >
+        X
+      </a>
+      <a
+        href="https://github.com/Lin1er/sterish"
+        className="hover:text-keyword"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub
+      </a>
+    </footer>
   );
 }
 
