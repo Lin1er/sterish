@@ -168,6 +168,28 @@ Kalau `gh` belum ter-auth: **push branch saja**, kasih Axel URL `Compare & PR`
 Tujuan: tiap tiket terdokumentasi sebagai PR yang bisa dilacak.
 (Catatan historis: STE-5 terlanjur merge fast-forward langsung ke main sebelum konvensi ini ada — dibiarkan.)
 
+### `main` dikunci ruleset + WAJIB signed commit (28 Sep 2026)
+
+Repo punya ruleset **`master`** (target: default branch, `bypass_actors: []`,
+`current_user_can_bypass: "never"` — **admin pun tidak bisa bypass**, jadi `gh pr merge --admin`
+TIDAK akan jalan). Aturannya: no direct push / no force-push / no delete ke `main`, wajib lewat PR,
+`require_code_owner_review` (belum ada file `CODEOWNERS`, jadi belum mengikat), extra approval untuk
+commit yang tidak ter-attribute ke akun GitHub, dan **`required_signatures`**.
+
+Konsekuensi praktis: **commit tanpa signature yang terverifikasi tidak bisa di-merge ke `main`.**
+Worktree ini sudah diset (repo-local): `gpg.format=ssh`, `user.signingkey=~/.ssh/id_ed25519.pub`,
+`commit.gpgsign=true`.
+
+Itu belum cukup sendiri: GitHub menolak dengan `reason: "unknown_key"` sampai public key yang sama
+didaftarkan sebagai **Signing Key** (bukan cuma Authentication Key) di
+<https://github.com/settings/ssh/new>. Cek kapan pun dengan:
+
+    gh api repos/Lin1er/sterish/pulls/<n>/commits \
+      --jq '.[] | {sha: .sha[0:8], verified: .commit.verification.verified, reason: .commit.verification.reason}'
+
+Harus `verified: true`. Kalau `unknown_key`, key-nya belum terdaftar; kalau `unsigned`, commit-nya
+dibuat tanpa `-S`/`commit.gpgsign`.
+
 ### Bukti deploy (STE-13 dst) — WAJIB dicatat di DUA tempat
 Setelah deploy apa pun, catat **SEMUA contract address (CA)** + link [stellar.expert](https://stellar.expert) di:
 1. **Comment Linear** tiket deploy-nya, DAN
