@@ -1,0 +1,20 @@
+{
+  "capabilities": [],
+  "content_hash": "abd2df4433d2ec2eb7a206f2fe3489b0f05dd4c668b8a32d0a8b439d2fdecdbb",
+  "evidence_hash": "0a90cb241f2209d6934f36ca70dd1f71e67234b8362fa9af9ba6eb4974d39188",
+  "findings": [
+    {
+      "description": "Synthesis: SAFE at score 100/100. no injection findings and score 100 >= safe threshold 70 -> SAFE (policy row 7)",
+      "evidence": "policy.decide over stage1+stage2 findings",
+      "severity": "LOW",
+      "stage": 3
+    }
+  ],
+  "recommendation": "ALLOW",
+  "risk": "none",
+  "score": 100,
+  "skill_id": "com.fixtures.demo.unit-converter-09282122",
+  "spec_version": "1.0.0",
+  "verdict": "SAFE",
+  "version": "1.0.0"
+}
