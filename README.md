@@ -7,7 +7,8 @@
 
 [![Contracts](https://github.com/Lin1er/sterish/actions/workflows/contracts.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/contracts.yml)
 [![Pipeline & API](https://github.com/Lin1er/sterish/actions/workflows/pipeline.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/pipeline.yml)
-[![Dashboard](https://github.com/Lin1er/sterish/actions/workflows/dashboard.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/dashboard.yml)
+[![Frontend](https://github.com/Lin1er/sterish/actions/workflows/frontend.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/frontend.yml)
+[![Landing](https://github.com/Lin1er/sterish/actions/workflows/landing.yml/badge.svg)](https://github.com/Lin1er/sterish/actions/workflows/landing.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Stellar](https://img.shields.io/badge/network-Stellar%20Testnet-6b21a8)
 
@@ -22,6 +23,31 @@ and pay for skills with cryptographic guarantees.
 📖 Full architecture: [`docs/architecture.md`](docs/architecture.md) ·
 API spec: [`docs/api-spec.md`](docs/api-spec.md) ·
 Delivery plan: [`docs/delivery-plan.md`](docs/delivery-plan.md)
+
+---
+
+## Deliverable 3 evidence — the demo video and the flow screenshots
+
+> **Both exist and are published.** They were produced on **28 September 2026**, after the Instawards
+> report had already been submitted, so that submission still lists them as outstanding. This section
+> is the record that they are not.
+
+| Evidence | Where to check it |
+|---|---|
+| **Demo video** — 2 min 52 s, narrated, the whole loop | **<https://sterish.xyz/demo.mp4>** (also [`docs/evidence/demo/sterish-demo.mp4`](docs/evidence/demo/sterish-demo.mp4)) |
+| **Screenshots of the full flow** — nine full-page captures | [`docs/evidence/demo/screenshots`](docs/evidence/demo/screenshots) |
+| **Evidence map** — every chapter tied to its transaction or endpoint | [`docs/evidence/demo/README.md`](docs/evidence/demo/README.md) |
+| **Raw terminal recordings** — replayable with `asciinema play` | [`docs/evidence/demo/terminal-session.cast`](docs/evidence/demo/terminal-session.cast) |
+| **Narration script**, word for word | [`docs/evidence/demo/narration.json`](docs/evidence/demo/narration.json) |
+
+The video was recorded live against production: a skill registered, audited, and bought while
+recording, then a poisoned one refused. The seven transactions it shows were re-checked against
+Horizon afterwards — **7 of 7 successful**, ledgers 4916394 to 4916409, every one linked in the
+evidence map.
+
+Stated there rather than left to be noticed: the narration is synthetic, submission is still
+operator-run, every wallet in the video belongs to the team, the model never decides a verdict, and
+all of it is testnet.
 
 ---
 
