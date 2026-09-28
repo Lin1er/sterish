@@ -1,0 +1,22 @@
+{
+ "title": "This is Sterish, an audited skill marketplace for AI agents, on Stellar. Everything you are about to see happened on testnet while this was being recorded.",
+ "problem": "An agent skill is instructions the model will follow, handed over with the agent's own authority. Nothing in the format carries provenance, and nothing checks that what you approved is what later runs.",
+ "landing": "Sterish audits the skill, then writes the verdict where nobody can forge it. On chain, pinned to the hash of the exact files it read.",
+ "audit": "Here is a developer handing a skill over. Three audit stages run, the verdict lands on chain, and a verified badge is minted. Twenty two seconds, start to finish.",
+ "safepage": "The skill page shows what was audited. The content hash, the audit transaction, and the evidence hash of the report. Change one byte, and it is a different version, with no verdict of its own.",
+ "apicheck": "This is the same answer an agent asks for before it installs anything. The verdict, the trust score, and the hash it is pinned to.",
+ "publish": "Once it is published, checking is free, but using it costs. Four oh two: payment required.",
+ "buy": "The agent pays a tenth of a USDC over x four oh two. The payment settles, and a licence token is minted to its address.",
+ "borrow": "Licence holders are public on the ledger, so naming someone else's address is not enough. Without a wallet signature, four oh one. With it, two hundred.",
+ "licences": "The licence itself is soulbound. It cannot be resold, and anyone can look it up.",
+ "apireport": "The report behind the verdict is served whole, and its bytes are hashed on chain, so you can check that the report you read is the report we published.",
+ "poison": "Now the other side. A poisoned skill, one that tells the agent to read your private key and send it away.",
+ "refused": "It scores ten, it gets no badge, and it cannot be bought. The contract itself refuses to licence a version that is not safe.",
+ "escrow": "The money moves with the risk. The developer locks the audit fee, the auditor posts a bond, an honest audit settles, and a verdict proven wrong is slashed to whoever reported it.",
+ "dangerpage": "The dashboard tells a buyer exactly what the contract would.",
+ "registry": "Every audited version is read live from the registry contract, including all thirteen skills from Stellar's own catalogue.",
+ "activity": "And every registry event, newest first.",
+ "check": "If you already have the files, you can hash them in the browser and ask the chain yourself.",
+ "numbers": "Measured on the day of this recording. Thirteen of thirteen catalogue skills audited safe. Four of four poisoned samples caught. Thirty six of thirty six reports matching their hash on chain. And fifteen real payments, each one minting a licence.",
+ "closing": "Sterish. Know what your agent installs. Live on Stellar testnet."
+}
