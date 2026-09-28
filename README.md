@@ -28,9 +28,8 @@ Delivery plan: [`docs/delivery-plan.md`](docs/delivery-plan.md)
 
 ## Deliverable 3 evidence — the demo video and the flow screenshots
 
-> **Both exist and are published.** They were produced on **28 September 2026**, after the Instawards
-> report had already been submitted, so that submission still lists them as outstanding. This section
-> is the record that they are not.
+> **Both exist and are published.** Produced on **28 September 2026** and included in the Instawards
+> submission. This section is the short index; the full evidence map is linked below.
 
 | Evidence | Where to check it |
 |---|---|
