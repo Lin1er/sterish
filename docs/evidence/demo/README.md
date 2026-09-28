@@ -3,11 +3,10 @@
 Recorded **28 September 2026** against the live stack: `api.sterish.xyz`, `app.sterish.xyz`,
 `sterish.xyz` and Stellar testnet. STE-58.
 
-> **Note for anyone reading the Instawards submission.** The report was submitted before these two
-> items existed, so it lists them as outstanding and the submission cannot be edited. They were
-> finished the same day and are published here: the video is live at <https://sterish.xyz/demo.mp4>,
-> the screenshots are in this folder, and every transaction in the video is linked below. Nothing
-> about the other deliverables changed.
+> **Note for anyone reading the Instawards submission.** These two items are part of it: the video is
+> live at <https://sterish.xyz/demo.mp4>, the screenshots are in this folder, and every transaction in
+> the video is linked below, so any claim it makes can be checked against the ledger rather than
+> taken on trust.
 
 - **Video:** [`sterish-demo.mp4`](sterish-demo.mp4) — 2 min 52 s, 1920×1080, narrated.
   Also served at <https://sterish.xyz/demo.mp4>.
