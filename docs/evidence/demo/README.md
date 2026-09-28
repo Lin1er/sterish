@@ -3,7 +3,7 @@
 Recorded **28 September 2026** against the live stack: `api.sterish.xyz`, `app.sterish.xyz`,
 `sterish.xyz` and Stellar testnet. STE-58.
 
-- **Video:** [`sterish-demo.mp4`](sterish-demo.mp4) — 2 min 54 s, 1920×1080, no audio.
+- **Video:** [`sterish-demo.mp4`](sterish-demo.mp4) — 2 min 54 s, 1920×1080, narrated.
   Also served at <https://sterish.xyz/demo.mp4>.
 - **Screenshots:** [`screenshots/`](screenshots) — nine full-page captures at 2× scale.
 - **Raw terminal recordings:** [`terminal-session.cast`](terminal-session.cast) and
@@ -15,11 +15,21 @@ Everything on screen happened during the take. The skills were registered, audit
 while recording, and the hashes in the frames are the hashes the network returned. Nothing is
 re-enacted, mocked or pointed at a fixture server.
 
-Three things were added in the edit, and nothing else: the **typing animation** of each command
-before it runs, the **caption strip** at the bottom, and the **title, escrow and closing cards**.
-Idle gaps in the terminal were trimmed to 1.2 s, so the loop looks faster than it was — the real
-durations are in the `.cast` files, which carry a timestamp per event. An audit takes about
-22 seconds end to end; the video shows it in ten.
+Four things were added in the edit, and nothing else: the **typing animation** of each command
+before it runs, the **caption strip** at the bottom, the **title, escrow and closing cards**, and
+the **narration**. Idle gaps in the terminal were trimmed to 1.2 s, so the loop looks faster than it
+was — the real durations are in the `.cast` files, which carry a timestamp per event. An audit takes
+about 22 seconds end to end; the video shows it in ten.
+
+**The voice is synthetic**, generated with Piper (`en_US-ryan-high`) from
+[`narration.json`](narration.json), which holds the script word for word. Nobody in the team
+recorded it, and it is said here rather than left for someone to wonder about. Where a scene's
+narration runs longer than its footage, the last frame is held rather than the sentence cut, which
+is why the poisoned refusal and the 401 sit on screen for several seconds.
+
+Motion and transitions are added too: a slow push on the cards, a few pixels of drift on the
+footage, and a different wipe or dissolve between scenes. None of it changes what is on screen —
+it exists because a static screencast is hard to watch for three minutes.
 
 ## The transactions in the video
 
