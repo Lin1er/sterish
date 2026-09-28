@@ -22,17 +22,32 @@ address has not changed and is the same contract it always was — see
 
 ---
 
-## Public URLs (checked 24 September 2026)
+## Public URLs (checked 28 September 2026)
 
 | What | URL | Served by | Notes |
 |---|---|---|---|
 | **API** | **https://api.sterish.xyz** | VPS `187.53.142.100` via Cloudflare Tunnel (STE-54) | Canonical. `REPORT_BASE_URL`, the x402 `resource.url` and the STE-48 `challenge_url` all use it |
 | API (alias) | https://api-sterish.jameshub.fun | same stack, same tunnel | Kept so anything already pointing at it keeps working |
 | **Dashboard** | **https://app.sterish.xyz** | Vercel | Public since 24 September; renders live registry data and calls the API at `api.sterish.xyz` |
-| Landing | https://sterish.xyz | — | Reserved for the landing page (STE-23); currently 404 |
+| **Landing** | **https://sterish.xyz** | Vercel, the **same project** as the dashboard | Serves the landing page (STE-23) at `/` since 28 September (STE-57). The apex currently 308s to `www.sterish.xyz`, which is a Vercel domain setting |
+| Landing (direct) | https://app.sterish.xyz/landing | same project | The route the landing page is authored at. Kept answering on every host, because shared links and the Instawards report point at it |
 
 The API allows any origin (`api-spec.md` §6): everything it serves is public ledger data, so the
 dashboard moving hostnames needs no change on the API side.
+
+### One deployment, two front doors
+
+`sterish.xyz` and `app.sterish.xyz` are the same Vercel project and the same build. What differs is
+one host-based rewrite in `frontend/next.config.ts`: on the brand hosts, `/` renders `/landing`;
+everywhere else — `app.sterish.xyz`, preview URLs, `localhost` — `/` stays the registry dashboard.
+Every other path resolves identically on every host, so a link to `/check` or `/skills/{id}` works
+whichever hostname it was copied from.
+
+The rule lives in `frontend/src/lib/landingHosts.ts` with unit tests, because Next compiles rewrites
+into the routes manifest at build time: a mistake there is invisible until it is deployed. It must
+sit in `beforeFiles` — `/` is a real route, and `afterFiles` rules only run once nothing has matched.
+`LANDING_HOSTS` overrides the host list at build time (`LANDING_HOSTS=localhost pnpm build` to try it
+locally, empty to serve the dashboard everywhere).
 
 ---
 

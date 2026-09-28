@@ -26,6 +26,29 @@ pnpm build        # next build
 
 CI runs exactly these four, in that order.
 
+## Which host serves what
+
+One deployment answers on every Sterish hostname. A host-based rewrite decides
+what `/` is:
+
+| Host | `/` renders |
+|---|---|
+| `sterish.xyz`, `www.sterish.xyz` | the landing page (`app/landing`) |
+| `app.sterish.xyz` | the registry dashboard (`app/page.tsx`) |
+| preview URLs, `localhost` | the registry dashboard |
+
+`/landing` keeps answering on every host, and every other route resolves the
+same everywhere. The rule is `landingRewriteConfig()` in
+`src/lib/landingHosts.ts`, wired into `next.config.ts` and covered by
+`src/lib/landingHosts.test.ts`.
+
+Rewrites are compiled into the routes manifest at build time, so to see the
+landing page at `/` locally, set the host list and rebuild:
+
+```bash
+LANDING_HOSTS=localhost pnpm build && pnpm start   # / is now the landing page
+```
+
 ## Where the data comes from
 
 Every read goes through `src/lib/api.ts`. Nothing else in the app calls `fetch`
