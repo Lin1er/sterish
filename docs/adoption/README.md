@@ -159,10 +159,10 @@ Send this only when they say yes. Nobody reads a quickstart before agreeing.
 | Registry (chain) | `CCZJN366SV57JEBZVXGYY3ZBLJNFV4IR5ILCAI3EMX2WDNQPEPQ4BRL2` |
 | API | `https://api.sterish.xyz` (`https://api-sterish.jameshub.fun` is the same box under its first name and still answers) |
 | Dashboard, no wallet | `https://app.sterish.xyz` — **link this first** |
-| Landing page | `https://app.sterish.xyz/landing` (the apex `sterish.xyz` still 404s) |
+| Landing page | `https://sterish.xyz` — its own deployment since 28 Sep 2026; the old `app.sterish.xyz/landing` is now a 404 |
 | Check a skill, no wallet | `GET /check/{skill_id}/{version}` — version is required |
 | Check bytes you already have | `GET /check/by-hash/{content_hash}` — the primary path |
-| Browse what is already audited | `GET /skills` — 24 shown, test namespaces hidden and counted |
+| Browse what is already audited | `GET /skills` — 35 shown of 43 on chain on 28 Sep 2026, test namespaces hidden and counted in `hidden_test_entries` |
 | Evidence | `docs/audit-evidence.md` |
 
 > ⚠️ **Do not add `?verdict=` or any filter to a link you send someone.** Measured against
