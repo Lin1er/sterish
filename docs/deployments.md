@@ -22,14 +22,15 @@ address has not changed and is the same contract it always was — see
 
 ---
 
-## Public URLs (checked 24 September 2026)
+## Public URLs (checked 28 September 2026)
 
 | What | URL | Served by | Notes |
 |---|---|---|---|
 | **API** | **https://api.sterish.xyz** | VPS `187.53.142.100` via Cloudflare Tunnel (STE-54) | Canonical. `REPORT_BASE_URL`, the x402 `resource.url` and the STE-48 `challenge_url` all use it |
 | API (alias) | https://api-sterish.jameshub.fun | same stack, same tunnel | Kept so anything already pointing at it keeps working |
 | **Dashboard** | **https://app.sterish.xyz** | Vercel | Public since 24 September; renders live registry data and calls the API at `api.sterish.xyz` |
-| **Landing** | **https://sterish.xyz** | Vercel, **root directory `landing/`** | Its own deployment and its own pnpm project, separate from the dashboard (STE-23) |
+| **Landing** | **https://sterish.xyz** | Vercel project `sterish-landing`, root directory `landing/` | Live since 28 September. Its own deployment and its own pnpm project, separate from the dashboard (STE-23) |
+| Landing (www) | https://www.sterish.xyz | same project | **308 to the apex.** Every document, the report and the X bio say `sterish.xyz`, so that is the one that serves |
 
 The API allows any origin (`api-spec.md` §6): everything it serves is public ledger data, so the
 dashboard moving hostnames needs no change on the API side.
@@ -39,9 +40,26 @@ because they answer different first questions: someone arriving at `sterish.xyz`
 never heard of Sterish and needs the argument, while someone opening `app.sterish.xyz`
 already knows and wants the registry. So the landing has no product nav and no wallet button.
 
-Set each project's **Root Directory** in Vercel: `landing/` for `sterish.xyz`, `frontend/` for
-`app.sterish.xyz`. Each installs its own `pnpm-lock.yaml`. Neither needs environment variables
-to build; `NEXT_PUBLIC_API_URL` defaults to `https://api.sterish.xyz` in the landing.
+Each project's **Root Directory** is set in Vercel, and both are linked to this one repo, so a push
+to `main` deploys whichever app changed:
+
+| Vercel project | Root directory | Domains |
+|---|---|---|
+| `sterish-landing` (`prj_AilE5ilGPZKEBQYP8zIdFzTxGhqk`) | `landing/` | `sterish.xyz`, `www.sterish.xyz` (308 to apex) |
+| `sterish` (`prj_5lJ3MvcnTsVFXWVsj5ry3kfalbVZ`) | `frontend/` | `app.sterish.xyz` |
+
+Each installs its own `pnpm-lock.yaml`. Neither needs environment variables to build;
+`NEXT_PUBLIC_API_URL` defaults to `https://api.sterish.xyz` in the landing.
+
+**`https://app.sterish.xyz/landing` is now a 404**, and deliberately so: the split deleted
+`frontend/app/landing/`. Anything still pointing at that URL — the Instawards report, links shared
+before 28 September — has to move to `https://sterish.xyz`. The apex is the only home the landing
+page has.
+
+Verified live on 28 September: `sterish.xyz` returns 200 with the landing page (logo lockup present,
+no wallet button, the live registry row read from `api.sterish.xyz`), `www.sterish.xyz` returns 308
+to the apex, `app.sterish.xyz` still returns the registry dashboard, and `app.sterish.xyz/check`
+still works.
 
 The two apps share the design tokens by **copy**, not by import, and the copy is guarded:
 `landing/src/modules/landing/tokens.drift.test.ts` reads both `globals.css` files and fails
