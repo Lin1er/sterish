@@ -29,10 +29,24 @@ address has not changed and is the same contract it always was — see
 | **API** | **https://api.sterish.xyz** | VPS `187.53.142.100` via Cloudflare Tunnel (STE-54) | Canonical. `REPORT_BASE_URL`, the x402 `resource.url` and the STE-48 `challenge_url` all use it |
 | API (alias) | https://api-sterish.jameshub.fun | same stack, same tunnel | Kept so anything already pointing at it keeps working |
 | **Dashboard** | **https://app.sterish.xyz** | Vercel | Public since 24 September; renders live registry data and calls the API at `api.sterish.xyz` |
-| Landing | https://sterish.xyz | — | Reserved for the landing page (STE-23); currently 404 |
+| **Landing** | **https://sterish.xyz** | Vercel, **root directory `landing/`** | Its own deployment and its own pnpm project, separate from the dashboard (STE-23) |
 
 The API allows any origin (`api-spec.md` §6): everything it serves is public ledger data, so the
 dashboard moving hostnames needs no change on the API side.
+
+**Two Vercel projects, one repo.** The landing and the dashboard are separate deployments
+because they answer different first questions: someone arriving at `sterish.xyz` has usually
+never heard of Sterish and needs the argument, while someone opening `app.sterish.xyz`
+already knows and wants the registry. So the landing has no product nav and no wallet button.
+
+Set each project's **Root Directory** in Vercel: `landing/` for `sterish.xyz`, `frontend/` for
+`app.sterish.xyz`. Each installs its own `pnpm-lock.yaml`. Neither needs environment variables
+to build; `NEXT_PUBLIC_API_URL` defaults to `https://api.sterish.xyz` in the landing.
+
+The two apps share the design tokens by **copy**, not by import, and the copy is guarded:
+`landing/src/modules/landing/tokens.drift.test.ts` reads both `globals.css` files and fails
+the build when they disagree. Change tokens in `frontend/app/globals.css` first, then bring
+the change across. The Landing workflow runs on changes to that file for exactly this reason.
 
 ---
 
