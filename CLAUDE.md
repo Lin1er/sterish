@@ -168,6 +168,43 @@ Kalau `gh` belum ter-auth: **push branch saja**, kasih Axel URL `Compare & PR`
 Tujuan: tiap tiket terdokumentasi sebagai PR yang bisa dilacak.
 (Catatan historis: STE-5 terlanjur merge fast-forward langsung ke main sebelum konvensi ini ada — dibiarkan.)
 
+### Pelajaran 28 Sep 2026: `Restrict updates` membekukan seluruh repo
+
+Sempat ada ruleset **`master`** di default branch (dibuat 19:20, **sudah dihapus 20:5x**), dan
+selama ~1,5 jam **tidak ada satu pun PR yang bisa di-merge** walaupun CI hijau. Ditulis di sini
+karena gejalanya menyesatkan dan dua diagnosis pertama salah.
+
+**Penyebab sebenarnya: rule `update` ("Restrict updates").** Merge PR itu update ke ref `main`,
+jadi rule ini memblokir SEMUA merge, bukan cuma push langsung. Dengan `bypass_actors: []` +
+`current_user_can_bypass: "never"`, `gh pr merge --admin` juga tidak menolong. Yang terlihat:
+`mergeable: MERGEABLE` bersebelahan dengan `mergeStateStatus: BLOCKED`, `reviewDecision: null`,
+dan pesan error yang tidak menyebut rule mana pun — cuma "the base branch policy prohibits the merge".
+
+Dua diagnosis yang SALAH, jangan diulang:
+- **Bukan** required check yang path-filtered dan tidak pernah lapor (dugaan di PR #66):
+  `install + lint + build` **SUCCESS** di #66 dan #63, dan ruleset itu tidak punya rule
+  `required_status_checks` sama sekali.
+- **Bukan** `required_signatures`. Rule itu memang sempat aktif dan bikin #66/#63 `unsigned` serta
+  #67 `unknown_key`; dicopot 20:05, dan ketiga PR **tetap** BLOCKED sampai `update` ikut hilang.
+
+Urutan cek kalau `main` membeku lagi:
+
+    gh api repos/Lin1er/sterish/rules/branches/main --jq '.[] | "\(.type) <- \(.ruleset_id)"'
+    gh pr view <n> --json mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
+    gh api repos/Lin1er/sterish/pulls/<n>/commits \
+      --jq '.[] | {sha: .sha[0:8], verified: .commit.verification.verified, reason: .commit.verification.reason}'
+
+**Perbaikannya harus dari web UI** (<https://github.com/Lin1er/sterish/settings/rules>), dan wajib
+klik **Save changes** — mengubah dropdown saja tidak menyimpan. API tidak bisa: token `gh` (OAuth,
+scope `gist read:org repo workflow`) dijawab **404** untuk `PATCH /repos/.../rulesets/<id>` walaupun
+`permissions.admin = true`. Kalau nanti `main` mau diproteksi lagi, pakai Restrict deletions +
+Block force pushes + Require a pull request, dan **jangan** Restrict updates.
+
+Soal signed commit, kalau `required_signatures` dinyalakan lagi: tiap anggota tim wajib mendaftarkan
+public key sebagai **Signing Key** (bukan Authentication Key) di <https://github.com/settings/ssh/new>,
+karena `unknown_key` artinya tanda tangannya sah tapi key-nya belum terdaftar. Worktree ini sudah
+diset repo-local: `gpg.format=ssh`, `user.signingkey=~/.ssh/id_ed25519.pub`, `commit.gpgsign=true`.
+
 ### Bukti deploy (STE-13 dst) — WAJIB dicatat di DUA tempat
 Setelah deploy apa pun, catat **SEMUA contract address (CA)** + link [stellar.expert](https://stellar.expert) di:
 1. **Comment Linear** tiket deploy-nya, DAN
